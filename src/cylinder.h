@@ -18,7 +18,6 @@ class Cylinder : public Obstacle
 {
 public:
 
-    static int count;
 
     Eigen::Vector3d P,Q;    /*!< Cilinder Axis reference Points, P should be the "center"       */
     Eigen::Vector3d D;      /*!< Pre-computed and normalized P - Q vector                       */
@@ -41,10 +40,10 @@ public:
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-    Cylinder(Eigen::Vector3d P_, Eigen::Vector3d Q_, double radius_, double scale = 1, double percolation_=0.0):P(P_*scale),Q(Q_*scale),radius(radius_*scale){
+    Cylinder(int id_, Eigen::Vector3d P_, Eigen::Vector3d Q_, double radius_, double scale = 1, double percolation_=0.0):P(P_*scale),Q(Q_*scale),radius(radius_*scale){
         D  = (Q_-P_).normalized();
         Q = P+D;
-        id = count++;     
+        id = id_;     
         volume = M_PI * (radius_*scale) *  (radius_*scale);
         percolation = percolation_;
     }

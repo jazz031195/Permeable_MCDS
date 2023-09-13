@@ -91,6 +91,66 @@ public:
 
 };
 
+/*! \class AxonCollisionSphere
+ *  \brief Class to save the axon obstacles that a can collide to a walker.
+ */
+class AxonCollisionSphere: public Collisionsphere{
+
+public:
+
+    unsigned small_sphere_list_end;                         /*!< Index of the LAST element on the list for the small collision sphere                               */
+    unsigned big_sphere_list_end;                           /*!< Index of the LAST element on the list for the big collision sphere                                 */
+
+    std::vector<unsigned>* collision_list;                  /*! <Pointer to  List with the cylinders indexes. The indexes are permuted in its position.             */
+
+    AxonCollisionSphere();
+
+    //! \fn Removes an index from the inner sphere
+    //! \param index in the collision list. Notice that is the index, no the value.
+    /*! \brief This function receives a index from the collision list and moves the value to the last position of the list.
+     *         then decrease the inner sphere end index. This way this index is no longer considered inner collision list.
+    */
+    void popFromSmallSphere(unsigned i);
+
+    //! \fn Adds one element to the list by moving it in front of the current index and increasing the index.
+    //! \param index in the collision list. Notice that is the index, no the value.
+    /*! \brief This function receives a index from the collision list and moves the value to the last position of the list.
+     *         then increase the inner sphere end index. This way this index is now included in the inner collision list.
+    */
+    void pushToSmallSphere(unsigned i);
+
+    //! \fn Removes one element to the list by moving it in front of the current index and decreasing the index.
+    //! \param index in the collision list. Notice that is the index, no the value.
+    /*! \brief This function receives a index from the collision list and moves the value to the last position of the list.
+     *         Then decrease the inner sphere end index. This way this index is now excluded in the outer collision list.
+    */
+    void popFromBigSphere(unsigned i);
+
+    //! \fn Push one element to the list by moving it in front of the current index and increase the end index.
+    //! \param index in the collision list. Notice that is the index, no the value.
+    /*! \brief This function receives a index from the collision list and moves the value to the last position of the list.
+     *         Then increase the inner sphere end index. This way this index is now included in the outer collision list.
+    */
+    void pushToBigSphere(unsigned i);
+
+    //! \fn Set function to fix the outer sphere size.
+    /*! \param size of the list
+    */
+    void setBigSphereSize(float size);
+
+    //! \fn Set function to fix the inner sphere size.
+    /*! \param size of the list
+    */
+    void setSmallSphereSize(float size);
+
+    //! \fn Push one element to the complete obstacle list
+    /*! \param element value to be added to the obstacle list
+    */
+    void push_index(unsigned int element);
+
+};
+
+
 /*! \class CylinderCollisionSphere
  *  \brief Class to save the PLY mehses and the subset of triangles that a can collide to a walker
  *

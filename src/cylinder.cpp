@@ -5,15 +5,14 @@
 
 using namespace Eigen;
 
-int Cylinder::count = 0;
+
 Cylinder::Cylinder()
 {
-    id = count++;
+
 }
 
 Cylinder::~Cylinder()
 {
-    id = count--;
 }
 
 Cylinder::Cylinder(const Cylinder &cyl)
@@ -24,7 +23,7 @@ Cylinder::Cylinder(const Cylinder &cyl)
     P = cyl.P;
     radius = cyl.radius;
     volume = cyl.volume;
-    id = count++;
+    id = cyl.id;
 
     // To be improved: move this line to Obstacle class.
     percolation     = cyl.percolation;

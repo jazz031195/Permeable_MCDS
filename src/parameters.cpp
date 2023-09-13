@@ -30,12 +30,13 @@ Parameters::Parameters()
     packing_icvf    = 0;
     packing_output_configuration = 0.0;
 
-        // For compilation
+    // For compilation
     gamma_output_conf=0;
     gamma_icvf=EPS_VAL;
     gamma_output_configuration=0.0;
     gamma_num_cylinders=0;
 
+    gamma_num_axons=0;
 
     packing_output_conf = false;
 
@@ -70,6 +71,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
 
         if(str_dist(tmp,"n") == 0){
             in >> num_walkers;
+        }
+        else if(str_dist(tmp,"c") == 0){
+            in >> concentration;
         }
         else if(str_dist(tmp,"t") == 0){
             in >> num_steps;
@@ -410,6 +414,10 @@ void Parameters::readObstacles(ifstream& in)
 
         if(str_dist(tmp,"<cylinders_list>") <= 2){
             readCylinderList(in);
+            num_obstacles++;
+        }
+        if(str_dist(tmp,"<axons_list>") <= 2){
+            readAxonList(in);
             num_obstacles++;
         }
         if(str_dist(tmp,"oriented_cylinders_list") <= 2){
@@ -961,7 +969,32 @@ void Parameters::readCylinderList(ifstream& in)
                 string path;
                 in >> path;
                 cylinder_permeability_files.push_back(path);
+            }
         }
-    }
+    } 
+}
+
+void Parameters::readAxonList(ifstream& in)
+{
+    string path;
+    in >> path;
+    axons_files.push_back(path);
+
+    string tmp="";
+    while(!(str_dist(tmp,"</cylinder_list>") <= 2)){
+        in >> tmp;    
+        if(!(str_dist(tmp,"permeability") <= 2)){
+                    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+            if(str_dist(tmp,"global") <= 1){
+                // One permeability for all obstacles
+                in >> obstacle_permeability;
+            }
+            if(str_dist(tmp,"local") <= 1){
+                // One permeability per obstacles
+                string path;
+                in >> path;
+                axon_permeability_files.push_back(path);
+            }
+        }
     } 
 }

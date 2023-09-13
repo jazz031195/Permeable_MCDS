@@ -17,12 +17,13 @@ class Sphere : public Obstacle
 {
 public:
 
-    static int count;
 
     Eigen::Vector3d P;      /*!< Center of the sphere   */
     double radius;          /*!< Radius of the sphere   */
 
     double volume;
+
+    double ax_id;           /*!< ID of axon sphere belongs to */
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -37,9 +38,10 @@ public:
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-    Sphere(Eigen::Vector3d P_, double radius_, double scale = 1, double percolation_=0.0):P(P_*scale), radius(radius_*scale){
+    Sphere(int id_, int ax_id_, Eigen::Vector3d P_, double radius_, double scale = 1, double percolation_=0.0):P(P_*scale), radius(radius_*scale){
         percolation = percolation_;
-        id = count++;
+        id = id_;
+        ax_id = ax_id_;
         volume = 4./3.*M_PI * (radius_*scale) *  (radius_*scale)  *  (radius_*scale);
     }
 
@@ -67,6 +69,14 @@ public:
      *  sphere that a given walker can reach.
      */
     double minDistance(Walker &w);
+
+    /*! \fn  minDistance
+     *  \param O, position in 3d coordinates
+     *  \brief Returns the minimum distance from the position to the sphere. Used to set the reachable
+     *  sphere that a given walker can reach.
+     */
+
+    double minDistance(Eigen::Vector3d O);
 
 private:
 

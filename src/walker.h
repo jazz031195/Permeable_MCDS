@@ -54,6 +54,8 @@ public:
 
     CylinderCollisionSphere collision_sphere_cylinders;             /*!< Collision sphere for collition against cylidners                       */
 
+    AxonCollisionSphere collision_sphere_axons;                     /*!< Collision sphere for collition against axons                      */
+
     PLYCollisionSphere collision_sphere_ply;                        /*!< Collision sphere for collition against PLY meshes                      */
 
     SphereCollisionSphere collision_sphere_spheres;                 /*!< Collision sphere for collition against spheres                         */
@@ -86,6 +88,7 @@ public:
 
     float steps_per_second;                                         /*!< Particles steps per second speeed.*/
 
+    int in_ax_index;                                                /*!< Index of axon in which walker is inside (-1 if is in extracellular space)*/
     //! Default constructor.
     /*! Set all variables to cero.*/
     Walker();

@@ -14,6 +14,7 @@
 #include <parallelmcsimulation.h>
 #include "voxel.h"
 #include "cylinder.h"
+#include "Axon.h"
 #include <thread>
 #include <simerrno.h>
 #include "sphere.h"

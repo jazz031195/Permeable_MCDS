@@ -20,6 +20,7 @@
 #include "plyobstacle.h"
 #include "voxel.h"
 #include "cylinder.h"
+#include "Axon.h"
 #include "sentinel.h"
 #include "propagator.h"
 #include "sphere.h"
@@ -51,6 +52,8 @@ public:
     std::vector <PLYObstacle> plyObstacles_list;    /*!< vector with all the instances of PLYObstacles                              */
     std::vector <Cylinder> cylinders_list;          /*!< vector with all the isntances of "Cylider" obstacles                       */
     std::vector<unsigned>  cylinders_deque;         /*!< deque with the indexes of the cylinders (used for optmization)             */
+    std::vector <Axon> axons_list;                  /*!< vector with all the isntances of "Axon" obstacles                       */
+    std::vector<unsigned>  axons_deque;             /*!< deque with the indexes of the axons (used for optmization)             */
     std::vector<std::vector<unsigned>> ply_deque;   /*!< deque with the indexes of the triangles of all ply's (used for opt)        */
     std::vector <Voxel> voxels_list;                /*!< vector with all the voxels to be simulated (if any)                        */
     Propagator propagator;                          /*!< Propagator object to compute and save the particles MSD                    */
@@ -139,7 +142,7 @@ public:
      *         with a defined "inside region" can be considered. Voxel periodicity is not
      *         considered
      */
-    bool isInIntra(Eigen::Vector3d& position, double distance_to_be_intra_ply=1e-6);
+    bool isInIntra(Eigen::Vector3d& position, int &ax_id, double distance_to_be_intra_ply=1e-6);
 
     /*!
      * \brief   Writes to disk the final propagator matrix.
@@ -147,6 +150,8 @@ public:
     void writePropagator(std::string path);
 
     bool isInsideCylinders(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
+
+    bool isInsideAxons(Vector3d &position, int &ax_id, double distance_to_be_inside=1e-6);
 
     bool isInsidePLY(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 
@@ -217,6 +222,14 @@ private:
      */
     inline void mapWalkerIntoVoxel(Eigen::Vector3d &amended_step, Collision &colision, double barrier_thickness);
 
+
+    /*! \fn     mapWalkerIntoVoxel_tortuous
+     *  \brief  If a voxel is given, maps the walker position at any position in the voxel, but in the same compartment 
+     (intra or extra)
+     */
+    inline void mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &colision);
+
+
     /*! \fn     getTimeDt
      * \param   last_time_dt saves the last time step;
      * \param   time_dt actual time step;
@@ -282,7 +295,7 @@ private:
      * \brief   finds an intra celullar 3d position inside the voxel (needs a voxel initialized).
      * \param   intra_pos vector to save the 3d position.
      */
-    inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos);
+    inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &ax_id);
 
     /*!
      * \brief   finds an extra cellular 3d position inside the voxel (needs a voxel initialized).

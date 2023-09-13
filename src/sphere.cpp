@@ -5,25 +5,21 @@
 
 using namespace Eigen;
 
-int Sphere::count = 0;
 
 Sphere::Sphere()
-{
-    id = count++;
-}
+{}
 
 Sphere::~Sphere()
-{
-    id = count--;
-}
+{}
 
 Sphere::Sphere(const Sphere &sph)
 {
 
     P               = sph.P;
     radius          = sph.radius;
-    id              = count++;
+    id              = sph.id;
     volume          = sph.volume;
+    ax_id           = sph.ax_id;
 
     // To be improved: move this line to Obstacle class.
     percolation     = sph.percolation;
@@ -181,6 +177,18 @@ double Sphere::minDistance(Walker &w){
     //Origin of the ray
     Vector3d O;
     w.getVoxelPosition(O);
+    Vector3d m = O - P;
+    // minimum distance to the sphere center.
+    double distance_to_sphere = m.norm();
+
+    //Minimum distance to the sphere wall.
+    double d_ = (distance_to_sphere - radius);
+    return d_>0.0?d_:0.0;
+
+}
+
+double Sphere::minDistance(Eigen::Vector3d O){
+
     Vector3d m = O - P;
     // minimum distance to the sphere center.
     double distance_to_sphere = m.norm();

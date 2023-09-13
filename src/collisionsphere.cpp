@@ -85,6 +85,90 @@ void CylinderCollisionSphere::push_index(unsigned int element)
         list_size++;
 }
 
+/************************  Axon Collision Implementation  ******************/
+
+AxonCollisionSphere::AxonCollisionSphere():small_sphere_list_end(0),big_sphere_list_end(0)
+{
+}
+
+void AxonCollisionSphere::pushToSmallSphere(unsigned i)
+{
+    //If i is already inside the "good" side we do nothing
+    if(i < small_sphere_list_end || small_sphere_list_end == collision_list->size()){
+        return;
+    }
+
+    unsigned jkr = collision_list->at(i);
+    collision_list->at(i) = collision_list->at(small_sphere_list_end);
+    collision_list->at(small_sphere_list_end) = jkr;
+    small_sphere_list_end++;
+
+    // WARNING small sphere size should never be greater than the big one.
+    if(small_sphere_list_end > big_sphere_list_end)
+        big_sphere_list_end = small_sphere_list_end;
+}
+
+void AxonCollisionSphere::pushToBigSphere(unsigned i)
+{
+    //If i is already on the "other" side we do nothing
+    if(i < big_sphere_list_end || big_sphere_list_end == collision_list->size()){
+        return;
+    }
+
+    unsigned jkr = collision_list->at(i);
+    collision_list->at(i)=collision_list->at(big_sphere_list_end);
+    collision_list->at(big_sphere_list_end) = jkr;
+    big_sphere_list_end++;
+
+}
+
+
+void AxonCollisionSphere::popFromSmallSphere(unsigned i)
+{
+    //If i is already on the "other" side we do nothing
+    if(i >= small_sphere_list_end || small_sphere_list_end == 0){
+        return;
+    }
+
+    unsigned jkr = collision_list->at(i);
+    collision_list->at(i)=collision_list->at(small_sphere_list_end-1);
+    collision_list->at(small_sphere_list_end-1) = jkr;
+    small_sphere_list_end--;
+}
+
+void AxonCollisionSphere::popFromBigSphere(unsigned i)
+{
+    //If i is already on the "other" side we do nothing
+    if(i >= big_sphere_list_end || big_sphere_list_end == 0){
+        return;
+    }
+
+    unsigned jkr = collision_list->at(i);
+    collision_list->at(i)=collision_list->at(big_sphere_list_end-1);
+    collision_list->at(big_sphere_list_end-1) = jkr;
+    big_sphere_list_end--;
+
+    // WARNING small sphere size should never be greater than the big one.
+    if(big_sphere_list_end < small_sphere_list_end)
+        small_sphere_list_end = big_sphere_list_end;
+}
+
+
+void AxonCollisionSphere::setBigSphereSize(float size){
+    big_sphere_distance = size;
+}
+
+void AxonCollisionSphere::setSmallSphereSize(float size){
+    small_sphere_distance = size;
+}
+
+void AxonCollisionSphere::push_index(unsigned int element)
+{
+        collision_list->push_back(element);
+        list_size++;
+}
+
+
 /************************  PLY Sphere Collision Implementation  ******************/
 
 PLYCollisionSphere::PLYCollisionSphere()

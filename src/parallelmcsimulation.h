@@ -74,6 +74,7 @@ private:
     */
     void specialInitializations();
 
+
 };
 
 #endif // PARALLELMCSIMULATION_H

@@ -30,7 +30,7 @@ public:
     double sim_duration;                            /*!< simulation total time                                                      */
     bool write_traj;                                /*!< flag, write a traj file or not, binary format only                         */
     bool write_hit;                                /*!< flag, write a hit file or not, binary format only                         */
-
+    double concentration;                           /*< concentration of walkers per mm³ */
     bool write_full_c;
 
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
@@ -51,6 +51,7 @@ public:
 
     std::vector<std::string> spheres_files;         /*!< file paths with a list of spheres obstacles                              */
     std::vector<std::string> cylinders_files;       /*!< file paths with a list of cilinders obstacles                              */
+    std::vector<std::string> axons_files;           /*!< file paths with a list of axons obstacles                              */
     std::vector<std::string> PLY_files;             /*!< file paths with PLY obstacle files                                         */
     std::vector<double> PLY_scales;                 /*!< Auxiliary vector to save PLY file scales                                   */
     std::vector<float> ini_delta_pos;               /*!< Delta position for the wlakers                                             */
@@ -109,6 +110,7 @@ public:
      Implementation of packing type by Remy -
     */
     bool        packing_cyl;
+    bool        packing_ax;
     bool        packing_s;
 
 
@@ -117,6 +119,7 @@ public:
     double      gamma_icvf;
     double      gamma_output_configuration;
     unsigned    gamma_num_cylinders;
+    unsigned    gamma_num_axons;
 
     /* 
     Implementation of multiple permeability by Remy
@@ -124,6 +127,7 @@ public:
     double obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
     std::vector<std::string> sphere_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> cylinder_permeability_files;    /*!< Obstacles permeability file if local                                       */
+    std::vector<std::string> axon_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<double> PLY_permeability;
 
     bool subdivision_flag           = false;        /*!< flag to check if we have several voxel subdivision to compute the signal   */
@@ -437,6 +441,12 @@ private:
      *  \brief read a list of cylinders.
     */
     void readCylinderList(std::ifstream &in);
+
+    /*! \fn readAxonList
+     *  \param file input iostreams
+     *  \brief read a list of axons.
+    */
+    void readAxonList(std::ifstream &in);
 
 };
 

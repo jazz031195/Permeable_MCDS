@@ -84,6 +84,8 @@ private:
 
     void addCylindersObstaclesFromFiles();
 
+    void addAxonsObstaclesFromFiles();
+
     void addPLYObstaclesFromFiles();
 
     void addVoxels();
