@@ -66,7 +66,7 @@ public:
 
     state status;                                                   /*!< state memeber                                                          */
 
-    RelativeLocation initial_location, location;                    /*!< location on the substrate (if known)                                   */
+    RelativeLocation initial_location, location, previous_location;                    /*!< location on the substrate (if known)                                   */
 
     Eigen::VectorXi colision_in_log, colision_ext_log;                                   /*!< Vector of colision for logging                                         */
 

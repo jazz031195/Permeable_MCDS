@@ -193,7 +193,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double &step_l
             if(Walker::bouncing){
                 if( t1 >= EPS_VAL ){
                     
-                    if (walker.initial_location== Walker::intra){
+                    if (walker.location== Walker::intra){
                         position = walker.pos_v + t1*step;
                         isinside = isPosInsideAxon_(position, -barrier_tickness,sph_ids_);
                         if (!isinside || sph_ids_.size()<=1){
@@ -215,7 +215,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double &step_l
                 
                 if(t2 >= EPS_VAL ){
      
-                    if (walker.initial_location== Walker::intra){
+                    if (walker.location== Walker::intra){
                         position = walker.pos_v + t2*step;
                         isinside = isPosInsideAxon_(position, -barrier_tickness,sph_ids_);
                         if (!isinside || sph_ids_.size()<=1){
@@ -239,7 +239,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double &step_l
             else{
                 if( t1 >= 0 ){
                     
-                    if (walker.initial_location== Walker::intra){
+                    if (walker.location== Walker::intra){
                         position = walker.pos_v + t1*step;
                         isinside = isPosInsideAxon_(position, -barrier_tickness,sph_ids_);
                         if (!isinside || sph_ids_.size()<=1){
@@ -261,7 +261,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double &step_l
                 
                 if(t2 >= 0){
                     
-                    if (walker.initial_location== Walker::intra){
+                    if (walker.location== Walker::intra){
                         position = walker.pos_v + t2*step;
                         isinside = isPosInsideAxon_(position, -barrier_tickness,sph_ids_);
                         if (!isinside || sph_ids_.size()<=1){
@@ -353,6 +353,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double &step_l
                         colision.perm_crossing      = _percolation_;
                         colision.bounced_direction  = step; 
                         walker.is_allowed_to_cross = true;
+                        cout << "WALKER HAS CROSSED !" << endl;
                         return true;
                     }
                 

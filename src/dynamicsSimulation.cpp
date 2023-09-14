@@ -491,6 +491,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.intra_extra_consensus--;
         walker.initial_location = Walker::intra;
         walker.location = Walker::intra;
+        walker.previous_location = Walker::intra;
         walker.in_ax_index = ax_id;
     }
     else if(params.ini_walker_flag.compare("extra")== 0){
@@ -499,6 +500,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.setInitialPosition(extra_pos);
         walker.intra_extra_consensus++;
         walker.initial_location = Walker::extra;
+        walker.previous_location = Walker::extra;
         walker.location = Walker::extra;
     }
     else if(voxels_list.size() > 0 or params.custom_sampling_area){
@@ -510,9 +512,11 @@ void DynamicsSimulation::iniWalkerPosition()
         if (isInIntra(walker.ini_pos, ax_id, 0.0)){
             walker.initial_location = Walker::intra;
             walker.location = Walker::intra;
+            walker.previous_location = Walker::intra;
         }
         else {
             walker.initial_location = Walker::extra;
+            walker.location = Walker::extra;
             walker.location = Walker::extra;
         }
 
@@ -1342,7 +1346,9 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
             handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_ax_index);   
             
             if(!isnearaxon){
+                walker.previous_location = walker.location;
                 walker.location = Walker::extra;
+                colision.col_location = Collision::outside;
             }
         }
         // extra walkers or unknown
@@ -1532,6 +1538,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 tmax = sqrt(params.diffusivity_extra/params.diffusivity_intra) * (tmax-displ);
                                 
                 walker.intra_extra_consensus--;
+                walker.previous_location = walker.location;
                 walker.location = Walker::extra;
 
             // Save that walker hit the membrane - For validation purpose
@@ -1544,6 +1551,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 tmax = sqrt(params.diffusivity_intra/params.diffusivity_extra) *(tmax -displ);
   
                 walker.intra_extra_consensus++;
+                walker.previous_location = walker.location;
                 walker.location = Walker::intra;
                 
             // Save that walker hit the membrane - For validation purpose
@@ -1565,12 +1573,14 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             tmax -= displ;
 
             if(colision.col_location == Collision::inside){
+                walker.previous_location = walker.location;
                 walker.location = Walker::intra;
 
             // Save that walker hit the membrane - For validation purpose
                 walker.colision_in++;
             }
             if(colision.col_location == Collision::outside){
+                walker.previous_location = walker.location;
                 walker.location = Walker::extra;
             // Save that walker hit the membrane - For validation purpose
                 walker.colision_ext++;
@@ -1619,12 +1629,14 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         walker.status = Walker::on_object;
 
         if(colision.col_location == Collision::inside){
+            walker.previous_location = walker.location;
             walker.location = Walker::intra;
 
         // Save that walker hit the membrane - For validation purpose
             walker.colision_in++;
         }
         else if(colision.col_location == Collision::outside){
+            walker.previous_location = walker.location;
             walker.location = Walker::extra;
         // Save that walker hit the membrane - For validation purpose
             walker.colision_ext++;
