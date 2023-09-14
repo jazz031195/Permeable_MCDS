@@ -57,7 +57,7 @@ void CylinderDistribution::createSubstrate()
 
                     Vector3d Q = {x,y,z};
                     Vector3d D = {x,y,z+1};
-                    Cylinder cyl(Q,D,this->radiis[i]);
+                    Cylinder cyl(0,Q,D,this->radiis[i]);
 
 
                     double min_distance;

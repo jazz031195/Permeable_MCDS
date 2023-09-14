@@ -76,7 +76,7 @@ void SphereDistribution::createSubstrate()
                     double z = (t*max_limits[2] + (1-t)*min_limits[2]);
 
                     Vector3d P = {x,y,z};
-                    Sphere sph(P,this->radiis[i]);
+                    Sphere sph(0,0,P,this->radiis[i]);
 
 
                     double min_distance;
@@ -320,6 +320,8 @@ void SphereDistribution::checkBoundaryConditions(Sphere sph, std::vector<Sphere>
     }
 }
 
+/*
+
 void SphereGammaDistribution::printSubstrate(ostream &out)
 {
     out << 1e-3 << endl;
@@ -329,3 +331,4 @@ void SphereGammaDistribution::printSubstrate(ostream &out)
                                      << spheres[i].radius*1e3 << endl;
     }
 }
+*/

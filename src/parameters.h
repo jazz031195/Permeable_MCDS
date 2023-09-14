@@ -23,7 +23,7 @@ class Parameters
 {
 public:
 
-    unsigned num_walkers;                           /*!< N, number of walkers                                                       */
+    unsigned num_walkers = 1;                           /*!< N, number of walkers                                                       */
     unsigned num_steps;                             /*!< T, number of steps                                                         */
     double diffusivity_intra;                       /*!< Di, intra-cellular diffusivity constant                                    */
     double diffusivity_extra;                       /*!< De, extra-cellular diffusivity constant                                    */

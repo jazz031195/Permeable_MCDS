@@ -20,7 +20,11 @@ ParallelMCSimulation::ParallelMCSimulation(std::string config_file)
 
     SimErrno::checkConfigurationFile(config_file.c_str());
 
+    cout << "read scheme files" << endl;
+
     params.readSchemeFile(config_file);
+
+    cout << "checkSimulationParameters" << endl;
 
     //printSimulationInfo();
 

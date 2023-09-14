@@ -18,17 +18,17 @@ bool SimErrno::checkSimulationParameters(Parameters &params)
 {
     cout << "\033[1;35m/***************   MC/DC Simulation parameters check out:  ***************/" << SH_DEFAULT << "\n";
 
-    if(params.num_walkers > 1e9){
-        error( " Maximum number of particles is fixed to 1e9.",cout);
-        assert(0);
-        return true;
-    }
+    //if(params.num_walkers > 1e9){
+    //    error( " Maximum number of particles is fixed to 1e9.",cout);
+    //    assert(0);
+    //    return true;
+    //}
 
-    if(params.num_walkers < 1){
-        error( " Minimum number of particles is fixed to 1." ,cout);
-        assert(0);
-        return true;
-    }
+    //if(params.num_walkers < 1){
+    //    error( " Minimum number of particles is fixed to 1." ,cout);
+    //    assert(0);
+    //    return true;
+    //}
 
     if(params.num_steps > 1e7){
         error( " Maximum number of steps is fixed to 1e7.",cout);
@@ -90,6 +90,12 @@ bool SimErrno::checkSimulationParameters(Parameters &params)
     if(params.cylinders_files.size()>0){
         info("Checking Cylinder list format...",cout);
         checkCylindersListFile(params);
+        info("Done...",cout);
+    }
+
+    if(params.axons_files.size()>0){
+        info("Checking Axon list format...",cout);
+        checkAxonsListFile(params);
         info("Done...",cout);
     }
 
@@ -483,14 +489,14 @@ bool SimErrno::checkCylindersListFile(Parameters &params)
 
             std::vector<std::string> jkr = split_(line,' ');
 
-            if(jkr.size() != 7 && jkr.size() != 4){
+            if(jkr.size() != 8 && jkr.size() != 4){
                 error( "Cylinder list file is not in the correct format." ,cout);
                 in.close();
                 assert(0);
                 return true;
             }
 
-            if (jkr.size() != 7){
+            if (jkr.size() != 8){
                 z_flag = true;
                 warning("No cylinders orientation inlcluded. Cylinder orientation was set towards the Z direction by default for all cylinders.",cout);
             }
@@ -517,6 +523,43 @@ bool SimErrno::checkCylindersListFile(Parameters &params)
         }
     }
 
+    return true;
+}
+
+bool SimErrno::checkAxonsListFile(Parameters &params)
+{
+    for(unsigned i = 0; i < params.axons_files.size(); i++){
+        bool z_flag = false;
+        ifstream in(params.axons_files[i]);
+
+        if(!in){
+            error( "Axon list file cannot be open." ,cout);
+            assert(0);
+            in.close();
+            return true;
+        }
+
+        bool first=true;
+        unsigned enum_ = 1;
+        for( std::string line; getline( in, line ); )
+        {
+
+            std::vector<std::string> jkr = split_(line,' ');
+            if(jkr.size() != 8){
+                error( "Axon list file is not in the correct format." ,cout);
+                string mess  = "Length of line : "+ to_string(jkr.size());
+                error( mess,cout);
+                in.close();
+                assert(0);
+                return true;
+            }
+
+
+            break;
+        }
+        in.close();
+
+    }
     return true;
 }
 

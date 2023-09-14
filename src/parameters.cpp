@@ -65,7 +65,10 @@ void Parameters::readSchemeFile(std::string conf_file_path)
     }
 
     string tmp="";
+    int number_lines = 0;
     while((in >> tmp) && (str_dist(tmp,"<END>") >= 2) ){
+        //cout << "read line number :" << number_lines << endl;
+        //cout << tmp << endl;
 
         std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
 
@@ -229,6 +232,7 @@ void Parameters::readSchemeFile(std::string conf_file_path)
             if( str_dist(tmp.substr(0,2),"</") > 0 )
                 SimErrno::warning("Parameter: " + tmp + " Unknown",cout);
         }
+        number_lines += 1;
     }
 
     if(scale_from_stu){
@@ -238,7 +242,7 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         //seconds to ms
         sim_duration*=s_to_ms;
     }
-
+    cout << "number_subdivisions :" << number_subdivisions << endl;
     if(number_subdivisions>1){
         addSubdivisions();
     }
@@ -575,7 +579,7 @@ void Parameters::readInfoGatheringParams(ifstream& in)
                 in >> tmp;
                 std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
 
-                sort(this->record_prop_times.begin(), this->record_prop_times.end());
+                std::sort(this->record_prop_times.begin(), this->record_prop_times.end());
 
                 this->record_prop_times.erase(unique( this->record_prop_times.begin(), this->record_prop_times.end() ), this->record_prop_times.end() );
             }
@@ -981,7 +985,7 @@ void Parameters::readAxonList(ifstream& in)
     axons_files.push_back(path);
 
     string tmp="";
-    while(!(str_dist(tmp,"</cylinder_list>") <= 2)){
+    while(!(str_dist(tmp,"</axons_list>") <= 2)){
         in >> tmp;    
         if(!(str_dist(tmp,"permeability") <= 2)){
                     std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);

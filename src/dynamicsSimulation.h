@@ -151,7 +151,7 @@ public:
 
     bool isInsideCylinders(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 
-    bool isInsideAxons(Vector3d &position, int &ax_id, double distance_to_be_inside=1e-6);
+    bool isInsideAxons(Eigen::Vector3d &position, int &ax_id, double distance_to_be_inside);
 
     bool isInsidePLY(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 

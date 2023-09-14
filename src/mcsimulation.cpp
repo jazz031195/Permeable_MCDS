@@ -87,6 +87,9 @@ void MCSimulation::startSimulation()
 {
 
     iniObstacles();
+    // update number of walkers
+    dynamicsEngine->params = params;
+    //cout << " number of walkers : " << params.num_walkers << endl;
 
     if(dataSynth != NULL){
         dynamicsEngine->startSimulation(dataSynth);
@@ -145,144 +148,6 @@ std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
-void MCSimulation::addAxonsObstaclesFromFiles()
-{
-
-    for(unsigned i = 0; i < params.axons_files.size(); i++){
-
-        cout << " reading file "<< endl;
-
-        std::ifstream in(params.axons_files[i]);
-
-        if(!in){
-            return;
-        }
-
-        bool first=true;
-        for( std::string line; getline( in, line ); )
-        {
-            if(first) {first-=1;continue;}
-
-            std::vector<std::string> jkr = split(line,' ');
-            if (jkr.size() != 8){
-                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
-            }
-            break;
-        }
-        in.close();
-
-        // Permeability file - if any
-        double perm_; 
-
-        std::ifstream in_perm;
-        if(params.axon_permeability_files.size() >0){
-            in_perm.open(params.axon_permeability_files[i]);
-        }
-
-        // Diffusion coefficients
-        double diff_i; 
-        double diff_e;
-
-        in.open(params.axons_files[i]);
-
-        double x,y,z,r;
-        int ax_id, sph_id;
-        int last_ax_id = -1;
-        std::string type_object;
-        std::string header;
-
-        std::vector<Sphere> spheres_ ;
-        Sphere sphere_;
-        int line_num = 0;
-
-        in >>header;
-        while (in >>ax_id >> sph_id >> type_object >> x >> y >> z >> r){
-
-
-            // convert to mm
-            x = x/1000.0;
-            y = y/1000.0;
-            z = z/1000.0;
-            r = r/1000.0;
-                
-            // if the new line is from a different axon
-            if (line_num !=0 and last_ax_id != ax_id){
-                    // create the axon with id : last_ax_id
-                Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, r);
-
-                // Local permeability - Different for each obstacle
-                if(in_perm){
-                    in_perm >> perm_;
-                }
-                // Global permeability - Same for all obstacle
-                else{
-                    perm_ = params.obstacle_permeability;
-                }  
-
-                for (unsigned i = 0; i < spheres_.size(); i++){
-                    spheres_[i].setPercolation(perm_);
-                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                    diff_i = params.diffusivity_intra; 
-                    diff_e = params.diffusivity_extra;
-                    spheres_[i].setDiffusion(diff_i, diff_e);
-                }
-                ax.set_spheres(spheres_);
-                dynamicsEngine->axons_list.push_back(ax);
-                spheres_.clear();
-
-            }
-            sphere_ = Sphere(sph_id, ax_id,Eigen::Vector3d(x,y,z), r);
-            spheres_.push_back(sphere_);
-            last_ax_id = ax_id;
-            line_num += 1;
-                
-        }
-        
-        
-
-        // add last sphere
-        Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, r);
-        for (unsigned i = 0; i < spheres_.size(); i++){
-            spheres_[i].setPercolation(perm_);
-            // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-            diff_i = params.diffusivity_intra; 
-            diff_e = params.diffusivity_extra;
-            spheres_[i].setDiffusion(diff_i, diff_e);
-        }
-        ax.set_spheres(spheres_);
-        dynamicsEngine->axons_list.push_back(ax);
-
-        double max_limits, min_limits;
-        // z of last sphere of first axon
-        Axon first_axon = dynamicsEngine->axons_list[0];
-        max_limits = first_axon.spheres[first_axon.spheres.size()-1].P[2]; 
-        // z of first sphere of first axon
-        min_limits = first_axon.spheres[0].P[2]; 
-
-        params.max_limits = Eigen::Vector3d(max_limits,max_limits,max_limits);
-        params.min_limits = Eigen::Vector3d(min_limits,min_limits,min_limits);
-        double volume = (params.max_limits[0]-params.min_limits[0])*(params.max_limits[1]-params.min_limits[1])*(params.max_limits[2]-params.min_limits[2]);
-        
-        cout << " Volume :" << volume << endl;
-        // set icvf
-        double icvf = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->axons_list);
-        // set number of particles
-        if (params.ini_walker_flag == "intra"){
-            params.setNumWalkers(params.concentration*volume*icvf);
-        }
-        else if (params.ini_walker_flag == "extra"){
-            params.setNumWalkers(params.concentration*volume*(1.0-icvf));
-        }
-        cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
-        
-        cout << " ICVF :" << icvf<< endl;
-        cout << " Number of particles :" << params.num_walkers << endl;
-        cout << "voxel size :"  << max_limits << endl;
-
-        in.close();
-        
-    }
-}
 
 
 bool withinBounds(Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, Eigen::Vector3d pos, double distance)
@@ -378,12 +243,166 @@ double computeICVF(Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, std::
     return AreaC / AreaV; // ( total axons volume / total volume )
 }
 
+
+void MCSimulation::addAxonsObstaclesFromFiles()
+{
+
+    for(unsigned i = 0; i < params.axons_files.size(); i++){
+
+
+        std::ifstream in(params.axons_files[i]);
+
+        if(!in){
+            return;
+        }
+
+        bool first=true;
+        for( std::string line; getline( in, line ); )
+        {
+            if(first) {first-=1;continue;}
+
+            std::vector<std::string> jkr = split(line,' ');
+            if (jkr.size() != 8){
+                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
+            }
+            break;
+        }
+        in.close();
+
+        // Permeability file - if any
+        double perm_; 
+
+        std::ifstream in_perm;
+        if(params.axon_permeability_files.size() >0){
+            in_perm.open(params.axon_permeability_files[i]);
+        }
+
+        // Diffusion coefficients
+        double diff_i; 
+        double diff_e;
+
+        in.open(params.axons_files[i]);
+
+        double x,y,z,r;
+        int ax_id, sph_id, p;
+        int last_ax_id = -1;
+        std::string type_object;
+        std::string header;
+
+        std::vector<Sphere> spheres_ ;
+        Sphere sphere_;
+        int line_num = 0;
+
+        int header_size = 8;
+
+        for(unsigned j = 0; j < header_size; j++){  
+            in >>header;
+            //cout << "header :" << header << endl;
+        } 
+
+        while (in >>ax_id >> sph_id >> type_object >> x >> y >> z >> r >> p){
+
+            // convert to mm
+            x = x/1000.0;
+            y = y/1000.0;
+            z = z/1000.0;
+            r = r/1000.0;
+
+                
+            // if the new line is from a different axon
+            if (line_num !=0 and last_ax_id != ax_id){
+                // create the axon with id : last_ax_id
+                Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, r);
+
+                // Local permeability - Different for each obstacle
+                if(in_perm){
+                    in_perm >> perm_;
+                }
+                // Global permeability - Same for all obstacle
+                else{
+                    perm_ = params.obstacle_permeability;
+                }  
+                
+                for (unsigned i = 0; i < spheres_.size(); i++){
+                    spheres_[i].setPercolation(perm_);
+                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                    diff_i = params.diffusivity_intra; 
+                    diff_e = params.diffusivity_extra;
+                    spheres_[i].setDiffusion(diff_i, diff_e);
+                }
+                ax.set_spheres(spheres_);
+                dynamicsEngine->axons_list.push_back(ax);
+                spheres_.clear();
+
+            }
+            sphere_ = Sphere(sph_id, ax_id,Eigen::Vector3d(x,y,z), r);
+            spheres_.push_back(sphere_);
+            last_ax_id = ax_id;
+            line_num += 1;
+                
+        }
+        
+        
+
+        // add last sphere
+        Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, r);
+        for (unsigned i = 0; i < spheres_.size(); i++){
+            spheres_[i].setPercolation(perm_);
+            // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+            diff_i = params.diffusivity_intra; 
+            diff_e = params.diffusivity_extra;
+            spheres_[i].setDiffusion(diff_i, diff_e);
+        }
+        ax.set_spheres(spheres_);
+        dynamicsEngine->axons_list.push_back(ax);
+
+        double max_limits, min_limits;
+        // z of last sphere of first axon
+        Axon first_axon = dynamicsEngine->axons_list[0];
+        max_limits = first_axon.spheres[first_axon.spheres.size()-1].P[2]; 
+        // z of first sphere of first axon
+        min_limits = first_axon.spheres[0].P[2]; 
+        cout << "min_limits : " << min_limits << endl;
+        cout << "max_limits : " << max_limits << endl;
+
+        // voxel
+        params.max_limits = Eigen::Vector3d(max_limits,max_limits,max_limits);
+        params.min_limits = Eigen::Vector3d(min_limits,min_limits,min_limits);
+        double volume = (params.max_limits[0]-params.min_limits[0])*(params.max_limits[1]-params.min_limits[1])*(params.max_limits[2]-params.min_limits[2]);
+        //pair<Eigen::Vector3d,Eigen::Vector3d> voxel_(min_limits,max_limits);
+        //params.voxels_list.push_back(voxel_);
+    
+        cout << " Volume :" << volume << endl;
+        // set icvf
+        double icvf = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->axons_list);
+        // set number of particles
+        if (params.ini_walker_flag == "intra"){
+            params.setNumWalkers(params.concentration*volume*icvf);
+        }
+        else if (params.ini_walker_flag == "extra"){
+            params.setNumWalkers(params.concentration*volume*(1.0-icvf));
+        }
+        else{
+            params.setNumWalkers(params.concentration*volume);
+        } 
+        cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
+        
+        cout << " ICVF :" << icvf<< endl;
+        cout << " Number of particles :" << params.num_walkers << endl;
+        cout << "voxel size :"  << max_limits << endl;
+
+
+
+        in.close();
+        
+    }
+}
+
 void MCSimulation::addCylindersObstaclesFromFiles()
 {
 
     for(unsigned i = 0; i < params.cylinders_files.size(); i++){
 
-        cout << " reading file "<< endl;
 
         std::ifstream in(params.cylinders_files[i]);
 
@@ -428,7 +447,12 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
         Cylinder cylinder;
 
-        in >>header;
+        int header_size = 8;
+
+        for(unsigned j = 0; j < header_size; j++){  
+            in >>header;
+            //cout << "header :" << header << endl;
+        } 
 
         while (in >>cyl_id >> sph_id >> type_object >> x >> y >> z >> r){
 
@@ -475,6 +499,8 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
         params.max_limits = Eigen::Vector3d(max_limits,max_limits,max_limits);
         params.min_limits = Eigen::Vector3d(min_limits,min_limits,min_limits);
+        //pair<Eigen::Vector3d,Eigen::Vector3d> voxel_(min_limits,max_limits);
+        //params.voxels_list.push_back(voxel_);
 
         double volume = (params.max_limits[0]-params.min_limits[0])*(params.max_limits[1]-params.min_limits[1])*(params.max_limits[2]-params.min_limits[2]);
         
@@ -489,6 +515,9 @@ void MCSimulation::addCylindersObstaclesFromFiles()
         else if (params.ini_walker_flag == "extra"){
             params.setNumWalkers(params.concentration*volume*(1.0-icvf));
         }
+        else{
+            params.setNumWalkers(params.concentration*volume);
+        } 
         std::cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
 
         std::cout << " ICVF :" << icvf<< endl;

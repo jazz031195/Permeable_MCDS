@@ -51,9 +51,6 @@ public:
     void printSubstrate(std::ostream& out); 
 
 
-    void printSubstrate(std::ostream& out);
-
-
 private:
 
     /*!

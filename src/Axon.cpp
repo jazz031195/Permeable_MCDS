@@ -82,37 +82,15 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
         //z
         Box.push_back({spheres_to_add[0].P[2] - spheres_to_add[0].radius, spheres_to_add[spheres_to_add.size()-1].P[2] + spheres_to_add[spheres_to_add.size()-1].radius});
     }
-    // add projection of spheres 
-    //for (int i=0; i<spheres_to_add.size(); ++i){
-    //    add_projection(spheres_to_add[i]);
-    //}
-}
-/*
-void Axon::add_projection(Sphere sphere_to_add){
 
-    // 2d limits of axon
-    Vector2d x_limits;
-    Vector2d y_limits;
-    // projections are in descending order. When added, it is added at the right position.
-    for (unsigned axis = 0; axis < 3; ++axis) {
+    // permeability variables
+    diffusivity_e = spheres[0].diffusivity_e;
+    diffusivity_i = spheres[0].diffusivity_i;
+    percolation = spheres[0].percolation;
 
-        double position1, position2;
-
-        // projections
-        // P + radius
-        position1 = sphere_to_add.P[axis] + sphere_to_add.radius;
-        Projections::projection_pt p1 {position1, id, sphere_to_add.id};
-        // P - radius
-        position2 = sphere_to_add.P[axis] - sphere_to_add.radius;
-        Projections::projection_pt p2 {position2, id, sphere_to_add.id};
-
-        projections.append_right_place(p1, p2, axis);
-        //cout << "projections.sph_projections_x.size() in add_proj: "<< projections.sph_projections_x.size() << endl;
-        
-    }
 
 }
-*/
+
 
 bool check_with_edge(Eigen::Vector3d position, Eigen::Vector2d x_limits, Eigen::Vector2d y_limits){ 
     if ((position[0] >=  x_limits[0])  && (position[0] <= x_limits[1])){
