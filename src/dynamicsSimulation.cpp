@@ -1342,12 +1342,11 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
             handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_ax_index);   
             
             if(!isnearaxon){
-                colision.col_location = Collision::outside;
                 walker.location = Walker::extra;
             }
         }
-        // extra walkers
-        else if (walker.location== Walker::extra){
+        // extra walkers or unknown
+        else {
             for(unsigned int i = 0 ; i < walker.collision_sphere_axons.small_sphere_list_end; i++ ){
                 unsigned index = walker.collision_sphere_axons.collision_list->at(i);
                 isnearaxon = (axons_list)[index].isWalkerInsideAxon(walker, 2*tmax + barrier_tickness);
@@ -1596,7 +1595,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         bounced_step = colision.bounced_direction;
 
         // Save colision - for validation purpose
-        trajectory.writeFullCollision(colision.colision_point, crossed, col_loc, t, walker.index);
+        //trajectory.writeFullCollision(colision.colision_point, crossed, col_loc, t, walker.index);
 
 
     

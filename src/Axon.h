@@ -45,7 +45,7 @@ public:
     std::vector<int> checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis);
     bool isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside,std::vector<int> &sph_ids);
     //bool isPosInsideAxon(Eigen::Vector3d &position,  double distance_to_be_inside, double max_radius, std::vector<int> &sph_ids);
-    bool intersection_sphere_vector(double &t1, double &t2,Sphere &s, Eigen::Vector3d &step, double &step_length, Eigen::Vector3d &pos, double &c);
+    bool intersection_sphere_vector(double &t1, double &t2,Sphere &s, Eigen::Vector3d &step, double &step_length, Eigen::Vector3d &pos, double &c, double &a);
     void set_spheres(std::vector<Sphere> spheres_to_add);
     bool isNearAxon(Eigen::Vector3d position, double distance_to_be_inside);
     bool isNearAxon(Walker walker, double distance_to_be_inside);

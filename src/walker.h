@@ -89,6 +89,8 @@ public:
     float steps_per_second;                                         /*!< Particles steps per second speeed.*/
 
     int in_ax_index;                                                /*!< Index of axon in which walker is inside (-1 if is in extracellular space)*/
+    
+    bool is_allowed_to_cross;                                       /*!< Is allowed to cross membrane, not illegal crossing */
     //! Default constructor.
     /*! Set all variables to cero.*/
     Walker();

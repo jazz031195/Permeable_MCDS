@@ -376,15 +376,17 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         // set icvf
         double icvf = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->axons_list);
         // set number of particles
-        if (params.ini_walker_flag == "intra"){
-            params.setNumWalkers(params.concentration*volume*icvf);
+        if (params.concentration != 0){
+            if (params.ini_walker_flag == "intra"){
+                params.setNumWalkers(params.concentration*volume*icvf);
+            }
+            else if (params.ini_walker_flag == "extra"){
+                params.setNumWalkers(params.concentration*volume*(1.0-icvf));
+            }
+            else{
+                params.setNumWalkers(params.concentration*volume);
+            } 
         }
-        else if (params.ini_walker_flag == "extra"){
-            params.setNumWalkers(params.concentration*volume*(1.0-icvf));
-        }
-        else{
-            params.setNumWalkers(params.concentration*volume);
-        } 
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
         
         cout << " ICVF :" << icvf<< endl;
@@ -509,15 +511,17 @@ void MCSimulation::addCylindersObstaclesFromFiles()
         double icvf = computeAreaICVF(params.min_limits, params.max_limits, dynamicsEngine->cylinders_list);
 
         // set number of particles
-        if (params.ini_walker_flag == "intra"){
-            params.setNumWalkers(params.concentration*volume*icvf);
+        if (params.concentration != 0){
+            if (params.ini_walker_flag == "intra"){
+                params.setNumWalkers(params.concentration*volume*icvf);
+            }
+            else if (params.ini_walker_flag == "extra"){
+                params.setNumWalkers(params.concentration*volume*(1.0-icvf));
+            }
+            else{
+                params.setNumWalkers(params.concentration*volume);
+            } 
         }
-        else if (params.ini_walker_flag == "extra"){
-            params.setNumWalkers(params.concentration*volume*(1.0-icvf));
-        }
-        else{
-            params.setNumWalkers(params.concentration*volume);
-        } 
         std::cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
 
         std::cout << " ICVF :" << icvf<< endl;

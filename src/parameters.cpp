@@ -35,6 +35,7 @@ Parameters::Parameters()
     gamma_icvf=EPS_VAL;
     gamma_output_configuration=0.0;
     gamma_num_cylinders=0;
+    concentration = 0;
 
     gamma_num_axons=0;
 
