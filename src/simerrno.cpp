@@ -582,24 +582,6 @@ bool SimErrno::checkNeuronsListFile(Parameters &params)
             return true;
         }
 
-        bool first=true;
-        unsigned enum_ = 1;
-        for( std::string line; getline( in, line ); )
-        {
-
-            std::vector<std::string> jkr = split_(line,' ');
-            if(jkr.size() != 8){
-                error( "Neuron list file is not in the correct format." ,cout);
-                string mess  = "Length of line : "+ to_string(jkr.size());
-                error( mess,cout);
-                in.close();
-                assert(0);
-                return true;
-            }
-
-
-            break;
-        }
         in.close();
 
     }

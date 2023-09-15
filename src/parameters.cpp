@@ -23,6 +23,7 @@ Parameters::Parameters()
 
     gamma_packing   = false;
     gaussian_packing= false;
+    neuron_packing  = false;
     uniform_packing = false;                      /*!< flag, true if a gamma distribution of spheres will be initialized        */
     hex_packing     = false;
     packing_cyl     = false;
