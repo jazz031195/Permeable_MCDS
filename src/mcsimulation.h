@@ -85,6 +85,8 @@ private:
     void addCylindersObstaclesFromFiles();
 
     void addAxonsObstaclesFromFiles();
+    
+    void addNeuronsObstaclesFromFiles();
 
     void addPLYObstaclesFromFiles();
 

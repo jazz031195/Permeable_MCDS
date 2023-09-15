@@ -45,7 +45,7 @@ public:
 
     /*! \fn     elasticBounceAgainsPlane
      */
-    void elasticBounceAgainsPlane(Eigen::Vector3d& ray_origin, Eigen::Vector3d& normal, double& t, Eigen::Vector3d &step);
+    static void elasticBounceAgainsPlane(Eigen::Vector3d& ray_origin, Eigen::Vector3d& normal, double& t, Eigen::Vector3d &step);
 
     /*!
      *  \param  walker to find the (closest) distance.

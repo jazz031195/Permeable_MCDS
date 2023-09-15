@@ -45,7 +45,7 @@ public:
                                         collison distance                                           */
     int obstacle_ind;                   /*!< In case of a generic obstacle saves the obstacle index.*/
 
-    double perm_crossing;                 /*!< Greater than 0 if particle crossed the membrane
+    double perm_crossing;               /*!< Greater than 0 if particle crossed the membrane        */
 
     /*! \fn  Default constructor.
      *  \brief Initialize everything with 0's and NULL states, the triangle and object indexes are set

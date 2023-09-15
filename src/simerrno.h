@@ -67,8 +67,14 @@ public:
      *  \brief Return false if any of the axon list files are inconsistent or bugged.
      *  In may assert the program.
     */
-
     static bool checkAxonsListFile(Parameters &params);
+
+    //! \fn checks if the given neuron list file make sense
+    /*! \param parameter instance
+     *  \brief Return false if any of the neuron list files are inconsistent or bugged.
+     *  In may assert the program.
+    */
+    static bool checkNeuronsListFile(Parameters &params);
 
     //! \fn checks if the given initial walker file make sense
     /*! \param parameter instance

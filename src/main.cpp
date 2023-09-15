@@ -15,6 +15,7 @@
 #include "voxel.h"
 #include "cylinder.h"
 #include "Axon.h"
+#include "Neuron.h"
 #include <thread>
 #include <simerrno.h>
 #include "sphere.h"

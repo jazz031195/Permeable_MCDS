@@ -52,6 +52,7 @@ public:
     std::vector<std::string> spheres_files;         /*!< file paths with a list of spheres obstacles                              */
     std::vector<std::string> cylinders_files;       /*!< file paths with a list of cilinders obstacles                              */
     std::vector<std::string> axons_files;           /*!< file paths with a list of axons obstacles                              */
+    std::vector<std::string> neurons_files;         /*!< file paths with a list of neuron obstacles                              */
     std::vector<std::string> PLY_files;             /*!< file paths with PLY obstacle files                                         */
     std::vector<double> PLY_scales;                 /*!< Auxiliary vector to save PLY file scales                                   */
     std::vector<float> ini_delta_pos;               /*!< Delta position for the wlakers                                             */
@@ -113,6 +114,9 @@ public:
     bool        packing_ax;
     bool        packing_s;
 
+    unsigned    num_neurons;
+    bool        neuron_packing;
+
 
     // For compilation
     bool        gamma_output_conf;
@@ -128,6 +132,7 @@ public:
     std::vector<std::string> sphere_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> cylinder_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> axon_permeability_files;    /*!< Obstacles permeability file if local                                       */
+    std::vector<std::string> neuron_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<double> PLY_permeability;
 
     bool subdivision_flag           = false;        /*!< flag to check if we have several voxel subdivision to compute the signal   */
@@ -400,6 +405,11 @@ private:
      *  \brief reads the parameters needed to define a gaussian packing of obstacle 
     */
     void readGaussianParams(std::ifstream &in);
+    /*! \fn readNeuronParams
+     *  \param file input iostreams
+     *  \brief reads the parameters needed to define a packing of neurons 
+    */
+    void readNeuronParams(std::ifstream &in);
 
     /*! \fn readHexagonalParams
      *  \param file input iostreams
@@ -447,6 +457,12 @@ private:
      *  \brief read a list of axons.
     */
     void readAxonList(std::ifstream &in);
+
+    /*! \fn readNeuronList
+     *  \param file input iostreams
+     *  \brief read a list of neurons.
+    */
+    void readNeuronList(std::ifstream &in);
 
 };
 

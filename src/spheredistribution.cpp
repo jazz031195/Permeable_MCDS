@@ -129,7 +129,7 @@ void SphereDistribution::printSubstrate(ostream &out)
     out << 1e-3 << endl;
     for(unsigned i = 0; i <spheres.size(); i++){
 
-        out << spheres[i].P[0]*1e3 << " " << spheres[i].P[1]*1e3 << " " << spheres[i].P[2]*1e3 << " "
+        out << spheres[i].center[0]*1e3 << " " << spheres[i].center[1]*1e3 << " " << spheres[i].center[2]*1e3 << " "
         << spheres[i].radius*1e3 << endl;;
     }
 }
@@ -147,7 +147,7 @@ bool SphereDistribution::checkForCollition(Sphere sph, Vector3d min_limits, Vect
     for(unsigned i = 0 ; i < spheres.size(); i++){
         for(unsigned j = 0 ; j < spheres_to_add.size(); j++){
 
-            double distance = (spheres[i].P - spheres_to_add[j].P).norm();
+            double distance = (spheres[i].center - spheres_to_add[j].center).norm();
 
             if(distance - (spheres[i].radius + spheres_to_add[j].radius) < 1e-15){
                 min_distance = 0;
@@ -164,7 +164,7 @@ bool SphereDistribution::checkForCollition(Sphere sph, Vector3d min_limits, Vect
     for(unsigned i = 0 ; i < spheres_to_add.size()-1; i++){
         for(unsigned j = i+1 ; j < spheres_to_add.size(); j++){
 
-            double distance = (spheres_to_add[i].P - spheres_to_add[j].P).norm();
+            double distance = (spheres_to_add[i].center - spheres_to_add[j].center).norm();
 
             if(distance - (spheres_to_add[i].radius + spheres_to_add[j].radius) < 1e-15){
                 min_distance = 0;
@@ -222,16 +222,16 @@ void SphereDistribution::checkBoundaryConditions(Sphere sph, std::vector<Sphere>
 
         double rad = sph.radius;
 
-        if(sph.P[i]+rad >= max_limits[i]){
+        if(sph.center[i]+rad >= max_limits[i]){
 
             Sphere tmp = sph;
-            tmp.P[i]+= min_limits[i] - max_limits[i];
+            tmp.center[i]+= min_limits[i] - max_limits[i];
             to_add.push_back(tmp);
         }
 
-        if(sph.P[i] - rad <= min_limits[i]){
+        if(sph.center[i] - rad <= min_limits[i]){
             Sphere tmp = sph;
-            tmp.P[i]+= max_limits[i] - min_limits[i];
+            tmp.center[i]+= max_limits[i] - min_limits[i];
             to_add.push_back(tmp);
         }
     }
@@ -243,15 +243,15 @@ void SphereDistribution::checkBoundaryConditions(Sphere sph, std::vector<Sphere>
             for(int i = 0 ; i < 3; i++){
                 double rad = jkr.radius;
 
-                if(jkr.P[i]+rad >= max_limits[i]){
+                if(jkr.center[i]+rad >= max_limits[i]){
                     Sphere tmp(jkr);
-                    tmp.P[i]+= min_limits[i] - max_limits[i];
+                    tmp.center[i]+= min_limits[i] - max_limits[i];
                     to_add.push_back(tmp);
                 }
 
-                if(jkr.P[i] - rad <= min_limits[i]){
+                if(jkr.center[i] - rad <= min_limits[i]){
                     Sphere tmp(jkr);
-                    tmp.P[i]+= max_limits[i] - min_limits[i];
+                    tmp.center[i]+= max_limits[i] - min_limits[i];
                     to_add.push_back(tmp);
                 }
             }
@@ -265,15 +265,15 @@ void SphereDistribution::checkBoundaryConditions(Sphere sph, std::vector<Sphere>
             for(int i = 0 ; i < 3; i++){
                 double rad = jkr.radius;
 
-                if(jkr.P[i]+rad >= max_limits[i]){
+                if(jkr.center[i]+rad >= max_limits[i]){
                     Sphere tmp(jkr);
-                    tmp.P[i]+= min_limits[i] - max_limits[i];
+                    tmp.center[i]+= min_limits[i] - max_limits[i];
                     to_add.push_back(tmp);
                 }
 
-                if(jkr.P[i] - rad <= min_limits[i]){
+                if(jkr.center[i] - rad <= min_limits[i]){
                     Sphere tmp(jkr);
-                    tmp.P[i]+= max_limits[i] - min_limits[i];
+                    tmp.center[i]+= max_limits[i] - min_limits[i];
                     to_add.push_back(tmp);
                 }
             }
@@ -287,15 +287,15 @@ void SphereDistribution::checkBoundaryConditions(Sphere sph, std::vector<Sphere>
             for(int i = 0 ; i < 3; i++){
                 double rad = jkr.radius;
 
-                if(jkr.P[i]+rad >= max_limits[i]){
+                if(jkr.center[i]+rad >= max_limits[i]){
                     Sphere tmp(jkr);
-                    tmp.P[i]+= min_limits[i] - max_limits[i];
+                    tmp.center[i]+= min_limits[i] - max_limits[i];
                     to_add.push_back(tmp);
                 }
 
-                if(jkr.P[i] - rad <= min_limits[i]){
+                if(jkr.center[i] - rad <= min_limits[i]){
                     Sphere tmp(jkr);
-                    tmp.P[i]+= max_limits[i] - min_limits[i];
+                    tmp.center[i]+= max_limits[i] - min_limits[i];
                     to_add.push_back(tmp);
                 }
             }
@@ -307,7 +307,10 @@ void SphereDistribution::checkBoundaryConditions(Sphere sph, std::vector<Sphere>
     {
         bool rep = false;
         for( unsigned j = 0; j < spheres_to_add.size(); j++){
-            if( (fabs(to_add[i].P[0] - spheres_to_add[j].P[0]) < 1e-12) && (fabs(to_add[i].P[1] - spheres_to_add[j].P[1]) < 1e-12)  && (fabs(to_add[i].P[2] - spheres_to_add[j].P[2]) < 1e-12) && (fabs(to_add[i].radius - spheres_to_add[j].radius) < 1e-14))
+            if( (fabs(to_add[i].center[0] - spheres_to_add[j].center[0]) < 1e-12) && 
+                (fabs(to_add[i].center[1] - spheres_to_add[j].center[1]) < 1e-12) && 
+                (fabs(to_add[i].center[2] - spheres_to_add[j].center[2]) < 1e-12) && 
+                (fabs(to_add[i].radius - spheres_to_add[j].radius) < 1e-14))
             {
                 rep = true;
                 break;

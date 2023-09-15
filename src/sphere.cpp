@@ -15,7 +15,7 @@ Sphere::~Sphere()
 Sphere::Sphere(const Sphere &sph)
 {
 
-    P               = sph.P;
+    center          = sph.center;
     radius          = sph.radius;
     id              = sph.id;
     volume          = sph.volume;
@@ -27,6 +27,8 @@ Sphere::Sphere(const Sphere &sph)
     diffusivity_i   = sph.diffusivity_i;
     prob_cross_e_i  = sph.prob_cross_e_i;
     prob_cross_i_e  = sph.prob_cross_i_e;
+
+    neighboring_spheres = sph.neighboring_spheres;
 }
 
 bool Sphere::checkCollision(Walker &walker, Eigen::Vector3d &step, double &step_lenght, Collision &colision)
@@ -34,7 +36,7 @@ bool Sphere::checkCollision(Walker &walker, Eigen::Vector3d &step, double &step_
     //Origin of the ray
     Vector3d O;
     walker.getVoxelPosition(O);
-    Vector3d m = O - P;
+    Vector3d m = O - center;
 
     //distance to the sphere center.
     double distance_to_sphere = m.norm();
@@ -159,7 +161,7 @@ inline bool Sphere::handleCollition(Walker& walker, Collision &colision, Vector3
 
         /* For a sphere, normal direction is equal to colision point */
         //Normal point
-        Eigen::Vector3d normal = (colision.colision_point - P).normalized();
+        Eigen::Vector3d normal = (colision.colision_point - center).normalized();
 
         Eigen::Vector3d temp_step = step;
         elasticBounceAgainsPlane(walker.pos_v,normal,colision.t,temp_step);
@@ -172,12 +174,17 @@ inline bool Sphere::handleCollition(Walker& walker, Collision &colision, Vector3
 
 }
 
+void Sphere::add_neighbor(Sphere* const neighbor)
+{
+    neighboring_spheres.push_back(neighbor);
+}
+
 double Sphere::minDistance(Walker &w){
 
     //Origin of the ray
     Vector3d O;
     w.getVoxelPosition(O);
-    Vector3d m = O - P;
+    Vector3d m = O - center;
     // minimum distance to the sphere center.
     double distance_to_sphere = m.norm();
 
@@ -189,7 +196,7 @@ double Sphere::minDistance(Walker &w){
 
 double Sphere::minDistance(Eigen::Vector3d O){
 
-    Vector3d m = O - P;
+    Vector3d m = O - center;
     // minimum distance to the sphere center.
     double distance_to_sphere = m.norm();
 
@@ -197,4 +204,13 @@ double Sphere::minDistance(Eigen::Vector3d O){
     double d_ = (distance_to_sphere - radius);
     return d_>0.0?d_:0.0;
 
+}
+
+bool Sphere::isInside(Eigen::Vector3d pos, double distance_to_be_inside) const{
+    
+    double d_ = (pos - this->center).norm();
+    d_ = d_-this->radius;
+    
+   // return d_>0.0?d_:0.0;
+    return d_ <= distance_to_be_inside;
 }

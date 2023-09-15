@@ -99,6 +99,12 @@ bool SimErrno::checkSimulationParameters(Parameters &params)
         info("Done...",cout);
     }
 
+    if(params.neurons_files.size() > 0){
+        info("Checking Neuron list format...",cout);
+        checkNeuronsListFile(params);
+        info("Done...",cout);
+    }
+
     if(params.ini_walkers_file.size() > 2){
         info("Checking walker initial position list format...",cout);
         checkInitWalkerFile(params);
@@ -563,6 +569,43 @@ bool SimErrno::checkAxonsListFile(Parameters &params)
     return true;
 }
 
+bool SimErrno::checkNeuronsListFile(Parameters &params)
+{
+    for(unsigned i = 0; i < params.neurons_files.size(); i++){
+        bool z_flag = false;
+        ifstream in(params.neurons_files[i]);
+
+        if(!in){
+            error( "Neuron list file cannot be open." ,cout);
+            assert(0);
+            in.close();
+            return true;
+        }
+
+        bool first=true;
+        unsigned enum_ = 1;
+        for( std::string line; getline( in, line ); )
+        {
+
+            std::vector<std::string> jkr = split_(line,' ');
+            if(jkr.size() != 8){
+                error( "Neuron list file is not in the correct format." ,cout);
+                string mess  = "Length of line : "+ to_string(jkr.size());
+                error( mess,cout);
+                in.close();
+                assert(0);
+                return true;
+            }
+
+
+            break;
+        }
+        in.close();
+
+    }
+    return true;
+}
+
 bool SimErrno::checkInitWalkerFile(Parameters &params)
 {
 
@@ -812,6 +855,9 @@ void SimErrno::printSimulatinInfo(Parameters &params, ostream &out,bool color)
     answer = (params.cylinders_files.size() > 0)?" true":" false";
     infoMenu(" Cylinder obstacles:    ------",  answer, out, color,35);
 
+    answer = (params.neurons_files.size() > 0) || params.neuron_packing ?" true":" false";
+    infoMenu(" Neuronal obstacles:    ------",  answer, out, color,34);
+    
     if(params.hex_packing)
         infoMenu(" Hexagonal Configuration:  ---", "true", out, color,35);
 

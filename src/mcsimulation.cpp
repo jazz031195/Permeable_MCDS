@@ -116,6 +116,8 @@ void MCSimulation::iniObstacles()
     addCylindersObstaclesFromFiles();
 
     addAxonsObstaclesFromFiles();
+    
+    addNeuronsObstaclesFromFiles();
 
     addPLYObstaclesFromFiles();
 
@@ -226,14 +228,14 @@ double computeICVF(Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, std::
         {
             for (uint j = 1; j < axons[i].spheres.size(); j++)
             {
-                double l = (axons[i].spheres[j - 1].P - axons[i].spheres[j].P).norm(); // distance between centers
+                double l = (axons[i].spheres[j - 1].center - axons[i].spheres[j].center).norm(); // distance between centers
                 double mean_r = (axons[i].spheres[j - 1].radius + axons[i].spheres[j].radius) / 2;
 
-                if (withinBounds(min_limits, max_limits,axons[i].spheres[j].P, axons[i].spheres[j].radius) && withinBounds(min_limits, max_limits,axons[i].spheres[j-1].P, axons[i].spheres[j-1].radius))
+                if (withinBounds(min_limits, max_limits,axons[i].spheres[j].center, axons[i].spheres[j].radius) && withinBounds(min_limits, max_limits,axons[i].spheres[j-1].center, axons[i].spheres[j-1].radius))
                 {
                     AreaC += l * M_PI * mean_r * mean_r;
                 }
-                else if (withinBounds(min_limits, max_limits,axons[i].spheres[j].P, 0) && withinBounds(min_limits, max_limits,axons[i].spheres[j-1].P, 0))
+                else if (withinBounds(min_limits, max_limits,axons[i].spheres[j].center, 0) && withinBounds(min_limits, max_limits,axons[i].spheres[j-1].center, 0))
                 {
                     AreaC += l * M_PI * mean_r * mean_r/2;
                 }
@@ -284,7 +286,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         in.open(params.axons_files[i]);
 
         double x,y,z,r;
-        int ax_id, sph_id, p;
+        int ax_id, sph_id, p
+;
         int last_ax_id = -1;
         std::string type_object;
         std::string header;
@@ -295,10 +298,9 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
         int header_size = 8;
 
-        for(unsigned j = 0; j < header_size; j++){  
-            in >>header;
-            //cout << "header :" << header << endl;
-        } 
+        for(int j = 0; j < header_size; j++)
+            in >> header;
+        
 
         while (in >>ax_id >> sph_id >> type_object >> x >> y >> z >> r >> p){
 
@@ -359,9 +361,9 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         double max_limits, min_limits;
         // z of last sphere of first axon
         Axon first_axon = dynamicsEngine->axons_list[0];
-        max_limits = first_axon.spheres[first_axon.spheres.size()-1].P[2]; 
+        max_limits = first_axon.spheres[first_axon.spheres.size()-1].center[2]; 
         // z of first sphere of first axon
-        min_limits = first_axon.spheres[0].P[2]; 
+        min_limits = first_axon.spheres[0].center[2]; 
         cout << "min_limits : " << min_limits << endl;
         cout << "max_limits : " << max_limits << endl;
 
@@ -397,6 +399,204 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
         in.close();
         
+    }
+}
+
+void MCSimulation::addNeuronsObstaclesFromFiles()
+{
+
+    // Read neurons from file
+    for(unsigned i = 0; i < params.neurons_files.size(); i++){
+
+        std::ifstream in(params.neurons_files[i]);
+
+        if(!in){
+            std::cout <<  "[ERROR] Unable to open:" << params.neurons_files[i] << std::endl;
+            return;
+        }
+        unsigned enum_ = 1;
+
+        bool first = true;
+
+        for( std::string line; getline( in, line ); )
+        {
+            if(first) {
+                first  = false;
+                enum_ += 1;
+                continue;
+                }
+            if (enum_ == 2 || enum_ == 3 || enum_ == 4 || enum_ == 5 || enum_ == 6){
+                enum_ += 1;
+                continue;
+            }
+
+            std::vector<std::string> jkr = split(line,' ');
+            if (jkr.size() != 5 && jkr.size() != 2){
+                std::cout << jkr.size() <<  " elements per line" << std::endl;
+                std::cout << "wrong number of elements per line in file" << std::endl;
+            }
+            break;
+        }
+        in.close();
+
+        // Permeability file - if any
+        double perm_; 
+
+        std::ifstream in_perm;
+        if(params.neuron_permeability_files.size() > 0){
+            in_perm.open(params.neuron_permeability_files[i]);
+        }
+
+        // Diffusion coefficients
+        double diff_i; 
+        double diff_e;
+
+        in.open(params.neurons_files[i]);
+        cout << params.neurons_files[i] << endl;
+        double x,y,z,r;
+        double scale;
+        double volume_inc_perc, dyn_perc, icvf;
+        double max_limits, min_limits;
+
+        in >> scale;
+        in >> volume_inc_perc;
+        in >> dyn_perc;
+        in >> icvf;
+        in >> min_limits;
+        in >> max_limits;
+
+        std::vector<Sphere> spheres_ ;
+        std::vector<Axon> subbranches_ ;
+        std::vector<Dendrite> dendrites_ ;
+        Sphere sphere_;
+        Sphere soma;
+        string part;
+        int id;
+
+        for( std::string line; getline( in, line ); ){
+                 
+            std::vector<std::string> jkr = split(line,' ');
+            int ax_id = 0;
+            if(jkr.size() == 4){
+                x = stod(jkr[0]);
+                y = stod(jkr[1]);
+                z = stod(jkr[2]);
+                r = stod(jkr[3]);
+                sphere_ = Sphere(id, ax_id, Eigen::Vector3d(x,y,z), r, scale);
+                if(spheres_.size() > 0)
+                {
+                    sphere_.add_neighbor(new Sphere(spheres_[spheres_.size() - 1]));
+                    spheres_[spheres_.size() - 1].add_neighbor(new Sphere(sphere_));
+                }
+                
+                spheres_.push_back(sphere_);
+        
+                if(subbranches_.size() > 0 && spheres_.size() == 0)
+                {
+                    sphere_.add_neighbor(new Sphere(subbranches_[0].spheres[0]));
+                    subbranches_[0].spheres[0].add_neighbor(new Sphere(sphere_));
+                    
+                }
+                else if (spheres_.size() == 0)
+                {
+                    soma.add_neighbor(new Sphere(sphere_));
+                    sphere_.add_neighbor(new Sphere(soma));
+                }
+                cout << "adding sphere, radius :" << sphere_.radius  << endl;
+            
+            }
+            if(jkr.size() == 2){
+                part = jkr[0];
+                id = stod(jkr[1]);
+
+                // If flag "soma", create a soma
+                if( part.find("Soma") != std::string::npos && spheres_.size() == 1)
+                {
+                    soma = spheres_[0];
+                    soma.setPercolation(perm_);
+                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                    diff_i = params.diffusivity_intra; 
+                    diff_e = params.diffusivity_extra;
+                    soma.setDiffusion(diff_i, diff_e);
+                    spheres_.clear();
+                }
+                // If Segment, create it from spheres_ and store it into axons_
+                else if( part.find("Segment") != std::string::npos && spheres_.size() > 0)
+                {
+                    Eigen::Vector3d begin = {min_limits, min_limits, min_limits};
+                    Eigen::Vector3d end   = {max_limits, max_limits, max_limits};
+                    Axon subbranch (id, begin, end, r);
+                    subbranch.set_spheres(spheres_);
+
+                    for (unsigned i = 0; i < spheres_.size(); i++){
+                        spheres_[i].setPercolation(perm_);
+                        // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                        diff_i = params.diffusivity_intra; 
+                        diff_e = params.diffusivity_extra;
+                        spheres_[i].setDiffusion(diff_i, diff_e);
+                    }
+
+                    spheres_.clear();
+                    subbranches_.push_back(subbranch);
+                    cout << "adding segment "  << endl;
+                    //TODO [ines] : add proximal & distal branching reading
+                }
+                // If dendrite, create it from spheres_ and store it into axons_
+                else if( part.find("Dendrite") != std::string::npos && subbranches_.size() > 0)
+                {
+                    Dendrite dendrite;
+                    dendrite.set_dendrite(subbranches_);
+                    subbranches_.clear();
+                    dendrites_.push_back(dendrite);
+                    cout << "adding dendrite : "  << id << endl;
+                }
+                // If neuron, create it from soma and axons
+                else if( part.find("Neuron") != std::string::npos)
+                {
+                    // Local permeability - Different for each obstacle
+                    if(in_perm){
+                        in_perm >> perm_;
+                    }
+                    // Global permeability - Same for all obstacle
+                    else{
+                        perm_ = params.obstacle_permeability;
+                    } 
+                    Neuron neuron(dendrites_, soma);
+
+                    for(size_t d=0; d < neuron.dendrites.size(); ++d)
+                    {
+                        for(size_t s=0; s < neuron.dendrites[d].subbranches.size(); ++s)
+                        {
+                            for(size_t sph=0; sph < neuron.dendrites[d].subbranches[s].spheres.size(); ++sph)
+                            {
+                                neuron.dendrites[d].subbranches[s].spheres[i].setPercolation(perm_);
+                                // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                                diff_i = params.diffusivity_intra; 
+                                diff_e = params.diffusivity_extra;
+                                neuron.dendrites[d].subbranches[s].spheres[i].setDiffusion(diff_i, diff_e);
+                            }
+                        }
+                    }
+                    dynamicsEngine->neurons_list.push_back(neuron);
+                    dendrites_.clear();
+                    // TODO : why nb_dendrites not printed ? [ines]
+                    cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
+                }
+            }
+        }
+
+        params.max_limits = Eigen::Vector3d(max_limits, max_limits, max_limits);
+        params.min_limits = Eigen::Vector3d(min_limits, min_limits, min_limits);
+        params.gamma_icvf = icvf;
+
+        in.close();
+
+
+        // double somaFraction, dendritesFraction;
+        // double min_distance_from_border = barrier_tickness + 5e-3 + params.sim_duration / params.num_steps / 1000;
+        // std::cout << params.sim_duration << params.num_steps << std::endl;
+        // tie(icvf, somaFraction, dendritesFraction) = computeICVF(min_distance_from_border);
+        // std::cout << icvf << somaFraction << dendritesFraction << std::endl;
     }
 }
 
@@ -451,12 +651,11 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
         int header_size = 8;
 
-        for(unsigned j = 0; j < header_size; j++){  
-            in >>header;
-            //cout << "header :" << header << endl;
-        } 
+        for(int j = 0; j < header_size; j++) 
+            in >> header;
+        
 
-        while (in >>cyl_id >> sph_id >> type_object >> x >> y >> z >> r){
+        while (in >> cyl_id >> sph_id >> type_object >> x >> y >> z >> r){
 
             // convert to mm
             x = x/1000.0;

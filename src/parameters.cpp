@@ -22,6 +22,7 @@ Parameters::Parameters()
     hex_packing_separation  = 0;
 
     gamma_packing   = false;
+    gaussian_packing= false;
     uniform_packing = false;                      /*!< flag, true if a gamma distribution of spheres will be initialized        */
     hex_packing     = false;
     packing_cyl     = false;
@@ -425,6 +426,10 @@ void Parameters::readObstacles(ifstream& in)
             readAxonList(in);
             num_obstacles++;
         }
+        if((str_dist(tmp,"<neurons_list>") <= 2)){
+            readNeuronList(in);
+            num_obstacles++;
+        }
         if(str_dist(tmp,"oriented_cylinders_list") <= 2){
             string path;
             in >> path;
@@ -627,10 +632,12 @@ void Parameters::readPackingParams(ifstream &in)
             readUniformParams(in);
 
         }
-        
         if(str_dist(tmp,"<gaussian_packing>") <= 1){
             readGaussianParams(in);
 
+        }
+        if(str_dist(tmp,"<neuron_packing>") <= 1){
+            readNeuronParams(in);
         }
         if(str_dist(tmp,"<hex_packing>") <=1){
             readHexagonalParams(in);
@@ -820,6 +827,41 @@ void Parameters::readGaussianParams(ifstream &in)
     }
 }
 
+void Parameters::readNeuronParams(ifstream &in)
+{
+
+    neuron_packing = true;
+
+    string tmp="";
+
+    while(str_dist(tmp,"</neuron_packing>") > 0)
+    {
+        in >> tmp;
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+
+        if(str_dist(tmp,"num_obstacles") <= 1){
+    
+            string line;
+            getline(in, line);
+            istringstream iss(line);
+            unsigned subs;
+            while (iss >> subs){num_neurons = subs;};
+
+        }      
+        else if(str_dist(tmp,"icvf") <= 1){
+            in >> packing_icvf;
+        }
+        else if(str_dist(tmp,"") == 0){
+            in.clear();
+            //in.ignore();
+        }
+        else if(str_dist(tmp,"</neuron_packing>") == 0){
+            break;
+        }
+
+        tmp = "";
+    }
+}
 
 void Parameters::readSubdivisionFile()
 {
@@ -999,6 +1041,37 @@ void Parameters::readAxonList(ifstream& in)
                 string path;
                 in >> path;
                 axon_permeability_files.push_back(path);
+            }
+        }
+    } 
+}
+
+void Parameters::readNeuronList(ifstream& in)
+{
+    string path;
+    in >> path;
+    neurons_files.push_back(path);
+
+    string tmp="";
+
+    while(!(str_dist(tmp,"</neurons_list>") <= 2))
+    {
+        in >> tmp;  
+
+        if(!(str_dist(tmp,"permeability") <= 2))
+        {
+            std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+            if(str_dist(tmp,"global") <= 1)
+            {
+                // One permeability for all obstacles
+                in >> obstacle_permeability;
+            }
+            if(str_dist(tmp,"local") <= 1)
+            {
+                // One permeability per obstacles
+                string path;
+                in >> path;
+                neuron_permeability_files.push_back(path);
             }
         }
     } 

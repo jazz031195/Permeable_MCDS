@@ -8,7 +8,9 @@
 #include "gaussiandistribution.h"
 #include "spheredistribution.h"
 #include "cylinderdistribution.h"
-
+#include "neurondistribution.h"
+#include <chrono>
+using namespace std::chrono;
 
 using namespace std;
 
@@ -536,6 +538,7 @@ void ParallelMCSimulation::specialInitializations()
 
         } 
 
+
     }
 
     if(params.uniform_packing == true){
@@ -620,6 +623,45 @@ void ParallelMCSimulation::specialInitializations()
             SimErrno::info("Done.\n",cout);
         }
 
+    }
+
+    if(params.neuron_packing == true){
+
+        string message = "Initialializing neuron distribution";
+        SimErrno::info(message,cout);
+        double diffusivity = std::max(params.diffusivity_extra, params.diffusivity_intra);
+        double step_length = sqrt(6.0 * diffusivity * params.sim_duration / params.num_steps);
+        NeuronDistribution neuron_dist(params.num_neurons, params.gamma_icvf
+                                      ,params.min_limits, params.max_limits, step_length);
+
+        auto start = high_resolution_clock::now();
+        neuron_dist.createSubstrate();
+        auto stop = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(stop-start);
+        cout << duration.count() << endl;
+
+        params.max_limits = neuron_dist.max_limits_vx;
+        params.min_limits = neuron_dist.min_limits_vx;
+
+        if(params.voxels_list.size()<=0){
+            pair<Eigen::Vector3d,Eigen::Vector3d> voxel_(params.min_limits,params.max_limits);
+            params.voxels_list.push_back(voxel_);
+        }
+        else{
+            params.voxels_list[0].first =  params.min_limits;
+            params.voxels_list[0].second = params.max_limits;
+        }
+
+        string file = params.output_base_name + "_neurons_list.txt";
+        params.neurons_files.push_back(file);
+
+        ofstream out(file);
+
+        neuron_dist.printSubstrate(out);
+
+        //params.cylinders_files.push_back(file);
+        out.close();
+        SimErrno::info("Done.\n",cout);
     }
 
 }

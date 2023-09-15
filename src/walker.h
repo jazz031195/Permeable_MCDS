@@ -55,6 +55,8 @@ public:
     CylinderCollisionSphere collision_sphere_cylinders;             /*!< Collision sphere for collition against cylidners                       */
 
     AxonCollisionSphere collision_sphere_axons;                     /*!< Collision sphere for collition against axons                      */
+    
+    NeuronCollisionSphere collision_sphere_neurons;                     /*!< Collision sphere for collition against neurons                      */
 
     PLYCollisionSphere collision_sphere_ply;                        /*!< Collision sphere for collition against PLY meshes                      */
 
@@ -89,6 +91,20 @@ public:
     float steps_per_second;                                         /*!< Particles steps per second speeed.*/
 
     int in_ax_index;                                                /*!< Index of axon in which walker is inside (-1 if is in extracellular space)*/
+    
+    int in_neuron_index;                                            /*!< Index of neuron in which walker is inside (-1 if is in extracellular space)*/
+    
+    int in_dendrite_index;                                          /*!< Index of dendrites in which walker is inside (-1 if is in extracellular space)*/
+    
+    int in_subbranch_index;                                          /*!< Index of subbranch in which walker is inside (-1 if is in extracellular space)*/
+    
+    int in_soma_index;                                          /*!< Index of subbranch in which walker is inside (-1 if is in extracellular space)*/
+
+    std::vector<int> in_sph_index;                                       /*!< Index of spheres in which walker is inside (-1 if is in extracellular space)*/
+    
+    static int cross_soma_dendrites;                                          /*!< Auxiliar index to save in which subbranch of the dendrite of the Neuron the walker is    */
+    
+    static int cross_dendrites_soma;                                          /*!< Auxiliar index to save in which subbranch of the dendrite of the Neuron the walker is    */
     
     bool is_allowed_to_cross;                                       /*!< Is allowed to cross membrane, not illegal crossing */
     //! Default constructor.

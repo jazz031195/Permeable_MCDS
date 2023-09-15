@@ -8,6 +8,9 @@
 #include "cylinder.h"
 #include "sphere.h"
 
+int Walker::cross_dendrites_soma  = 0;
+int Walker::cross_soma_dendrites  = 0;
+
 Walker::Walker()
 {
     pos_r = pos_v.setZero(3,1);
@@ -18,7 +21,13 @@ Walker::Walker()
     intra_extra_consensus = intra_coll_count = extra_coll_count = rejection_count = steps_count = 0;
     steps_per_second = 0;
     colision_in = colision_ext = crossing_in = crossing_ext= 0;
-
+    in_ax_index           = -1;
+    in_neuron_index       = -1;
+    in_soma_index         = -1;
+    in_dendrite_index     = -1;
+    in_subbranch_index    = -1;
+    in_sph_index.clear();
+    is_allowed_to_cross   = false;
 }
 
 Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
@@ -40,9 +49,16 @@ Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, 
     status = free;
     index = 0;
     initial_location  = location = unknown;
-    intra_extra_consensus = intra_coll_count = extra_coll_count =0;
+    intra_extra_consensus = intra_coll_count = extra_coll_count = 0;
     steps_per_second = 0;
-    colision_in = colision_ext = crossing_in = crossing_ext= 0;
+    colision_in = colision_ext = crossing_in = crossing_ext = 0;
+    in_ax_index           = -1;
+    in_neuron_index       = -1;
+    in_soma_index         = -1;
+    in_dendrite_index     = -1;
+    in_subbranch_index    = -1;
+    in_sph_index.clear();
+    is_allowed_to_cross   = false;
 }
 
 void Walker::getRealPosition(double &x_, double &y_, double &z_) const

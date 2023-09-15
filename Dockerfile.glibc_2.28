@@ -1,0 +1,39 @@
+# How to:
+# cd /Users/ideriedm/Documents/MCDS/MCDS-dFMRI
+# To build the image (needed only once): (replace "aarch64" with "x86_64" on desktop)
+#   docker build -f Dockerfile.glibc_2.28 . --tag=glibc_2.28 --build-arg ARCH=aarch64
+# To execute compilation:
+#   docker run -i -t -v .:/dockerworkdir glibc_2.28
+
+# This one uses glibc 2.28
+FROM debian:oldoldstable-slim
+
+# Install gcc and other dependencies in the image using the package manager
+RUN apt update && apt install -yy g++-x86-64-linux-gnu git tar curl make
+
+# Install cmake 3.26 (the version in the package manager is too old)
+ARG ARCH
+ENV INSTALLER=cmake-3.26.4-linux-$ARCH.sh
+RUN curl -O# https://cmake.org/files/v3.26/$INSTALLER
+RUN chmod +x $INSTALLER
+RUN mkdir /cmake
+RUN bash $INSTALLER --prefix=/cmake --skip-license
+RUN rm $INSTALLER
+
+# TODO: clear apt cache to gain space
+
+# entry point: Execute the project build commands
+WORKDIR /dockerworkdir
+CMD /cmake/bin/cmake \
+    -DCMAKE_BUILD_TYPE:STRING=Release \
+    -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/x86_64-linux-gnu-gcc \
+    -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/x86_64-linux-gnu-g++ \
+    -S./ \
+    -B./build_glibc_2.28 \
+    -G "Unix Makefiles" \
+&& /cmake/bin/cmake \
+    --build build_glibc_2.28 \
+    --config Release \
+    --target MC-DC_Simulator \
+    -j 10 \
+    --

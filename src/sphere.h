@@ -18,12 +18,13 @@ class Sphere : public Obstacle
 public:
 
 
-    Eigen::Vector3d P;      /*!< Center of the sphere   */
+    Eigen::Vector3d center;      /*!< Center of the sphere   */
     double radius;          /*!< Radius of the sphere   */
 
     double volume;
 
     double ax_id;           /*!< ID of axon sphere belongs to */
+    std::vector<Sphere*> neighboring_spheres; /* Direct neighboring sphere(s) */
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -33,12 +34,12 @@ public:
     ~Sphere(); 
 
     /*!
-     *  \param P_ Sphere origin
+     *  \param center_ Sphere origin
      *  \param radius_ sphere's radius
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-    Sphere(int id_, int ax_id_, Eigen::Vector3d P_, double radius_, double scale = 1, double percolation_=0.0):P(P_*scale), radius(radius_*scale){
+    Sphere(int id_, int ax_id_, Eigen::Vector3d center_, double radius_, double scale = 1, double percolation_=0.0):center(center_*scale), radius(radius_*scale){
         percolation = percolation_;
         id = id_;
         ax_id = ax_id_;
@@ -77,6 +78,9 @@ public:
      */
 
     double minDistance(Eigen::Vector3d O);
+    bool isInside(Eigen::Vector3d pos, double distance_to_be_inside) const;
+
+    void add_neighbor(Sphere* const neighbor);
 
 private:
 

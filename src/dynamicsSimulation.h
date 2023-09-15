@@ -21,6 +21,7 @@
 #include "voxel.h"
 #include "cylinder.h"
 #include "Axon.h"
+#include "Neuron.h"
 #include "sentinel.h"
 #include "propagator.h"
 #include "sphere.h"
@@ -53,7 +54,9 @@ public:
     std::vector <Cylinder> cylinders_list;          /*!< vector with all the isntances of "Cylider" obstacles                       */
     std::vector<unsigned>  cylinders_deque;         /*!< deque with the indexes of the cylinders (used for optmization)             */
     std::vector <Axon> axons_list;                  /*!< vector with all the isntances of "Axon" obstacles                       */
+    std::vector <Neuron> neurons_list;                  /*!< vector with all the isntances of "Neuron" obstacles                       */
     std::vector<unsigned>  axons_deque;             /*!< deque with the indexes of the axons (used for optmization)             */
+    std::vector<unsigned>  neurons_deque;             /*!< deque with the indexes of the neurons (used for optmization)             */
     std::vector<std::vector<unsigned>> ply_deque;   /*!< deque with the indexes of the triangles of all ply's (used for opt)        */
     std::vector <Voxel> voxels_list;                /*!< vector with all the voxels to be simulated (if any)                        */
     Propagator propagator;                          /*!< Propagator object to compute and save the particles MSD                    */
@@ -142,7 +145,7 @@ public:
      *         with a defined "inside region" can be considered. Voxel periodicity is not
      *         considered
      */
-    bool isInIntra(Eigen::Vector3d& position, int &ax_id, double distance_to_be_intra_ply=1e-6);
+    bool isInIntra(Eigen::Vector3d& position, int &ax_id, int& neuron_id, int& dendrite_id, int& subbranch_id, std::vector<int>& in_sph_id, double distance_to_be_intra_ply=1e-6);
 
     /*!
      * \brief   Writes to disk the final propagator matrix.
@@ -152,6 +155,8 @@ public:
     bool isInsideCylinders(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 
     bool isInsideAxons(Eigen::Vector3d &position, int &ax_id, double distance_to_be_inside);
+
+    bool isInsideNeurons(Eigen::Vector3d &position, int &neuron_id, int &dendrite_id, int &subbranch_id, vector<int> &in_sph_id, double barrier_thickness);
 
     bool isInsidePLY(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 
@@ -295,8 +300,10 @@ private:
      * \brief   finds an intra celullar 3d position inside the voxel (needs a voxel initialized).
      * \param   intra_pos vector to save the 3d position.
      */
-    inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &ax_id);
+    inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &ax_id, int& neuron_id, int& dendrite_id, int& subbranch_id, std::vector<int>& sph_id);
 
+    Eigen::Vector3d getAnIntraCellularPosition_dendrite(bool const& random_pos);
+    Eigen::Vector3d getAnIntraCellularPosition_soma(bool const& random_pos);
     /*!
      * \brief   finds an extra cellular 3d position inside the voxel (needs a voxel initialized).
      * \param   extra_pos vector to save the 3d position.
