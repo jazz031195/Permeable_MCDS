@@ -23,9 +23,9 @@ void GammaDistribution::displayDistribution()
     const int nrolls=10000;  // number of experiments
     const int nstars=100;    // maximum number of stars to distribute
     unsigned tot_num_obstacles = 0; 
-    for(int i=0;i<num_obstacles.size(); ++i){
+    for(size_t i=0; i<num_obstacles.size(); ++i)
         tot_num_obstacles += num_obstacles[i];
-    }
+    
 
     string message;
     std::random_device rd;
@@ -34,18 +34,18 @@ void GammaDistribution::displayDistribution()
     int p[11]={};  
 
 
-    for(int i=0;i<num_obstacles.size(); ++i){
-        unsigned curr_counter    = 0; 
+    for(size_t i=0; i < num_obstacles.size(); ++i){
+        // unsigned curr_counter    = 0; 
         double curr_alpha   = alpha[i];
         double curr_beta    = beta[i];
-        double curr_num_obstacle = num_obstacles[i];
+        // double curr_num_obstacle = num_obstacles[i];
 
         unsigned curr_nb_roll   = nrolls * num_obstacles[i]/tot_num_obstacles; 
 
         std::gamma_distribution<double> distribution(curr_alpha,curr_beta);
 
 
-        for (int i=0; i<curr_nb_roll; ++i) {
+        for (unsigned i=0; i < curr_nb_roll; ++i) {
             double number = distribution(generator);
             if (number<10) ++p[int(number)];
             else ++p[10];
@@ -70,7 +70,7 @@ std::vector<double> GammaDistribution::createRadiiList(){
 
 
     unsigned tot_num_obstacles = 0; 
-    for(int i=0;i<num_obstacles.size(); ++i){
+    for(size_t i=0;i<num_obstacles.size(); ++i){
         tot_num_obstacles += num_obstacles[i];
     }
    
@@ -79,7 +79,7 @@ std::vector<double> GammaDistribution::createRadiiList(){
     unsigned counter    = 0; 
     double rad_curr     = 0.0;
 
-    for(int i=0;i<num_obstacles.size(); ++i){
+    for(size_t i=0;i<num_obstacles.size(); ++i){
         unsigned curr_counter    = 0; 
         double curr_alpha   = alpha[i];
         double curr_beta    = beta[i];

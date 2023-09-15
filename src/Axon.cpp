@@ -511,7 +511,7 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& dista
         }
         // find common ids in all 3 axes
         std::vector<int> spheres_to_check_all_axes = findCommonIntegers(spheres_id_to_check[0], spheres_id_to_check[1], spheres_id_to_check[2]);
-        for (auto i = 0; i < spheres_to_check_all_axes.size(); ++i) 
+        for (size_t i = 0; i < spheres_to_check_all_axes.size(); ++i) 
         {
             Sphere sphere_to_check = spheres[spheres_to_check_all_axes[i]];
             if (sphere_to_check.minDistance(position) <= distance_to_be_inside)
