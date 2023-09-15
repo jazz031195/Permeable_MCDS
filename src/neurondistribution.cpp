@@ -564,8 +564,7 @@ void NeuronDistribution::printSubstrate(ostream &out) const
         out << neurons[i].soma.center[0] << " " 
         << neurons[i].soma.center[1] << " "
         << neurons[i].soma.center[2] << " "
-        << neurons[i].soma.radius    <<  " "
-        << 0 << endl; //bool_active = false for now
+        << neurons[i].soma.radius    << endl; 
         out << "Soma " + to_string(i) << endl;
 
         for (size_t j = 0; j < neurons[i].dendrites.size(); j++)

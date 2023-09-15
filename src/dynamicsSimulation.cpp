@@ -9,6 +9,7 @@
  * @version 1.42 stable
  */
 
+#include "doctest.h"
 
 #include "dynamicsSimulation.h"
 #include "constants.h"
@@ -1221,7 +1222,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         //flag in case there was any error with the particle.
         back_tracking = false;
 
-        //cout << "Walker :" << w << endl;
+        cout << "Walker :" << w << endl;
 
         walker.setIndex(w);
 
@@ -1260,11 +1261,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
             // Moves the particle. Checks collision and handles bouncing.
 
-            try{
-
+            try
+            {
                 //updateWalkerPosition(step);
                 updateWalkerPosition(step, t);
-
             }
             catch(Sentinel::ErrorCases error){
 
@@ -1468,6 +1468,103 @@ void DynamicsSimulation::generateDirectedStep(Vector3d &new_step, Vector3d &dire
  * @return True if a bouncing in needed.
  */
 //bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step) {
+
+TEST_CASE("updateWalkerPosition")
+{
+    cout << "updateWalkerPosition" << endl;
+
+    // Create soma
+    Vector3d center(0.05, 0.05, 0.05);
+    double radius_soma     = 10e-3;
+    double radius_dendrite = 0.5e-3;
+    int sphere_id          = 0;
+    Sphere soma(sphere_id, 0, center, radius_soma);
+
+    // Create a single dendrite: 1 stick of 10 spheres
+    vector<Sphere> dendrite_spheres;
+    int branch_id = 0;
+    for (size_t i = 0; i < 10; ++i)
+    {
+        Vector3d next_center(center[0] + radius_soma + i * radius_dendrite / 4, center[1], center[2]);
+        dendrite_spheres.push_back(Sphere(i, branch_id, next_center, radius_dendrite));
+    }
+    Axon subbranch(branch_id, Vector3d(), Vector3d(), radius_dendrite);
+    subbranch.set_spheres(dendrite_spheres);
+    Dendrite d;
+    d.add_subbranch(subbranch);
+
+    // Create a neuron
+    Neuron n(center, radius_soma, 0);
+    n.add_dendrite(d);
+
+    // Add it to the list of neurons
+    vector<Neuron> neurons({n});
+
+    struct DynamicsSimulationTest : DynamicsSimulation
+    {
+        bool updateWalkerPosition(Eigen::Vector3d &step)
+        {
+            unsigned t = 0;
+            return DynamicsSimulation::updateWalkerPosition(step, t);
+        }
+    } simu;
+
+
+    auto empty_vect = vector<unsigned int>();
+    simu.walker.collision_sphere_cylinders.collision_list     = &empty_vect;
+    simu.walker.collision_sphere_spheres.collision_list       = &empty_vect;
+    simu.walker.collision_sphere_axons.collision_list         = &empty_vect;
+    auto empty_vect_vect = vector<vector<unsigned int>>();
+    simu.walker.collision_sphere_ply.collision_list           = &empty_vect_vect;
+
+    vector <PLYObstacle> plyObstacles_list;      
+    vector <Cylinder> cylinders_list;            
+    vector <Sphere> spheres_list;                
+    vector <Sphere> dyn_spheres_list;    
+    vector <Axon> axons_list;                    
+
+    simu.plyObstacles_list = plyObstacles_list;
+    simu.cylinders_list    = cylinders_list;
+    simu.spheres_list      = spheres_list;
+    simu.axons_list        = axons_list;
+    simu.neurons_list      = neurons;
+
+
+    Vector3d direction(0, 1, 0);
+    double step_length = 6e-4;
+    simu.step = direction;
+    simu.curr_step_lenght = step_length;
+    simu.walker.location = simu.walker.initial_location = Walker::intra;  
+    simu.walker.in_neuron_index = 0;
+
+    auto neur_list = vector<unsigned int>({0});
+    simu.walker.collision_sphere_neurons.collision_list = &neur_list;
+    simu.walker.collision_sphere_neurons.pushToBigSphere(0);
+    simu.walker.collision_sphere_neurons.pushToSmallSphere(0);
+
+    auto ini_pos = Vector3d(center[0] + radius_soma, center[1], center[2]);
+    simu.walker.setInitialPosition(ini_pos);
+    n.isPosInsideNeuron(ini_pos, barrier_tickness, false, simu.walker.in_soma_index, simu.walker.in_dendrite_index,
+                        simu.walker.in_subbranch_index, simu.walker.in_sph_index);
+    CHECK_EQ(simu.walker.in_neuron_index, 0);
+    CHECK_EQ(simu.walker.in_dendrite_index, 0);
+    CHECK_EQ(simu.walker.in_subbranch_index, 0);
+
+    Collision colision;
+    SUBCASE("trivial hit")
+    {
+        bool need_bouncing = simu.updateWalkerPosition(simu.step);
+
+        CHECK(!need_bouncing);
+        CHECK_EQ(simu.step, direction);
+        CHECK_EQ(simu.walker.last_pos_r, ini_pos + radius_dendrite*direction);
+        CHECK_EQ(simu.walker.last_pos_v, ini_pos + radius_dendrite*direction);
+        CHECK_EQ(simu.walker.pos_r, ini_pos + direction * (2*radius_dendrite - step_length));
+        CHECK_EQ(simu.walker.pos_v, ini_pos + direction * (2*radius_dendrite - step_length));
+    }
+    // TODO: count checkObstacleCollision calls
+}
+
 bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t) {
   
     //new step to take
@@ -1511,6 +1608,14 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         // True if there was a collision and the particle needs to be bounced.
         update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, colision);
 
+        if(!walker.is_allowed_to_cross)
+        {
+            if(walker.initial_location != walker.location)
+            {
+                sentinela.checkErrors(walker, params, (plyObstacles_list.size() == 0), bouncing_count);
+                break;
+            }
+        }
         // Updates the position and bouncing direction.
         if(update_walker_status){
 
@@ -1758,6 +1863,45 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
 }
 
 //bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &colision)
+
+TEST_CASE("updateWalkerPositionAndHandleBouncing")
+{
+    cout << "updateWalkerPositionAndHandleBouncing" << endl;
+    struct DynamicsSimulationTest : DynamicsSimulation
+    {
+        bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d &amended_step, double &tmax, Collision &colision)
+        {
+            unsigned t = 0;
+            return DynamicsSimulation::updateWalkerPositionAndHandleBouncing(amended_step, tmax, colision, t);
+        }
+    } simu;
+
+    Vector3d direction(0, 1, 0);
+    double step_length = 6e-4;
+    double radius_dendrite = 0.5e-3;
+
+    simu.step = direction;
+
+    Collision colision;
+
+    SUBCASE("trivial hit")
+    {
+        colision.type = Collision::hit;
+        colision.t = radius_dendrite;
+        colision.col_location = Collision::inside;
+        colision.bounced_direction = -direction;
+
+        Vector3d bounced_step = direction;
+        double tmax = step_length;
+        bool bounced = simu.updateWalkerPositionAndHandleBouncing(bounced_step, tmax, colision);
+
+        CHECK(bounced);
+        CHECK_EQ(simu.step, direction);
+        CHECK_EQ(simu.walker.pos_r, direction * radius_dendrite);
+        CHECK_EQ(simu.walker.pos_v, direction * radius_dendrite);
+    }
+}
+
 bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &colision, unsigned &t)
 {
 

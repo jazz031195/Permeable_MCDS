@@ -162,7 +162,7 @@ public:
 
     bool isInsideSpheres(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 
-private:    
+protected:    
     /*! \fn     generateStep
      *  \param  step stores the computed step.
      *  \param  l step size. Can be used to change diffusivity in the medium.
