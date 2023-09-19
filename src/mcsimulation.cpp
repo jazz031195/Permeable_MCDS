@@ -577,6 +577,7 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
                             }
                         }
                     }
+                    neuron.add_projection();
                     dynamicsEngine->neurons_list.push_back(neuron);
                     dendrites_.clear();
                     // TODO : why nb_dendrites not printed ? [ines]

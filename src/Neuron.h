@@ -23,6 +23,7 @@ public:
     double span_radius;                     /* Radius [mm] inside which all the dendrites are contained */
     std::vector<Dendrite> dendrites;        /* Contains all the dendrites of the neuron*/
     Sphere soma;                    /* Soma of the neuron */
+    std::vector<Eigen::Vector2d> Box;       /* Contains the bounding box around the whole neuron */
 
     /*! Default constructor.*/
     Neuron();
@@ -125,6 +126,10 @@ public:
      *                                       dendrite_id : dendrite_id or -1.
     */
     std::vector<int> isNearDendrite(Eigen::Vector3d const& position,  double const& barrier_thickness) const;
+    std::vector<int> isNearDendrite(Walker const& walker, Eigen::Vector3d const &step_dir, double const &step_lenght, double const& barrier_thickness) const;
+    bool isNearNeuron(Eigen::Vector3d const &position, double const &distance_to_be_inside) const;
+
+    void add_projection();
 
 private:
 

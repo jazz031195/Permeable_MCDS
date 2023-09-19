@@ -333,10 +333,7 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
     }
 
     if(write_hit)
-    {
         writePositionHit(col_in, col_ext, cross_in, cross_ext);
-
-    }    
     
 }
 

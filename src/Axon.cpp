@@ -542,9 +542,9 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& dista
         }
         sph_ids.clear();
         sph_ids.push_back(min_id);
-        // cout << "sph_ids size" << sph_ids.size() << endl;
-        // for(size_t i=0; i < spheres[sph_ids[0]].neighboring_spheres.size(); ++i)
-        //     cout << (spheres[sph_ids[0]].neighboring_spheres[i]->center - position).norm() << endl;
+        distances.clear();
+        distances.push_back(min_dist_to_center);
+
         return true;
     }
     else

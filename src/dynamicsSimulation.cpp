@@ -484,7 +484,7 @@ void DynamicsSimulation::writeDWSignal(SimulableSequence* dataSynth)
     }
 }
 
-void DynamicsSimulation::iniWalkerPosition()
+void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
 {
     walker.initial_location = Walker::unknown;
     walker.location         = Walker::unknown;
@@ -510,13 +510,26 @@ void DynamicsSimulation::iniWalkerPosition()
     }
     else if(params.ini_walker_flag.compare("intra")== 0){
         Vector3d intra_pos;
-    
-        getAnIntraCellularPosition(intra_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id);
-        walker.setInitialPosition(intra_pos);
+        // If walker was not discarded 
+        // => initial_position re-assigned to [-1, -1, -1]
+        if(initial_position[0] == -1)
+        {
+            getAnIntraCellularPosition(intra_pos, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+            walker.setInitialPosition(intra_pos);
+        }
+        else
+        {
+            bool random_pos = false;
+            isInIntra(initial_position, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            if(walker.in_soma_index >= 0)
+                intra_pos = getAnIntraCellularPosition_soma(random_pos);
+            else if (walker.in_dendrite_index >= 0)
+                intra_pos = getAnIntraCellularPosition_dendrite(random_pos);
+            walker.setInitialPosition(intra_pos);
+        }
         walker.intra_extra_consensus--;
         walker.initial_location = Walker::intra;
         walker.location = Walker::intra;
-        walker.in_ax_index = ax_id;
     }
     else if(params.ini_walker_flag.compare("extra")== 0){
         Vector3d extra_pos;
@@ -541,14 +554,12 @@ void DynamicsSimulation::iniWalkerPosition()
             walker.location = Walker::extra;
         }
 
-        if(params.computeVolume){
+        if(params.computeVolume)
             isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0);
-        }
-        
+
     }
-    else{
+    else
         walker.setInitialPosition(Vector3d(0,0,0));
-    }
 }
 
 
@@ -1227,7 +1238,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         walker.setIndex(w);
 
         // Initialize the walker initial position
-        iniWalkerPosition();
+        iniWalkerPosition(walker.ini_pos);
 
         // Update step length based on the walker initial position in space
         updateStepLength(l);
@@ -1269,11 +1280,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             catch(Sentinel::ErrorCases error){
 
                 // Possible errors, or numerical un-handed cases should end here.
-                sentinela.deportationProcess(walker,w,t,back_tracking,params,id);
+                sentinela.deportationProcess(walker, w, t, back_tracking, params, id);
 
-                if ( (error == Sentinel::ErrorCases::stuck) || (error == Sentinel::ErrorCases::crossed)){
+                if ( (error == Sentinel::ErrorCases::stuck) || (error == Sentinel::ErrorCases::crossed))
                     break;
-                }
 
                 if ( error == Sentinel::rejected  )
                     continue;
@@ -1297,21 +1307,12 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             walker.steps_count++;
             walker.rejection_count = 0;
 
-
         }// end for t
 
-        /*
-        if(!back_tracking)
-            if(finalPositionCheck()){
-                back_tracking=true;
-                w--;
-            }
-        */
 
         //If there was an error, we don't compute the signal or write anything.
-        if(back_tracking){
-
-            w--;
+        if(back_tracking)
+        {
             if(started_in_soma)
                 -- count_soma_begin;
             else
@@ -1330,7 +1331,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         //updates the phase shift.
         if(dataSynth)
-            dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);
+            dataSynth->update_phase_shift(this->time_step, walker.pos_r_log);
 
         //Update de DWI signal
         if(dataSynth)
@@ -1372,7 +1373,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
     num_simulated_walkers = w;
 
-    if(num_simulated_walkers<= params.num_walkers){
+    if(num_simulated_walkers <= params.num_walkers){
 
         trajectory.reWriteHeaderFile(num_simulated_walkers);
 
@@ -1568,12 +1569,8 @@ TEST_CASE("updateWalkerPosition")
 bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t) {
   
     //new step to take
-    Vector3d bounced_step = step.normalized(),end_point;
-    Vector3d previous_real_position, previous_voxel_position, real_pos, voxel_pos;
-
-    //Save the walker initial position.
-    walker.getVoxelPosition(previous_voxel_position);
-    walker.getRealPosition(previous_real_position);
+    Vector3d bounced_step = step.normalized(), end_point;
+    Vector3d real_pos, voxel_pos;
 
     // Collision instance to save manage the collision (in Spanish).
     Collision colision;
@@ -1589,15 +1586,12 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
     sentinela.clear();
 
     // Reset colision state of walker
-    walker.colision_in = 0;
+    walker.colision_in  = 0;
     walker.colision_ext = 0;
-    walker.crossing_in = 0;
+    walker.crossing_in  = 0;
     walker.crossing_ext = 0;
 
     unsigned bouncing_count = 0;
-
-
-
     do{   
         bounced = false;
         bouncing_count++;
@@ -1620,7 +1614,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         if(update_walker_status){
 
             //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,colision);
-            bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,colision, t);
+            bounced = updateWalkerPositionAndHandleBouncing(bounced_step, tmax, colision, t);
 
             // restarts the variables.
             
@@ -1646,12 +1640,11 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
 
          // Update the walker position after the bouncing (or not)
         walker.getRealPosition(real_pos);
-        walker.setRealPosition(real_pos  + tmax*bounced_step);
+        walker.setRealPosition(real_pos + tmax*bounced_step);
 
         walker.getVoxelPosition(voxel_pos);
-        walker.setVoxelPosition(voxel_pos+ tmax*bounced_step);
+        walker.setVoxelPosition(voxel_pos + tmax*bounced_step);
     }
-
 
     return false;
 }
@@ -1722,19 +1715,27 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
 
     // For each Neuron Obstacle
     // We are already in an Axon, no need to check all the others
-    // TODO : update in_neuron_index
-    if (walker.location == Walker::intra && walker.in_neuron_index >= 0)
+    if (walker.in_neuron_index >= 0)
     {
         neurons_list[walker.in_neuron_index].checkCollision(walker, bounced_step, tmax, colision_tmp);
         handleCollisions(colision, colision_tmp, max_collision_distance, walker.in_neuron_index);
     }
+    // We are in extra
     else if (neurons_list.size() > 0)
     {
         for (unsigned int i = 0; i < walker.collision_sphere_neurons.small_sphere_list_end; i++)
         {
             unsigned index = walker.collision_sphere_neurons.collision_list->at(i);
-            neurons_list[index].checkCollision(walker, bounced_step, tmax, colision_tmp);
-            handleCollisions(colision, colision_tmp, max_collision_distance, index);
+
+            Vector3d pos;
+            walker.getVoxelPosition(pos);
+            bool isNearNeuron = neurons_list[index].isNearNeuron(pos, 2 * tmax);
+
+            if(isNearNeuron)
+            {
+                neurons_list[index].checkCollision(walker, bounced_step, tmax, colision_tmp);
+                handleCollisions(colision, colision_tmp, max_collision_distance, index);
+            }   
         }
     }
 

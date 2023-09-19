@@ -268,7 +268,7 @@ protected:
      *          ot any other flag (as it can be intra, extra, delta position (not implemented yet)).
      * \todo    Add the flags " onlyIntra", "onlyExtra" and "singlePos".
      */
-    inline void iniWalkerPosition();
+    inline void iniWalkerPosition(Eigen::Vector3d& initial_position);
 
     /*!
      * \brief   fill the list of indexes in walkers such that the obstacle is close enough for collision.

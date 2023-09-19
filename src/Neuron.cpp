@@ -57,7 +57,7 @@ Neuron::Neuron(vector<Dendrite> const &dendrites_, Vector3d const &soma_center, 
     soma = Sphere(0, id, soma_center, soma_radius);
 }
 
-Neuron::Neuron(Neuron const &neuron) : nb_dendrites(neuron.nb_dendrites), span_radius(neuron.span_radius), dendrites(neuron.dendrites), soma(neuron.soma)
+Neuron::Neuron(Neuron const &neuron) : nb_dendrites(neuron.nb_dendrites), span_radius(neuron.span_radius), dendrites(neuron.dendrites), soma(neuron.soma), Box(neuron.Box)
 {
     id = nb_neurons++;
     percolation    = neuron.percolation;
@@ -472,7 +472,123 @@ vector<int> Neuron::isNearDendrite(Vector3d const &position, double const &dista
     return dendrite_ids;
 }
 
+vector<int> Neuron::isNearDendrite(Walker const& walker, Vector3d const &step_dir, double const &step_lenght, double const &distance_to_be_inside) const
+{
+    Vector3d pos;
+    walker.getVoxelPosition(pos);
+    Vector3d next_pos = pos + step_dir * step_lenght;
+    
+    return isNearDendrite(next_pos, distance_to_be_inside);
+}
 
+TEST_CASE("isNearNeuron")
+{
+    cout << "isNearNeuron" << endl;
+    Vector3d center(0.05, 0.05, 0.05);
+    double radius_soma = 10e-3;
+    double radius_dendrite = 0.5e-3;
+
+    Neuron neuron(center, radius_soma, 0);
+    Dendrite dendrite;
+
+    int branch_id = 0;
+    vector<Sphere> spheres_list;
+    for (size_t i = 0; i < 10; ++i)
+    {
+        Vector3d next_center(center[0] + radius_soma + i * radius_dendrite / 4, center[1], center[2]);
+        Sphere sphere_to_add(i, branch_id, next_center, radius_dendrite);
+        spheres_list.push_back(sphere_to_add);
+    }
+
+    Vector3d begin;
+    vector <int> proximal_end = {};
+    vector <int> distal_end   = {1, 2};
+    Axon subbranch(branch_id, radius_dendrite, begin, begin, proximal_end, distal_end);
+    subbranch.set_spheres(spheres_list);
+    dendrite.add_subbranch(subbranch);
+    neuron.add_dendrite(dendrite);
+
+    spheres_list.clear();
+    for (size_t i = 0; i < 10; ++i)
+    {
+        Vector3d next_center(center[0] - radius_soma + i * radius_dendrite / 4, center[1], center[2]);
+        Sphere sphere_to_add(i, branch_id, next_center, radius_dendrite);
+        spheres_list.push_back(sphere_to_add);
+    }
+
+    Dendrite dendrite2;
+    Axon subbranch2(branch_id + 1, radius_dendrite, begin, begin, proximal_end, distal_end);
+    subbranch2.set_spheres(spheres_list);
+    dendrite2.add_subbranch(subbranch2);
+    neuron.add_dendrite(dendrite2);
+    neuron.add_projection();
+
+    bool isNearNeuron;
+    SUBCASE("Soma center")
+    {
+        Vector3d position(center[0], center[1], center[2]);
+        isNearNeuron = neuron.isNearNeuron(position, EPS_VAL);
+        // Should not be near any dendrite
+        CHECK(isNearNeuron == true);
+    }
+    SUBCASE("Begin of dendrite 0")
+    {
+        Vector3d position(center[0] + radius_soma + 2*EPS_VAL, center[1], center[2]);
+        isNearNeuron = neuron.isNearNeuron(position, EPS_VAL);
+        CHECK(isNearNeuron == true);
+    }
+    SUBCASE("End of dendrite 0")
+    {
+        auto sphere_list = neuron.dendrites[0].subbranches[0].spheres;
+        Vector3d position(sphere_list[sphere_list.size()-1].center);
+        isNearNeuron = neuron.isNearNeuron(position, EPS_VAL);
+        CHECK(isNearNeuron == true);
+
+    }
+    SUBCASE("Begin: dendrite 1")
+    {
+        Vector3d position(center[0] - radius_soma - 2*EPS_VAL, center[1], center[2]);
+        isNearNeuron = neuron.isNearNeuron(position, EPS_VAL);
+        CHECK(isNearNeuron == true);
+
+    }
+    SUBCASE("End: dendrite 1")
+    {
+        auto sphere_list = neuron.dendrites[1].subbranches[0].spheres;
+        Vector3d position(sphere_list[sphere_list.size()-1].center);
+        isNearNeuron = neuron.isNearNeuron(position, EPS_VAL);
+        CHECK(isNearNeuron == true);
+    }
+    SUBCASE("Outside")
+    {
+        Vector3d position(1, 1, 1);
+        isNearNeuron = neuron.isNearNeuron(position, EPS_VAL);
+        CHECK(isNearNeuron == false);
+    }
+}
+
+bool Neuron::isNearNeuron(Vector3d const &position, double const &distance_to_be_inside) const
+{
+    // Check each dendrite's box
+    int count_isnear = 0;
+    vector<int> dendrite_ids;
+    
+    for (unsigned int axis = 0; axis < 3; ++axis)
+    {
+        Vector2d axis_limits = Box[axis];
+
+        if ((position[axis] >= axis_limits[0] - distance_to_be_inside) &&
+            (position[axis] <= axis_limits[1] + distance_to_be_inside))
+        {
+            ++count_isnear;
+        }
+    }
+    // Inside the box around dendrite
+    if (count_isnear == 3)
+        return true;
+
+    return false;
+}
 
 bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double const &step_lenght, Collision &colision)
 {
@@ -488,7 +604,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
     }
     // If in dendrite, check collision with the correct sphere
-    else
+    else if(walker.in_dendrite_index >= 0)
     {
 
         int in_sph;
@@ -500,6 +616,46 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
 
         Sphere* sphere(new Sphere(dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph]));
         isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+    }
+    // Extra water
+    else
+    {
+        Vector3d pos;
+        walker.getVoxelPosition(pos);
+        Vector3d next_pos = pos + step_dir * step_lenght;
+        vector<int> dendrite_ids = isNearDendrite(walker, step_dir, step_lenght, barrier_tickness);
+        vector<int> sph_ids;
+        vector<double> distances;
+        double dist_min    = 1000;
+        int coll_dendrite, coll_subbranch, coll_sphere = -1;
+
+        for(size_t d=0; d < dendrite_ids.size(); d++)
+        {
+            for(size_t s=0; s < dendrites[dendrite_ids[d]].subbranches.size(); s++)
+            {
+                dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, barrier_tickness, sph_ids, distances);
+                if(distances[0] < dist_min)
+                {
+                    dist_min       = distances[0];
+                    coll_dendrite  = dendrite_ids[d];
+                    coll_subbranch = s;
+                    coll_sphere    = sph_ids[0];
+                }
+            }
+        }
+
+        // check soma as well
+        double dist_soma = (soma.center - next_pos).norm();
+        if (dist_soma < dist_min)
+        {
+            Sphere* sphere(new Sphere(soma));
+            isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+        }
+        else
+        {
+            Sphere* sphere(new Sphere(dendrites[coll_dendrite].subbranches[coll_subbranch].spheres[coll_sphere]));
+            isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+        }
     }
 
     
@@ -635,10 +791,6 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
     // values indicating whether the walker is inside or outside a sphere
     std::vector<double> cs;
 
-    std::vector<int> sph_ids;
-    std::vector<double> all_cs;
-
-
     // distances to collision
     double t1;
     double t2;
@@ -647,9 +799,7 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
     bool intersect = intersection_sphere_vector(t1, t2, *sphere, step, step_lenght, O, c);
     // Technically, it should always intersect (TODO: [ines] check)
     if (intersect)
-    {
-        all_cs.push_back(c);
-        
+    {        
         // if the collision are too close or negative.
         if (Walker::bouncing)
         {
@@ -798,48 +948,6 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
 }
 
 
-// vector<int> Neuron::closest_subbranch(Vector3d const &position, int const &dendrite_id, int const &subbranch_id, double const &step_length)
-// {
-//     const auto &subbranch = dendrites[dendrite_id].subbranches[subbranch_id];
-//     int nb_subbranches = dendrites[dendrite_id].subbranches.size();
-//     int size_subbranch = subbranch.spheres.size() - 1;
-//     double eps = 0.0005;
-//     double distance_to_proximal_end = (subbranch.spheres[0].center - position).norm() - eps;
-//     double distance_to_distal_end = (subbranch.spheres[size_subbranch].center - position).norm() - eps;
-
-//     if (distance_to_proximal_end <= step_length)
-//     {
-//         return subbranch.proximal_branching;
-//     }
-//     else if (distance_to_distal_end <= step_length)
-//     {
-//         // The subbranch id starts at 1 but the indices in c++ start at 0
-//         vector<int> distal_branching = subbranch.distal_branching;
-
-//         // Distal end of the neuron
-//         if ((distal_branching[0] >= nb_subbranches) || (distal_branching[1] >= nb_subbranches))
-//             return {-2};
-
-//         return distal_branching;
-//     }
-//     else
-//         return {-1};
-// }
-
-// vector<int> Neuron::close_dendrites_from_soma(Vector3d const &position, double const &step_length)
-// {
-//     vector<int> closer_dendrite;
-//     for (size_t i = 0; i < dendrites.size(); ++i)
-//     {
-//         // TODO : there was a segfault here once ... [ines]
-//         double distance_to_axon = (position - dendrites[i].subbranches[0].spheres[0].center).norm();
-//         if (distance_to_axon <= step_length + dendrites[i].subbranches[0].spheres[0].radius)
-//         {
-//             closer_dendrite.push_back(i);
-//         }
-//     }
-//     return closer_dendrite;
-// }
 
 // TODO: do other cases
 TEST_CASE("intersection_sphere_vector")
@@ -930,4 +1038,94 @@ vector<double> Neuron::get_Volume() const
     }
 
     return {VolumeSoma, VolumeDendrites};
+}
+
+TEST_CASE("add_projection")
+{
+    cout << "add_projection" << endl;
+    Vector3d center(0.05, 0.05, 0.05);
+    double radius_soma = 10e-3;
+    double radius_dendrite = 0.5e-3;
+
+    Neuron neuron(center, radius_soma, 0);
+    Dendrite dendrite;
+    int branch_id = 0;
+
+    vector<Sphere> spheres_list;
+    for (size_t i = 0; i < 10; ++i)
+    {
+        Vector3d next_center(center[0] + radius_soma + i * radius_dendrite / 4, center[1], center[2]);
+        spheres_list.push_back(Sphere(i, branch_id, next_center, radius_dendrite));
+    }
+
+    Vector3d begin;
+    vector<int> proximal_end = {};
+    vector<int> distal_end = {1, 2};
+    Axon subbranch(branch_id, radius_dendrite, begin, begin, proximal_end, distal_end);
+    subbranch.set_spheres(spheres_list);
+    dendrite.add_subbranch(subbranch);
+    neuron.add_dendrite(dendrite);
+
+    spheres_list.clear();
+    for (size_t i = 0; i < 10; ++i)
+    {
+        Vector3d next_center(center[0] - radius_soma - i * radius_dendrite / 4, center[1], center[2]);
+        spheres_list.push_back(Sphere(i, branch_id, next_center, radius_dendrite));
+    }
+    Axon subbranch2(branch_id, radius_dendrite, begin, begin, proximal_end, distal_end);
+    subbranch2.set_spheres(spheres_list);
+    Dendrite dendrite2;
+    dendrite2.add_subbranch(subbranch2);
+    neuron.add_dendrite(dendrite2);
+    neuron.add_projection();
+
+    // x min projection
+    CHECK(neuron.Box[0][0] <= center[0] - radius_soma - 9 * radius_dendrite / 4);
+    CHECK(neuron.Box[0][1] >= center[0] + radius_soma + 9 * radius_dendrite / 4);
+
+    // y min projection
+    CHECK(neuron.Box[1][0] <= center[1] - radius_soma);
+    CHECK(neuron.Box[1][1] >= center[1] + radius_soma);
+
+    // z min projection
+    CHECK(neuron.Box[2][0] <= center[2] - radius_soma);
+    CHECK(neuron.Box[2][1] >= center[2] + radius_soma);
+
+
+}
+void Neuron::add_projection()
+{
+    for(int axis=0; axis < 3 ; axis++)
+    {
+        // Contains the minimum axis projection of the subbranches axon_projections
+        double min_axis_projection     = 1000;
+        // Contains the maximum axis projection of the subbranches axon_projections
+        double max_axis_projection     = 0;
+
+        for(size_t d=0; d < dendrites.size() ; d++)
+        {   
+            double min_proj = dendrites[d].Box[axis][0];       
+            double max_proj = dendrites[d].Box[axis][1];       
+            
+            // Find the largest projection of all subbranches
+            if(max_proj > max_axis_projection)
+                max_axis_projection = max_proj;
+            // Find the smallest projection of all subbranches
+            if(min_proj < min_axis_projection)
+                min_axis_projection = min_proj;
+        }
+
+        // Check min & max proj for center as well
+        double min_proj = soma.center[axis] - soma.radius;
+        double max_proj = soma.center[axis] + soma.radius;
+        // Find the largest projection of all subbranches
+        if(max_proj > max_axis_projection)
+            max_axis_projection = max_proj;
+        // Find the smallest projection of all subbranches
+        if(min_proj < min_axis_projection)
+            min_axis_projection = min_proj;
+
+        // The box around the whole dendrite is between the min & max projections
+        Box.push_back({min_axis_projection, max_axis_projection});  
+    }
 }

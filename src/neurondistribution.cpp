@@ -100,6 +100,7 @@ void NeuronDistribution::createSubstrate()
             {
                 Neuron neuron(soma_centers[i], soma_radius, neurons.size());
                 growDendrites(neuron); 
+                neuron.add_projection();
                 neurons.push_back(neuron);
                 cout << " End of neuron " << i << endl;
             }
@@ -296,9 +297,6 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
 
     Eigen::Vector3d center = {0, 0, 0};
     bool discard_dendrite  = false;
-    double volume_inc_perc = 0;
-    bool swell             = false;
-    double scale           = 1;
    
     for(int sphere_id=0; sphere_id < nb_spheres ; ++sphere_id)
     {
