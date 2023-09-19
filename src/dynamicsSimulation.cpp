@@ -489,8 +489,7 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
     walker.initial_location = Walker::unknown;
     walker.location         = Walker::unknown;
     walker.intra_extra_consensus = walker.intra_coll_count = walker.extra_coll_count=walker.rejection_count=0;
-    int ax_id, neuron_id, dendrite_id, subbranch_id;
-    vector<int> sph_id;
+    
     //If the number of positions is less than the walkers, it restarts.
     if(iniPos.is_open()){
         double x,y,z;
@@ -542,7 +541,8 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
     else if(voxels_list.size() > 0 or params.custom_sampling_area){
         walker.setRandomInitialPosition(params.min_sampling_area,params.max_sampling_area);
 
-        int ax_id;
+        int ax_id, neuron_id, dendrite_id, subbranch_id;
+        vector<int> sph_id;
 
         // Walker initial position - Required for multiple diffusivities
         if (isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0)){
@@ -1255,7 +1255,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             ++ count_soma_begin;
             started_in_soma = true;
         }
-        else
+        else if (walker.in_dendrite_index >= 0)
         {
             ++ count_dendrites_begin;
             started_in_soma = false;
@@ -1313,9 +1313,9 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         //If there was an error, we don't compute the signal or write anything.
         if(back_tracking)
         {
-            if(started_in_soma)
+            if(started_in_soma && walker.initial_location == Walker::intra)
                 -- count_soma_begin;
-            else
+            else if(walker.initial_location == Walker::intra)
                 -- count_dendrites_begin;
 
             continue;
@@ -1326,7 +1326,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         if(walker.in_soma_index == 0)
             ++ count_soma_end;
-        else
+        else if (walker.in_dendrite_index >= 0)
             ++ count_dendrites_end;
 
         //updates the phase shift.

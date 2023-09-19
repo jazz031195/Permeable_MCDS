@@ -633,14 +633,16 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         {
             for(size_t s=0; s < dendrites[dendrite_ids[d]].subbranches.size(); s++)
             {
-                dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, barrier_tickness, sph_ids, distances);
-                if(distances[0] < dist_min)
+                if(dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, barrier_tickness, sph_ids, distances))
                 {
-                    dist_min       = distances[0];
-                    coll_dendrite  = dendrite_ids[d];
-                    coll_subbranch = s;
-                    coll_sphere    = sph_ids[0];
-                }
+                    if(distances[0] < dist_min)
+                    {
+                        dist_min       = distances[0];
+                        coll_dendrite  = dendrite_ids[d];
+                        coll_subbranch = s;
+                        coll_sphere    = sph_ids[0];
+                    }
+                }    
             }
         }
 
@@ -663,28 +665,17 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     if (!isPosInsideNeuron(colision.colision_point, barrier_tickness, false, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index))
     {
         walker.location = Walker::extra;
-        cout << "extra" << endl;
+        // cout << "extra" << endl;
+    }
+    else
+    {
+        walker.location = Walker::intra;
     }
 
     if((in_soma == 0) & (walker.in_soma_index != 0) & (walker.in_dendrite_index >= 0))
         walker.cross_soma_dendrites++;
     else if((in_dendrite >= 0) & (walker.in_dendrite_index < 0) & (walker.in_soma_index == 0))
         walker.cross_dendrites_soma++;
-    // TODO [ines] : do the extracellular collisions
-    // if (walker.location == Walker::extra)
-    // {
-    //     // Check if collision with soma. Can be internal or external collisions.
-    //     if (soma.checkCollision(walker, step_dir, step_lenght, colision))
-    //     {
-    //         return true;
-    //     }
-    //     // Check if collision with dendrites from outside.
-    //     for (uint8_t i = 0; i < dendrites.size(); ++i)
-    //     {
-    //         if (dendrites[i].checkCollision(walker, step_dir, step_lenght, colision))
-    //             return true;
-    //     }
-    // }
 
     return isColliding;
 }
