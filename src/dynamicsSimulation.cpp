@@ -150,19 +150,7 @@ void DynamicsSimulation::initObstacleInformation(){
 
     for(unsigned i= 0 ; i < axons_list.size();i++){
         axons_deque.push_back(i);
-
-        if(axons_list[i].percolation > 0.0){
-            double dse = sqrt(step_length_pref*axons_list[i].diffusivity_e);
-            double dsi = sqrt(step_length_pref*axons_list[i].diffusivity_i);
-
-            double prob_cross_i_e = axons_list[i].percolation * dsi * 2. / 3. / axons_list[i].diffusivity_i;
-            double prob_cross_e_i = axons_list[i].percolation * dse * 2. / 3. / axons_list[i].diffusivity_e; 
-
-            axons_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
-            axons_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
-            
-        }
-
+        axons_list[i].set_prob_crossings(step_length_pref);
     }
 
     walker.collision_sphere_axons.collision_list        = &axons_deque;
@@ -517,7 +505,7 @@ void DynamicsSimulation::iniWalkerPosition()
         else {
             walker.initial_location = Walker::extra;
             walker.location = Walker::extra;
-            walker.location = Walker::extra;
+            walker.previous_location = Walker::extra;
         }
 
         if(params.computeVolume){
@@ -1011,6 +999,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         // Initialize the walker initial position
         iniWalkerPosition();
 
+
         // Update step length based on the walker initial position in space
         updateStepLength(l);
 
@@ -1023,7 +1012,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {           
-
+      
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
 
@@ -1071,6 +1060,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
 
         }// end for t
+
 
         /*
         if(!back_tracking)
@@ -1340,29 +1330,25 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
 
         // intra walkers
         if (walker.location== Walker::intra){
-            isnearaxon = (axons_list)[walker.in_ax_index].isWalkerInsideAxon(walker, tmax+ barrier_tickness);
-
+            //cout << "walker.in_ax_index :" << walker.in_ax_index << endl;
             (axons_list)[walker.in_ax_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
             handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_ax_index);   
-            
-            if(!isnearaxon){
-                walker.previous_location = walker.location;
-                walker.location = Walker::extra;
-                colision.col_location = Collision::outside;
-            }
         }
         // extra walkers or unknown
         else {
             for(unsigned int i = 0 ; i < walker.collision_sphere_axons.small_sphere_list_end; i++ ){
                 unsigned index = walker.collision_sphere_axons.collision_list->at(i);
-                isnearaxon = (axons_list)[index].isWalkerInsideAxon(walker, 2*tmax + barrier_tickness);
-                if (isnearaxon){
+                //cout << "step_lenght_extra :" << step_lenght_extra << endl;
+                bool isnear = (axons_list)[index].isNearAxon(walker.pos_v, 2*step_lenght_extra);
+                if (isnear){
+
                     (axons_list)[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
                     handleCollisions(colision,colision_tmp,max_collision_distance,index);  
                 }
             }
         }
     }
+
 
     //For each PLY Obstacles
     for(unsigned int i = 0 ; i < walker.collision_sphere_ply.collision_list->size(); i++ )
@@ -1456,11 +1442,11 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
 
 void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &colision)
 {
-
+    //cout << "MAPPING " << endl;
     walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
     Eigen::Vector3d position;
     //cout << "mapped " << endl;
-    if (walker.initial_location== Walker::extra){
+    if (walker.location== Walker::extra){
         getAnExtraCellularPosition(position);
     }
     else{
@@ -1505,6 +1491,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
 
     if (tmax <= min_step_length)
     {
+        walker.previous_location = walker.location;
         tmax = 0.0;
         return false;   
     }    
@@ -1517,6 +1504,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             sentinela.rejected_step = true;
             Eigen::Vector3d direction = -step;
             generateDirectedStep(walker.next_direction,direction);
+            walker.previous_location = walker.location;
             walker.status = Walker::on_object;
             return false;
         }
@@ -1529,6 +1517,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         // Membrane crossing due to permeability --> Tmax needs to be updated because diffusivity may have changed!
         int crossed = 0, col_loc = colision.col_location;
 
+    
         if (colision.perm_crossing > EPS_VAL){
             
             crossed = 1;
@@ -1540,7 +1529,12 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 walker.intra_extra_consensus--;
                 walker.previous_location = walker.location;
                 walker.location = Walker::extra;
-
+                /*
+                cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
+                cout << " walker is now extra after crossing" << endl;
+                cout << "previous_location:" << walker.previous_location  << endl;
+                cout << "location:" << walker.location  << endl;
+                */
             // Save that walker hit the membrane - For validation purpose
                 walker.crossing_in++;
                 walker.colision_in++;
@@ -1553,6 +1547,12 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 walker.intra_extra_consensus++;
                 walker.previous_location = walker.location;
                 walker.location = Walker::intra;
+                /*
+                cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
+                cout << " walker is now intra after crossing" << endl;
+                cout << "previous_location:" << walker.previous_location  << endl;
+                cout << "location:" << walker.location  << endl;
+                */
                 
             // Save that walker hit the membrane - For validation purpose
                 walker.crossing_ext++;
@@ -1561,6 +1561,10 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             }
             else{
                 tmax-=displ;
+                walker.previous_location = walker.location;
+                //cout << "previous_location:" << walker.previous_location  << endl;
+                //cout << "location:" << walker.location  << endl;
+
             }
 
             if(walker.initial_location == Walker::unknown){
@@ -1575,23 +1579,40 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             if(colision.col_location == Collision::inside){
                 walker.previous_location = walker.location;
                 walker.location = Walker::intra;
-
+                /*
+                cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
+                cout << " walker stays intra" << endl;
+                cout << "previous_location:" << walker.previous_location  << endl;
+                cout << "location:" << walker.location  << endl;
+                */
             // Save that walker hit the membrane - For validation purpose
                 walker.colision_in++;
             }
             if(colision.col_location == Collision::outside){
                 walker.previous_location = walker.location;
                 walker.location = Walker::extra;
+                /*
+                cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
+                cout << " walker stays extra" << endl;
+                cout << "previous_location:" << walker.previous_location  << endl;
+                cout << "location:" << walker.location  << endl;
+                */
             // Save that walker hit the membrane - For validation purpose
                 walker.colision_ext++;
+            }
+            if (colision.col_location == Collision::unknown){
+                walker.previous_location = walker.location;
+                //cout << "previous_location:" << walker.previous_location  << endl;
+                //cout << "location:" << walker.location  << endl;
             }
             if(walker.initial_location == Walker::unknown){
                 walker.initial_location = walker.location;
             }
             
         }
+        
 
-
+ 
         if (tmax < 0.0){
                 tmax = 0.0;
                 bounced = false;
@@ -1645,7 +1666,6 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         //Save info on collision - Validation purpose
         int crossed=0, col_loc = colision.col_location;
         trajectory.writeFullCollision(colision.colision_point, crossed, col_loc, t, walker.index);
-
         
         return false;
     }
@@ -1653,6 +1673,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         sentinela.rejected_step = true;
         Eigen::Vector3d direction = -step;
         generateDirectedStep(walker.next_direction,direction);
+        walker.previous_location = walker.location;
         walker.status = Walker::on_object;
         return false;
     }

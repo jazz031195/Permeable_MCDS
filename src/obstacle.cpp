@@ -16,6 +16,8 @@ void Obstacle::elasticBounceAgainsPlane(Eigen::Vector3d &ray_origin, Eigen::Vect
     Eigen::Vector3d ray =  (-t*step).normalized();//
     double rn = ray.dot(normal);
 
+    //std::cout << "rn in elastic plane :" << rn << std::endl;
+
     // Caso 3) ni cerca ni paralela
     step = -ray + 2.0*normal*rn;
 

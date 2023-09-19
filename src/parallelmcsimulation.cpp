@@ -24,7 +24,7 @@ ParallelMCSimulation::ParallelMCSimulation(std::string config_file)
 
     params.readSchemeFile(config_file);
 
-    cout << "checkSimulationParameters" << endl;
+    cout << "read scheme files" << endl;
 
     //printSimulationInfo();
 

@@ -72,7 +72,7 @@ bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY,
             throw(this->error);
         }
     }
-    if ((walker.location != Walker::unknown) and walker.is_allowed_to_cross == false and (walker.location != walker.previous_location))
+    if ((walker.location != Walker::unknown) and (walker.previous_location != Walker::unknown) and walker.is_allowed_to_cross == false and (walker.location != walker.previous_location))
     {
         setCrossingError(uint(walker.in_obj_index));
         illegal_count++;
@@ -102,11 +102,13 @@ void Sentinel::deportationProcess(Walker &walker, unsigned& w, unsigned &t, bool
 
     if(this->error == Sentinel::ErrorCases::crossed){
         //If the particle crosses and object because numerical problems
-        if(params.verbatim)
-            cout << endl <<  SH_FG_GRAY <<  "[INFO]   " << SH_DEFAULT << " Sim: " << id << " " <<
+        //if(params.verbatim)
+        cout << endl <<  SH_FG_GRAY <<  "[INFO]   " << SH_DEFAULT << " Sim: " << id << " " <<
                     "Walker "<< w << " labeled as 'illegal' after crossing obstacle id: " << this->obstacle_id <<
                     "\nBacktraking...\nDone" << endl;
+        cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
         w--;
+        //assert(0);
         back_tracking = true;
     }
 

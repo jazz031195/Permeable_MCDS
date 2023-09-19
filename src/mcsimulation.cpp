@@ -323,6 +323,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                     perm_ = params.obstacle_permeability;
                 }  
                 
+                //cout << "perm_ :"   << perm_ << endl;
                 for (unsigned i = 0; i < spheres_.size(); i++){
                     spheres_[i].setPercolation(perm_);
                     // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
@@ -330,6 +331,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                     diff_e = params.diffusivity_extra;
                     spheres_[i].setDiffusion(diff_i, diff_e);
                 }
+                ax.setDiffusion(diff_i, diff_e);
+                ax.setPercolation(perm_);
                 ax.set_spheres(spheres_);
                 dynamicsEngine->axons_list.push_back(ax);
                 spheres_.clear();
@@ -378,13 +381,16 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         // set number of particles
         if (params.concentration != 0){
             if (params.ini_walker_flag == "intra"){
-                params.setNumWalkers(params.concentration*volume*icvf);
+                int num_walkers = params.concentration*volume*icvf/params.num_proc;
+                params.setNumWalkers(num_walkers);
             }
             else if (params.ini_walker_flag == "extra"){
-                params.setNumWalkers(params.concentration*volume*(1.0-icvf));
+                int num_walkers = params.concentration*volume*(1.0-icvf)/params.num_proc;
+                params.setNumWalkers(num_walkers);
             }
             else{
-                params.setNumWalkers(params.concentration*volume);
+                int num_walkers = params.concentration*volume/params.num_proc;
+                params.setNumWalkers(num_walkers);
             } 
         }
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
@@ -513,13 +519,16 @@ void MCSimulation::addCylindersObstaclesFromFiles()
         // set number of particles
         if (params.concentration != 0){
             if (params.ini_walker_flag == "intra"){
-                params.setNumWalkers(params.concentration*volume*icvf);
+                int num_walkers = params.concentration*volume*icvf/params.num_proc;
+                params.setNumWalkers(num_walkers);
             }
             else if (params.ini_walker_flag == "extra"){
-                params.setNumWalkers(params.concentration*volume*(1.0-icvf));
+                int num_walkers = params.concentration*volume*(1.0-icvf)/params.num_proc;
+                params.setNumWalkers(num_walkers);
             }
             else{
-                params.setNumWalkers(params.concentration*volume);
+                int num_walkers = params.concentration*volume/params.num_proc;
+                params.setNumWalkers(num_walkers);
             } 
         }
         std::cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
