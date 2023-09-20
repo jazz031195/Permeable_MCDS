@@ -626,7 +626,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         vector<int> dendrite_ids = isNearDendrite(walker, step_dir, step_lenght, barrier_tickness);
         vector<int> sph_ids;
         vector<double> distances;
-        double dist_min    = 1000;
+        double dist_min    = 2 * step_lenght;
         int coll_dendrite, coll_subbranch, coll_sphere = -1;
 
         for(size_t d=0; d < dendrite_ids.size(); d++)
@@ -647,13 +647,14 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         }
 
         // check soma as well
+        double dist_dendrites = dist_min;
         double dist_soma = (soma.center - next_pos).norm();
-        if (dist_soma < dist_min)
+        if (dist_soma <= dist_min)
         {
             Sphere* sphere(new Sphere(soma));
             isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
         }
-        else
+        else if ((dist_dendrites <= dist_min) && (coll_dendrite >= 0) && (coll_subbranch >= 0) && (coll_sphere >= 0) )
         {
             Sphere* sphere(new Sphere(dendrites[coll_dendrite].subbranches[coll_subbranch].spheres[coll_sphere]));
             isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
@@ -753,15 +754,54 @@ TEST_CASE("checkCollision_branching")
             w.setRealPosition(w.pos_r + radius_dendrite * direction);
             w.setVoxelPosition(w.pos_v + radius_dendrite * direction);
 
-            colision.t = radius_dendrite;
-            colision.bounced_direction = -direction;
-            colision.colision_point = w.pos_v;
+            // colision.t = radius_dendrite;
+            // colision.bounced_direction = -direction;
+            // colision.colision_point = w.pos_v;
 
-            bool collided = neuron.checkCollision_branching(w, &neuron.dendrites[0].subbranches[0].spheres[0], direction, step_length - radius_dendrite, colision);
+            bool collided = neuron.checkCollision_branching(w, &neuron.dendrites[0].subbranches[0].spheres[0], -direction, step_length - radius_dendrite, colision);
 
             CHECK(!collided);
             CHECK_EQ(colision.type, Collision::null);
-            CHECK_EQ(colision.t, doctest::Approx(radius_dendrite));
+            CHECK_EQ(colision.t, min(2 * radius_dendrite, step_length - radius_dendrite));
+            CHECK_EQ(colision.bounced_direction, -direction);
+            CHECK_EQ(colision.colision_point, w.pos_v - (step_length - radius_dendrite) * direction);
+            CHECK_EQ(w.status, Walker::bouncing);
+        }
+    }
+    SUBCASE("trivial extra bounce cycle")
+    {
+        Vector3d direction(1, 0, 0);
+        double step_length = 6e-4;
+
+        Walker w;
+        w.setInitialPosition(center[0] - radius_soma - 0.5 * step_length, center[1], center[2]);
+        w.location = w.initial_location = Walker::extra;
+
+        SUBCASE("trivial extra hit")
+        {
+            bool collided = neuron.checkCollision_branching(w, &neuron.soma, direction, step_length, colision);
+            CHECK(collided);
+            CHECK_EQ(colision.type, Collision::hit);
+            CHECK_EQ(colision.t, doctest::Approx(min(radius_soma, 0.5 * step_length)));
+            CHECK_EQ(colision.bounced_direction, -direction);
+            CHECK_EQ(colision.colision_point, w.pos_v + 0.5 * step_length * direction);
+            CHECK_EQ(w.status, Walker::free);
+        }
+        SUBCASE("trivial extra bounce")
+        {
+            w.status = Walker::bouncing;
+            w.setRealPosition(w.pos_r + 0.5 * step_length * direction);
+            w.setVoxelPosition(w.pos_v + 0.5 * step_length * direction);
+
+            // colision.t = radius_soma;
+            // colision.bounced_direction = -direction;
+            // colision.colision_point = w.pos_v;
+
+            bool collided = neuron.checkCollision_branching(w, &neuron.soma, -direction, 0.5 * step_length, colision);
+
+            CHECK(!collided);
+            CHECK_EQ(colision.type, Collision::null);
+            // CHECK_EQ(colision.t, doctest::Approx(radius_soma));
             CHECK_EQ(colision.bounced_direction, -direction);
             CHECK_EQ(colision.colision_point, w.pos_v);
             CHECK_EQ(w.status, Walker::bouncing);
@@ -781,13 +821,14 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
     std::vector<double> dist_intersections;
     // values indicating whether the walker is inside or outside a sphere
     std::vector<double> cs;
+    std::vector<double> as;
 
     // distances to collision
     double t1;
     double t2;
-    double c;
+    double c, a;
     // Find the intersection with the sphere in which the walker is
-    bool intersect = intersection_sphere_vector(t1, t2, *sphere, step, step_lenght, O, c);
+    bool intersect = intersection_sphere_vector(t1, t2, *sphere, step, step_lenght, O, c, a);
     // Technically, it should always intersect (TODO: [ines] check)
     if (intersect)
     {        
@@ -798,11 +839,13 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
             {
                 dist_intersections.push_back(t1);
                 cs.push_back(c);
+                as.push_back(a);
             }
             if (t2 >= EPS_VAL)
             {
                 dist_intersections.push_back(t2);
                 cs.push_back(c);
+                as.push_back(a);
             }
         }
         else
@@ -811,11 +854,13 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
             {
                 dist_intersections.push_back(t1);
                 cs.push_back(c);
+                as.push_back(a);
             }
             if (t2 >= 0)
             {
                 dist_intersections.push_back(t2);
                 cs.push_back(c);
+                as.push_back(a);
             }
         }    
     }
@@ -839,8 +884,13 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
     // If they are some intersections to consider
     if (dist_intersections.size() > 0)
     {
+        unsigned index_;
+
+        auto min_distance_int = std::min_element(std::begin(dist_intersections), std::end(dist_intersections));
+        index_ = std::distance(std::begin(dist_intersections), min_distance_int);
+
         // Set the distance to the collision point
-        double dist_to_collision = dist_intersections[0];
+        double dist_to_collision = dist_intersections[index_];
         colision.t = fmin(dist_to_collision, step_lenght);
         colision.colision_point = walker.pos_v + colision.t * step;
         // If the distance is <= step_length => there is a collision
@@ -850,12 +900,12 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
             // All collisions are considered as hit 
             // (walls between intersecting spheres as well as outer boundary)
             colision.type = Collision::hit;
-            colision.rn = cs[0];
+            colision.rn = cs[index_];
 
             // if extra, cannot hit sphere from inside
             if (walker.initial_location== Walker::extra)
             {
-                if (cs[0] < -1e-15)
+                if (cs[index_] < -1e-15)
                     colision.col_location = Collision::inside;
                 else
                     colision.col_location = Collision::outside;
@@ -913,10 +963,17 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
                 colision.perm_crossing     = 0.;
                 walker.is_allowed_to_cross = false;
 
-                Vector3d normal = (colision.colision_point - sphere->center).normalized();
-                Vector3d temp_step = step;
-                elasticBounceAgainsPlane(walker.pos_v, normal, colision.t, temp_step);
-                colision.bounced_direction = temp_step.normalized();
+                if (fabs(as[index_]) < EPS_VAL)
+                {
+                    colision.col_location = Collision::on_edge;
+                    colision.bounced_direction = -step;
+                }
+                else{
+                    Vector3d normal = (colision.colision_point - sphere->center).normalized();
+                    Vector3d temp_step = step;
+                    elasticBounceAgainsPlane(walker.pos_v, normal, colision.t, temp_step);
+                    colision.bounced_direction = temp_step.normalized();
+                }
                 return true;
             }
 
@@ -954,31 +1011,31 @@ TEST_CASE("intersection_sphere_vector")
 
     Vector3d traj_origin(0.05, 0.05, 0.05);
 
-    double intercept1, intercept2, c;
-    CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c));
+    double intercept1, intercept2, c, a;
+    CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c, a));
 
     CHECK_EQ(intercept1, doctest::Approx(radius));
     CHECK_EQ(intercept2, doctest::Approx(-radius));
     // CHECK_EQ(c, ); // TODO: [ines]
 
     traj_origin = {0.04, 0.05, 0.05};
-    CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c));
+    CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c, a));
     CHECK_EQ(intercept1, doctest::Approx(0.01 + radius));
     CHECK_EQ(intercept2, doctest::Approx(0.01 - radius));
 
     traj_origin = {0.0, 0.05, 0.05};
-    CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c));
+    CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c, a));
     CHECK_EQ(intercept1, doctest::Approx(0.05 + radius));
     CHECK_EQ(intercept2, doctest::Approx(0.05 - radius));
 
 }
 
-bool Neuron::intersection_sphere_vector(double &intercept1, double &intercept2, Sphere const &sphere, Vector3d const &step_dir, double const &step_length, Vector3d const &traj_origin, double &c)
+bool Neuron::intersection_sphere_vector(double &intercept1, double &intercept2, Sphere const &sphere, Vector3d const &step_dir, double const &step_length, Vector3d const &traj_origin, double &c, double& a)
 {
     Vector3d m = traj_origin - sphere.center;
     double rad = sphere.radius;
 
-    double a = 1;
+    a = 1;
     double b = m.dot(step_dir);
     c = m.dot(m) - rad * rad;
 
@@ -987,8 +1044,8 @@ bool Neuron::intersection_sphere_vector(double &intercept1, double &intercept2, 
     if (discr < 0.0)
         return false;
 
-    intercept1 = (-b + sqrt(discr)) / (a);
-    intercept2 = (-b - sqrt(discr)) / (a);
+    intercept1 = (-b + sqrt(discr)) / a;
+    intercept2 = (-b - sqrt(discr)) / a;
 
     return true;
 }
@@ -1017,16 +1074,13 @@ void Neuron::generateSpanRadius(double const &lower_bound, double const &upper_b
 
 vector<double> Neuron::get_Volume() const
 {
-    double VolumeSoma = 0;
-    double VolumeDendrites = 0;
     // Calculate the volume of the soma
-    VolumeSoma += 4.0 / 3.0 * M_PI * pow(soma.radius, 3);
+    double VolumeSoma = 4.0 / 3.0 * M_PI * pow(soma.radius, 3);
 
     // Calculate the cylindrical volume of each dendrite
+    double VolumeDendrites = 0;
     for (uint8_t j = 0; j < dendrites.size(); j++)
-    {
         VolumeDendrites += dendrites[j].volumeDendrite();
-    }
 
     return {VolumeSoma, VolumeDendrites};
 }

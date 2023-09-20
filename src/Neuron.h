@@ -111,7 +111,7 @@ public:
      * @param c                  double, ||traj.orig - s.center||² - s.radius²
      */
     static bool intersection_sphere_vector(double& intercept1, double& intercept2, Sphere const& s, Eigen::Vector3d const& step_dir, 
-                                    double const& step_length, Eigen::Vector3d const& traj_orig, double & c);
+                                    double const& step_length, Eigen::Vector3d const& traj_orig, double& c, double& a);
     /**
      * Check if the position is in the close vicinity (bounding boxes) of the soma.
      * @return std::tuple<std::string, int>, {'neuron_part', part_id}
