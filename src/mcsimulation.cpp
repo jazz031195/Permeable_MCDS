@@ -431,7 +431,7 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
             }
 
             std::vector<std::string> jkr = split(line,' ');
-            if (jkr.size() != 5 && jkr.size() != 2){
+            if (jkr.size() != 4 && jkr.size() != 2){
                 std::cout << jkr.size() <<  " elements per line" << std::endl;
                 std::cout << "wrong number of elements per line in file" << std::endl;
             }
@@ -443,10 +443,18 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
         double perm_; 
 
         std::ifstream in_perm;
-        if(params.neuron_permeability_files.size() > 0){
+        if(params.neuron_permeability_files.size() > 0)
             in_perm.open(params.neuron_permeability_files[i]);
-        }
+        
 
+        // Local permeability - Different for each obstacle
+        if(params.neuron_permeability_files.size() > 0)
+            in_perm >> perm_;
+        // Global permeability - Same for all obstacle
+        else
+            perm_ = params.obstacle_permeability;
+        
+                
         // Diffusion coefficients
         double diff_i; 
         double diff_e;
@@ -578,6 +586,8 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
                         }
                     }
                     neuron.add_projection();
+                    neuron.setPercolation(perm_);
+                    neuron.setDiffusion(diff_i, diff_e);
                     dynamicsEngine->neurons_list.push_back(neuron);
                     dendrites_.clear();
                     // TODO : why nb_dendrites not printed ? [ines]

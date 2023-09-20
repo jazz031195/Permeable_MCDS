@@ -856,6 +856,21 @@ void Parameters::readNeuronParams(ifstream &in)
             in.clear();
             //in.ignore();
         }
+        else if(str_dist(tmp,"permeability") <= 2){
+        
+            in >> tmp;
+            std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+            if(str_dist(tmp,"global") <= 1){
+                // One permeability for all obstacles
+                in >> obstacle_permeability;
+            }
+            if(str_dist(tmp,"local") <= 1){
+                // One permeability per obstacles
+                string path;
+                in >> path;
+                neuron_permeability_files.push_back(path);
+            }
+        }
         else if(str_dist(tmp,"</neuron_packing>") == 0){
             break;
         }
@@ -992,8 +1007,8 @@ void Parameters::readSphereList(ifstream& in)
                 string path;
                 in >> path;
                 sphere_permeability_files.push_back(path);
+            }
         }
-    }
     } 
 }
 

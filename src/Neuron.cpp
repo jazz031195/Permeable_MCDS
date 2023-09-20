@@ -890,14 +890,14 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
                         gen_perm.seed(rd());
                         std::uniform_real_distribution<double> udist(0,1);
                         
-                        double _percolation_ = udist(gen_perm); 
+                        double _percolation_ = udist(gen_perm);
 
                         double dynamic_percolation = 0.0;
                         
                         if (colision.col_location == Collision::inside) 
-                            dynamic_percolation = prob_cross_i_e; 
+                            dynamic_percolation = this->prob_cross_i_e;
                         else if (colision.col_location == Collision::outside)
-                            dynamic_percolation = prob_cross_e_i;
+                            dynamic_percolation = this->prob_cross_e_i;
                         
                         if( dynamic_percolation - _percolation_ > EPS_VAL )
                         {            

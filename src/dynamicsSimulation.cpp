@@ -790,10 +790,10 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             std::uniform_int_distribution<int> neuron_dist(0, neurons_list.size() - 1);
             int neuron_id = neuron_dist(gen);
             Vector3d somaCenter = neurons_list[neuron_id].soma.center;
-            double probaRadius = double(udist(gen));
-            double somaRadius = neurons_list[neuron_id].soma.radius;
+            double probaRadius  = double(udist(gen));
+            double somaRadius   = neurons_list[neuron_id].soma.radius;
             double theta = 2 * M_PI * udist(gen);
-            double phi = acos(1 - 2 * udist(gen));
+            double phi   = acos(1 - 2 * udist(gen));
             double x = sin(phi) * cos(theta) * probaRadius * somaRadius + somaCenter[0];
             double y = sin(phi) * sin(theta) * probaRadius * somaRadius + somaCenter[1];
             double z = cos(phi) * probaRadius * somaRadius + somaCenter[2];
@@ -1365,6 +1365,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     out << "Crossed dendrites -> soma : " << walker.cross_dendrites_soma << endl;
     out.close();
 
+    cout << neurons_list[0].count_perc_crossings << endl;
     /*********************   WARNING  **********************/
     /*                                                     */
     /*         END OF THE DYNAMIC SIMULATION CORE          */
@@ -1602,7 +1603,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         // True if there was a collision and the particle needs to be bounced.
         update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, colision);
 
-        if(!walker.is_allowed_to_cross)
+        if(params.obstacle_permeability == 0.0)
         {
             if(walker.initial_location != walker.location)
             {
@@ -1931,7 +1932,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         if(colision.t < 1e-10 && walker.status != walker.bouncing){
             sentinela.rejected_step = true;
             Eigen::Vector3d direction = -step;
-            generateDirectedStep(walker.next_direction,direction);
+            generateDirectedStep(walker.next_direction, direction);
             walker.status = Walker::on_object;
             return false;
         }

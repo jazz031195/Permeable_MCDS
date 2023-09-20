@@ -28,6 +28,7 @@ Walker::Walker()
     in_subbranch_index    = -1;
     in_sph_index.clear();
     is_allowed_to_cross   = false;
+    ini_pos = Eigen::Vector3d(-1, -1, -1);
 }
 
 Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
