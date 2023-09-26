@@ -66,13 +66,12 @@ public:
      *
      * @param position Eigen::Vector3d, position of the walker.
      * @param barrier_thickness double, thickness of the cellular barrier.
-     * @param swell_              bool, if this swells or not. 
      * @param in_soma_index        int, 0 if in soma, -1 otherwise. 
      * @param in_dendrite_index    int, id of the dendrite it is in, -1 if outside dendrite. 
      * @param in_subbranch_index   int, id of the dendrite subbranch it is in, -1 if outside dendrite. 
      * @return                    bool, true if position is inside this.
      */
-    bool isPosInsideNeuron(Eigen::Vector3d const& position,  double const& barrier_thickness, bool const& swell_, int& in_soma_index, 
+    bool isPosInsideNeuron(Eigen::Vector3d const& position,  double const& barrier_thickness, int& in_soma_index, 
                            int& in_dendrite_index, int& in_subbranch_index, std::vector<int>& in_sph_index);
     /**
      * Minimal distance between a position pos and this.

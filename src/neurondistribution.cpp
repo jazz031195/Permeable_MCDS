@@ -67,15 +67,15 @@ void NeuronDistribution::createSubstrate()
             for(int i = 0 ; i < num_obstacles; i++){
                 unsigned stuck = 0;
                 while(++stuck <= 10000){
-                    // double t = udist(gen);
-                    // double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
-                    // t        = udist(gen);
-                    // double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
-                    // t        = udist(gen);
-                    // double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
-                    double x = (max_limits_vx[0] - min_limits_vx[0])/2;
-                    double y = (max_limits_vx[1] - min_limits_vx[1])/2;
-                    double z = (max_limits_vx[2] - min_limits_vx[2])/2;
+                    double t = udist(gen);
+                    double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
+                    t        = udist(gen);
+                    double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
+                    t        = udist(gen);
+                    double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
+                    // double x = (max_limits_vx[0] - min_limits_vx[0])/2;
+                    // double y = (max_limits_vx[1] - min_limits_vx[1])/2;
+                    // double z = (max_limits_vx[2] - min_limits_vx[2])/2;
 
                     Eigen::Vector3d soma_center = {x, y, z};
                    
@@ -106,9 +106,9 @@ void NeuronDistribution::createSubstrate()
             }
 
 
-            // double icvf, somaFraction, dendritesFraction;
-            // tie(icvf, somaFraction, dendritesFraction) = computeICVF(0);
-            // cout << icvf << somaFraction << dendritesFraction << endl;
+            double icvf, somaFraction, dendritesFraction;
+            tie(icvf, somaFraction, dendritesFraction) = computeICVF(0);
+            cout << icvf << somaFraction << dendritesFraction << endl;
             achieved = true;
 
             // if(this->icvf - best_icvf  < 0.0005){
@@ -144,7 +144,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
     {   
         cout << "dendrite " << i << endl;
         int tries = 0;
-        int nb_branching = 3;//generateNbBranching();
+        int nb_branching = 1;//generateNbBranching();
         // Radius of each dendrite sphere [mm]
         double sphere_radius = 0.5e-3;
         // Don't initiate dendrite too close from the borders
@@ -178,7 +178,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                 for(int b=0; b < nb_branching; ++b)
                 {
                     // Length of a segment before branching
-                    double l_segment = 240e-3 / double(nb_branching);//generateLengthSegment();
+                    double l_segment = 100e-3;//240e-3 / double(nb_branching);//generateLengthSegment();
                     // Number of spheres per segment
                     int nb_spheres   = l_segment / (sphere_radius / 4.0); //Let's assume that dendrites have a radius of 0.5microns so far
                     vector<int> proximal_branch;
@@ -507,7 +507,7 @@ bool NeuronDistribution::isSphereColliding(Sphere const& sph)
     int dummy;
     vector<int> dummy2;
     for (unsigned i = 0; i < neurons.size() ; i++){
-        bool isinside = neurons[i].isPosInsideNeuron(position, distance_to_be_inside, false, dummy, dummy, dummy, dummy2);
+        bool isinside = neurons[i].isPosInsideNeuron(position, distance_to_be_inside, dummy, dummy, dummy, dummy2);
         if (isinside)
             return true;
     }
@@ -539,7 +539,7 @@ bool NeuronDistribution::isSphereColliding(Vector3d const& sphere_center, double
     int dummy;
     vector<int> dummy2;
     for (unsigned i = 0; i < neurons.size() ; i++){
-        bool isinside = neurons[i].isPosInsideNeuron(sphere_center, distance_to_be_inside, false, dummy, dummy, dummy, dummy2);
+        bool isinside = neurons[i].isPosInsideNeuron(sphere_center, distance_to_be_inside, dummy, dummy, dummy, dummy2);
         if (isinside)
             return true;
     }
@@ -639,7 +639,6 @@ tuple<double, double, double> NeuronDistribution::computeICVF(double const& min_
         VolumeSoma      += volumeNeuron[0];
         VolumeDendrites += volumeNeuron[1];
     }
-    
     double somaFraction      = VolumeSoma / VolumeVoxel;
     double dendritesFraction = VolumeDendrites/ VolumeVoxel;
     double ICVF              = somaFraction + dendritesFraction;

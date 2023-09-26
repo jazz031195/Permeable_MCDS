@@ -4,6 +4,7 @@
 #include "pgsesequence.h"
 #include "gradientwaveform.h"
 #include <iostream>
+#include "constants.h"
 
 int MCSimulation::count =0;
 
@@ -244,6 +245,44 @@ double computeICVF(Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, std::
     }
     return AreaC / AreaV; // ( total axons volume / total volume )
 }
+
+double computeICVF(Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, std::vector <Neuron> neurons)
+{
+    if (neurons.size() == 0)
+        return 0;
+    double AreaV = (max_limits[0] - min_limits[0]) * (max_limits[1] - min_limits[1]) * (max_limits[2] - min_limits[2]); // total volume
+    double AreaC = 0;
+
+    for (uint i = 0; i < neurons.size(); i++) // for all axons
+    {
+        for (uint d = 0; d < neurons[i].dendrites.size(); d++) // for all axons
+        {
+            for (uint s = 0; s < neurons[i].dendrites[d].subbranches.size(); s++) // for all axons
+            {
+                auto spheres = neurons[i].dendrites[d].subbranches[s].spheres;
+                if (spheres.size() > 1)
+                {
+                    for (uint j = 1; j < spheres.size(); j++)
+                    {
+                        double l = (spheres[j - 1].center - spheres[j].center).norm(); // distance between centers
+                        double mean_r = (spheres[j - 1].radius + spheres[j].radius) / 2;
+
+                        if (withinBounds(min_limits, max_limits, spheres[j].center, spheres[j].radius) && withinBounds(min_limits, max_limits, spheres[j-1].center, spheres[j-1].radius))
+                        {
+                            AreaC += l * M_PI * mean_r * mean_r;
+                        }
+                        else if (withinBounds(min_limits, max_limits, spheres[j].center, 0) && withinBounds(min_limits, max_limits, spheres[j-1].center, 0))
+                        {
+                            AreaC += l * M_PI * mean_r * mean_r/2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return AreaC / AreaV; // ( total axons volume / total volume )
+}
+
 
 
 void MCSimulation::addAxonsObstaclesFromFiles()
@@ -602,12 +641,7 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
 
         in.close();
 
-
-        // double somaFraction, dendritesFraction;
-        // double min_distance_from_border = barrier_tickness + 5e-3 + params.sim_duration / params.num_steps / 1000;
-        // std::cout << params.sim_duration << params.num_steps << std::endl;
-        // tie(icvf, somaFraction, dendritesFraction) = computeICVF(min_distance_from_border);
-        // std::cout << icvf << somaFraction << dendritesFraction << std::endl;
+        double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
     }
 }
 
@@ -734,7 +768,7 @@ void MCSimulation::addCylindersObstaclesFromFiles()
         }
         std::cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
 
-        std::cout << " ICVF :" << icvf<< endl;
+        std::cout << " ICVF :" << icvf << endl;
         std::cout << " Number of particles :" << params.num_walkers << endl;
         std::cout << "voxel size :"  << max_limits << endl;
         

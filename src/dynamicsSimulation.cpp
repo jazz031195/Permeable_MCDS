@@ -545,14 +545,11 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
         vector<int> sph_id;
 
         // Walker initial position - Required for multiple diffusivities
-        if (isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0)){
-            walker.initial_location = Walker::intra;
-            walker.location = Walker::intra;
-        }
-        else {
-            walker.initial_location = Walker::extra;
-            walker.location = Walker::extra;
-        }
+        if (isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0))
+            walker.initial_location = walker.location = Walker::intra;
+        else 
+            walker.initial_location = walker.location = Walker::extra;
+
 
         if(params.computeVolume)
             isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0);
@@ -1080,7 +1077,12 @@ bool DynamicsSimulation::isInsideNeurons(Vector3d &position, int &neuron_id, int
 {
     for (unsigned i = 0; i < neurons_list.size(); i++)
     {
-        bool isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, false, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+        bool isinside;
+        if(walker.location == Walker::intra)
+            isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+        else
+            isinside = neurons_list.at(i).isPosInsideNeuron(position, -barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+
         if (isinside)
         {
             walker.in_neuron_index = i;
@@ -1230,7 +1232,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         back_tracking = false;
 
         cout << "Walker :" << w << endl;
-
+        if(walker.initial_location == Walker::intra)
+            cout << "starts in intra" << endl;
+        else
+            cout << "starts in extra" << endl;
         walker.setIndex(w);
 
         // Initialize the walker initial position
@@ -1542,7 +1547,7 @@ TEST_CASE("updateWalkerPosition")
 
     auto ini_pos = Vector3d(center[0] + radius_soma, center[1], center[2]);
     simu.walker.setInitialPosition(ini_pos);
-    n.isPosInsideNeuron(ini_pos, barrier_tickness, false, simu.walker.in_soma_index, simu.walker.in_dendrite_index,
+    n.isPosInsideNeuron(ini_pos, barrier_tickness, simu.walker.in_soma_index, simu.walker.in_dendrite_index,
                         simu.walker.in_subbranch_index, simu.walker.in_sph_index);
     CHECK_EQ(simu.walker.in_neuron_index, 0);
     CHECK_EQ(simu.walker.in_dendrite_index, 0);
@@ -1799,7 +1804,7 @@ void DynamicsSimulation::handleCollisions(Collision &colision, Collision &colisi
 }
 
 
-void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Collision &colision,double barrier_thicknes)
+void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Collision &colision, double barrier_thicknes)
 {
 
     walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
@@ -1821,9 +1826,9 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
 
     walker.setVoxelPosition(voxel_pos);
 
-    if (mapped){
+    if (mapped)
         initWalkerObstacleIndexes();
-    }
+    
 }
 
 void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &colision)
@@ -1831,8 +1836,8 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_st
 
     walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
     Eigen::Vector3d position;
-    //cout << "mapped " << endl;
-    if (walker.initial_location== Walker::extra){
+    // cout << "mapped " << endl;
+    if (walker.location == Walker::extra){
         getAnExtraCellularPosition(position);
     }
     else{

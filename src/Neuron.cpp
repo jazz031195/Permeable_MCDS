@@ -152,9 +152,9 @@ TEST_CASE("isPosInsideNeuron")
         spheres_list.clear();
         for (size_t i = 0; i < 10; ++i)
         {
-            Vector3d next_center(last_center[0] + i * radius_dendrite / 4 * branching_direction[0],
-                                 last_center[1] + i * radius_dendrite / 4 * branching_direction[1],
-                                 last_center[2] + i * radius_dendrite / 4 * branching_direction[2]);
+            Vector3d next_center(last_center[0] + double(i) * radius_dendrite / 4.0 * branching_direction[0],
+                                 last_center[1] + double(i) * radius_dendrite / 4.0 * branching_direction[1],
+                                 last_center[2] + double(i) * radius_dendrite / 4.0 * branching_direction[2]);
             Sphere sphere_to_add(i, branch_id + rep + 1, next_center, radius_dendrite);
             spheres_list.push_back(sphere_to_add);
         }
@@ -172,6 +172,7 @@ TEST_CASE("isPosInsideNeuron")
     std::uniform_real_distribution<double> udist(0,1);
     int dummy;
     vector<int> dummy1;
+    double err_margin = 1e-10;
     SUBCASE("soma")
     {
         Vector3d somaCenter = neuron.soma.center;
@@ -191,8 +192,8 @@ TEST_CASE("isPosInsideNeuron")
                 double z = cos(phi) * probaRadius * somaRadius + somaCenter[2];
                 Vector3d pos_temp = {x,y,z};
 
-                bool inSoma_formula = pow(x-somaCenter[0], 2) + pow(y-somaCenter[1], 2) + pow(z-somaCenter[2], 2) <= somaRadius;
-                bool inSoma_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, false, dummy, dummy, dummy, dummy1);
+                bool inSoma_formula = (pow(x-somaCenter[0], 2) + pow(y-somaCenter[1], 2) + pow(z-somaCenter[2], 2)) <= (pow(somaRadius, 2) + err_margin);
+                bool inSoma_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, dummy, dummy, dummy, dummy1);
                 CHECK_EQ(inSoma_formula, inSoma_function);
             }
             SUBCASE("at soma surface")
@@ -204,10 +205,22 @@ TEST_CASE("isPosInsideNeuron")
                 double z = cos(phi) * somaRadius + somaCenter[2];
                 Vector3d pos_temp = {x,y,z};
 
-                bool inSoma_formula = pow(x-somaCenter[0], 2) + pow(y-somaCenter[1], 2) + pow(z-somaCenter[2], 2) <= somaRadius;
-                bool inSoma_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, false, dummy, dummy, dummy, dummy1);
+                bool inSoma_formula = (pow(x-somaCenter[0], 2) + pow(y-somaCenter[1], 2) + pow(z-somaCenter[2], 2)) <= (pow(somaRadius, 2) + err_margin);
+                bool inSoma_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, dummy, dummy, dummy, dummy1);
                 CHECK_EQ(inSoma_formula, inSoma_function);
             }
+        }
+        SUBCASE("outside soma")
+        {
+            double x = somaCenter[0];
+            double y = somaRadius + somaCenter[1] + 1e-6;
+            double z = somaCenter[2];
+            Vector3d pos_temp = {x,y,z};
+
+            bool inSoma_formula = (pow(x-somaCenter[0], 2) + pow(y-somaCenter[1], 2) + pow(z-somaCenter[2], 2)) <= (pow(somaRadius, 2) + err_margin);
+            bool inSoma_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, dummy, dummy, dummy, dummy1);
+            CHECK(!inSoma_formula);
+            CHECK_EQ(inSoma_formula, inSoma_function);
         }     
     }
     SUBCASE("in dendrite")
@@ -233,8 +246,8 @@ TEST_CASE("isPosInsideNeuron")
                         double z = cos(phi) * probaRadius * sphereRadius + sphereCenter[2];
                         Vector3d pos_temp = {x,y,z};
 
-                        bool inSphere_formula = pow(x-sphereCenter[0], 2) + pow(y-sphereCenter[1], 2) + pow(z-sphereCenter[2], 2) <= sphereRadius;
-                        bool inSphere_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, false, dummy, dummy, dummy, dummy1);
+                        bool inSphere_formula = (pow(x-sphereCenter[0], 2) + pow(y-sphereCenter[1], 2) + pow(z-sphereCenter[2], 2)) <= pow(sphereRadius, 2) + err_margin;
+                        bool inSphere_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, dummy, dummy, dummy, dummy1);
                         CHECK_EQ(inSphere_formula, inSphere_function);
                     }
                     SUBCASE("at dendrite surface")
@@ -246,17 +259,35 @@ TEST_CASE("isPosInsideNeuron")
                         double z = cos(phi) * sphereRadius + sphereCenter[2];
                         Vector3d pos_temp = {x,y,z};
 
-                        bool inSphere_formula = pow(x-sphereCenter[0], 2) + pow(y-sphereCenter[1], 2) + pow(z-sphereCenter[2], 2) <= sphereRadius;
-                        bool inSphere_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, false, dummy, dummy, dummy, dummy1);
+                        bool inSphere_formula = (pow(x-sphereCenter[0], 2) + pow(y-sphereCenter[1], 2) + pow(z-sphereCenter[2], 2)) <= pow(sphereRadius, 2) + err_margin;
+                        bool inSphere_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, dummy, dummy, dummy, dummy1);
                         CHECK_EQ(inSphere_formula, inSphere_function);
                     }
                 }
+            }
+            SUBCASE("outside dendrite")
+            {
+                auto last_subbranch = neuron.dendrites[d].subbranches[neuron.dendrites[d].subbranches.size() - 1];
+                auto first_sphere   = last_subbranch.spheres[0];
+                auto last_sphere    = last_subbranch.spheres[last_subbranch.spheres.size() - 1];
+                auto sphereCenter   = last_sphere.center;
+                double sphereRadius = last_sphere.radius;
+                auto direction      = (last_sphere.center - first_sphere.center).normalized();
+                Vector3d pos_temp   = last_sphere.center + (radius_dendrite + 1e-6) * direction;
+                double x = pos_temp[0];
+                double y = pos_temp[1];
+                double z = pos_temp[2];
+
+                bool inSphere_formula = (pow(x-sphereCenter[0], 2) + pow(y-sphereCenter[1], 2) + pow(z-sphereCenter[2], 2)) <= pow(sphereRadius, 2) + err_margin;
+                bool inSphere_function= neuron.isPosInsideNeuron(pos_temp, barrier_tickness, dummy, dummy, dummy, dummy1);
+                CHECK(!inSphere_formula);
+                CHECK_EQ(inSphere_formula, inSphere_function);
             }
         }
     }
 }
 
-bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &distance_to_be_inside, bool const &swell_, int &in_soma_index, int &in_dendrite_index, int &in_subbranch_index, vector<int> &in_sph_index)
+bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &distance_to_be_inside, int &in_soma_index, int &in_dendrite_index, int &in_subbranch_index, vector<int> &in_sph_index)
 {
     // Temporary variables to store the index before knowing if the walker is in the soma or in a dendrite
     int in_dendrite_index_tmp, in_subbranch_index_tmp, in_soma_index_tmp;
@@ -278,7 +309,7 @@ bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &di
         {
             for (size_t b=0; b < dendrites[part_id[p]].subbranches.size(); b++)
             {
-                if (dendrites[part_id[p]].subbranches[b].isPosInsideAxon_(position, barrier_tickness, in_sph_index_tmp_tmp, distances))
+                if (dendrites[part_id[p]].subbranches[b].isPosInsideAxon_(position, distance_to_be_inside, in_sph_index_tmp_tmp, distances))
                 {
                     // Find the minimum distance walker-center for this subbranch
                     double min = *min_element(begin(distances), end(distances));
@@ -663,14 +694,17 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
 
     
  
-    if (!isPosInsideNeuron(colision.colision_point, barrier_tickness, false, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index))
+    if ((walker.location == Walker::intra) && 
+        (!isPosInsideNeuron(colision.colision_point, barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
     {
         walker.location = Walker::extra;
         // cout << "extra" << endl;
     }
-    else
+    else if((walker.location == Walker::extra) && 
+        (isPosInsideNeuron(colision.colision_point, -barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
     {
         walker.location = Walker::intra;
+        // cout << "intra" << endl;
     }
 
     if((in_soma == 0) & (walker.in_soma_index != 0) & (walker.in_dendrite_index >= 0))
@@ -902,33 +936,40 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
             colision.type = Collision::hit;
             colision.rn = cs[index_];
 
+            // In case of intra water, check if collision with intra walls
+            bool inner_collision = false;
             // if extra, cannot hit sphere from inside
-            if (walker.initial_location== Walker::extra)
+            if (walker.location == Walker::extra)
             {
                 if (cs[index_] < -1e-15)
+                {
                     colision.col_location = Collision::inside;
+                    // TODO [ines] : you should never enter here
+                    assert(0);
+                }
                 else
-                    colision.col_location = Collision::outside;
-                
+                    colision.col_location = Collision::outside;    
             }
+            // intra 
             else
-                colision.col_location = Collision::inside;
-            
-            // Check if the collision point is part of the neighboring spheres
-            bool inner_collision = false;
-            for(size_t i=0; i < sphere->neighboring_spheres.size(); ++i)
-                inner_collision = inner_collision || sphere->neighboring_spheres[i]->isInside(colision.colision_point, EPS_VAL);
-            
-            // If yes, it is a collision without reflection (the walker keeps the same direction)
-            if(inner_collision)
             {
-                colision.bounced_direction = step;
-                colision.perm_crossing     = 0.;
-                walker.is_allowed_to_cross = false;
-                return true;
+                colision.col_location = Collision::inside;
+                // Check if the collision point is part of the neighboring spheres
+                for(size_t i=0; i < sphere->neighboring_spheres.size(); ++i)
+                    inner_collision = inner_collision || sphere->neighboring_spheres[i]->isInside(colision.colision_point, barrier_tickness);
+                
+                // If yes, it is a collision without reflection (the walker keeps the same direction)
+                if(inner_collision)
+                {
+                    colision.bounced_direction = step;
+                    colision.perm_crossing     = 0.;
+                    walker.is_allowed_to_cross = false;
+                    return true;
+                }
             }
+                
             // If not, it is a "real collision" with the outer boundary => reflection
-            else
+            if(!inner_collision)
             {
                 // Membrane permeability    
                 if(percolation > 0.0)
