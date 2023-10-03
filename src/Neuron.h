@@ -95,6 +95,8 @@ public:
     void add_dendrite(Dendrite& dendrite_to_add);
     // std::vector <int> closest_subbranch(Eigen::Vector3d const& position, int const& dendrite_id, int const& subbranch_id, double const& step_length);
     std::vector <double> get_Volume() const;
+    /* Get the neuron area in mm² */
+    double get_Area() const;
     /**
      * Calculates if there is/are intersection(s) between the sphere s and a walker
      * starting at traj_orig, with a direction step_dir. 

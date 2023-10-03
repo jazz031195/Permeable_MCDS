@@ -67,6 +67,8 @@ public:
     bool isPosInsideAxon_(Eigen::Vector3d const&position,  double const& distance_to_be_inside, std::vector<int>& sphere_ids, std::vector<double>& distances);
     /* Calculate the volume of the current axon and update its tortuosity */
     double volumeAxon() const;
+    /* Calculate the area of the current axon */
+    double areaAxon() const;
        
 };
 

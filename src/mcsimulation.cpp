@@ -628,6 +628,7 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
                     neuron.setPercolation(perm_);
                     neuron.setDiffusion(diff_i, diff_e);
                     dynamicsEngine->neurons_list.push_back(neuron);
+                    dynamicsEngine->area = dynamicsEngine->area + neuron.get_Area();
                     dendrites_.clear();
                     // TODO : why nb_dendrites not printed ? [ines]
                     cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
@@ -641,7 +642,18 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
 
         in.close();
 
+        double volume          = (params.max_limits[0] - params.min_limits[0]) * (params.max_limits[1] - params.min_limits[1]) * (params.max_limits[2] - params.min_limits[2]);
         double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
+
+        if (params.concentration != 0){
+            if (params.ini_walker_flag == "intra")
+                params.setNumWalkers(params.concentration * volume * icvf);
+            else if (params.ini_walker_flag == "extra")
+                params.setNumWalkers(params.concentration * volume * (1.0 - icvf));
+            else
+                params.setNumWalkers(params.concentration * volume);
+            
+        }
     }
 }
 

@@ -67,6 +67,7 @@ DynamicsSimulation::DynamicsSimulation() {
     icvf=0;
     intra_tries=0;
     total_tries=0;
+    area = 0;
 }
 
 /**
@@ -92,6 +93,7 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
     icvf=0;
     intra_tries=0;
     total_tries=0;
+    area = 0;
 }
 
 /**
@@ -116,6 +118,7 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
     icvf=0;
     intra_tries=0;
     total_tries=0;
+    area = 0;
 }
 
 void DynamicsSimulation::initObstacleInformation(){
@@ -508,6 +511,10 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
                 Vector3d(double(params.ini_delta_pos[0]),double(params.ini_delta_pos[1]),double(params.ini_delta_pos[2])));
     }
     else if(params.ini_walker_flag.compare("intra")== 0){
+        walker.intra_extra_consensus--;
+        walker.initial_location = Walker::intra;
+        walker.location = Walker::intra;
+
         Vector3d intra_pos;
         // If walker was not discarded 
         // => initial_position re-assigned to [-1, -1, -1]
@@ -525,10 +532,7 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
             else if (walker.in_dendrite_index >= 0)
                 intra_pos = getAnIntraCellularPosition_dendrite(random_pos);
             walker.setInitialPosition(intra_pos);
-        }
-        walker.intra_extra_consensus--;
-        walker.initial_location = Walker::intra;
-        walker.location = Walker::intra;
+        } 
     }
     else if(params.ini_walker_flag.compare("extra")== 0){
         Vector3d extra_pos;
@@ -702,7 +706,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> udist(0,1);
-
+    walker.initial_location = walker.location = Walker::intra;
 
     if(axons_list.size() <=0 and neurons_list.size() <=0  and cylinders_list.size() <=0 and plyObstacles_list.size() <= 0 and spheres_list.size() <= 0){
         SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate.",cout);
@@ -773,7 +777,6 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
     {
         while (true)
         {
-            cout << "starts in soma" << endl;
             if (count > 100000)
             {
                 SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
@@ -794,6 +797,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
+                cout << "starts in soma" << endl;
                 return pos_temp;
             }
             count++;
@@ -803,7 +807,6 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
     {
         while (true)
         {
-            cout << "starts in soma" << endl;
             if (count > 100000)
             {
                 SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
@@ -822,6 +825,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
+                cout << "starts in soma" << endl;
                 return pos_temp;
             }
             count++;
@@ -841,7 +845,6 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
     {
         while (true)
         {
-            cout << "starts in dendrite" << endl;
             if (count > 100000)
             {
                 SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
@@ -861,6 +864,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
+                cout << "starts in dendrite" << endl;
                 return pos_temp;
             }
             count++;
@@ -870,7 +874,6 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
     {
         while (true)
         {
-            cout << "starts in dendrite" << endl;
             if (count > 100000)
             {
                 SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
@@ -885,6 +888,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
+                cout << "starts in dendrite" << endl;
                 return pos_temp;
             }
             count++;
@@ -898,7 +902,7 @@ void DynamicsSimulation::getAnExtraCellularPosition(Vector3d &extra_pos)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> udist(0,1);
-
+    walker.initial_location = walker.location = Walker::extra;
 
 
     if(voxels_list.size()<=0){
@@ -1232,15 +1236,15 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         back_tracking = false;
 
         cout << "Walker :" << w << endl;
-        if(walker.initial_location == Walker::intra)
-            cout << "starts in intra" << endl;
-        else
-            cout << "starts in extra" << endl;
+
         walker.setIndex(w);
 
         // Initialize the walker initial position
         iniWalkerPosition(walker.ini_pos);
-
+        if(walker.initial_location == Walker::intra)
+            cout << "starts in intra" << endl;
+        else
+            cout << "starts in extra" << endl;
         // Update step length based on the walker initial position in space
         updateStepLength(l);
 
@@ -1356,6 +1360,12 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         }
 
     }// for w
+    double vol_mm3 = (walker.crossing_in + walker.crossing_ext);
+    cout << "perm " << vol_mm3/ (area * 1e-6 * params.sim_duration * 1e-3) << " m/s" << endl;
+    cout << "s " <<  params.sim_duration * 1e-3 << " s" << endl;
+    cout << "area " << area * 1e-6  << " m²" << endl;
+    cout << "crossings " << (walker.crossing_in + walker.crossing_ext) << endl;
+
 
     ofstream out(params.output_base_name+"_count_walker.txt", std::ofstream::app);
     out << "Number walker in soma, begin : " << count_soma_begin << endl;
@@ -1366,7 +1376,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     out << "Crossed dendrites -> soma : " << walker.cross_dendrites_soma << endl;
     out.close();
 
-    cout << neurons_list[0].count_perc_crossings << endl;
+    cout << "Perc crossings " << neurons_list[0].count_perc_crossings << endl;
     /*********************   WARNING  **********************/
     /*                                                     */
     /*         END OF THE DYNAMIC SIMULATION CORE          */
@@ -1587,11 +1597,11 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
     // Clears the status of the sentinel.
     sentinela.clear();
 
-    // Reset colision state of walker
-    walker.colision_in  = 0;
-    walker.colision_ext = 0;
-    walker.crossing_in  = 0;
-    walker.crossing_ext = 0;
+    // // Reset colision state of walker
+    // walker.colision_in  = 0;
+    // walker.colision_ext = 0;
+    // walker.crossing_in  = 0;
+    // walker.crossing_ext = 0;
 
     unsigned bouncing_count = 0;
     do{   
@@ -1604,20 +1614,17 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         // True if there was a collision and the particle needs to be bounced.
         update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, colision);
 
-        if(params.obstacle_permeability == 0.0)
+        if(walker.initial_location != walker.location && !walker.is_allowed_to_cross)
         {
-            if(walker.initial_location != walker.location)
-            {
-                sentinela.checkErrors(walker, params, (plyObstacles_list.size() == 0), bouncing_count);
-                break;
-            }
+            sentinela.checkErrors(walker, params, (plyObstacles_list.size() == 0), bouncing_count);
+            break;
         }
+        
         // Updates the position and bouncing direction.
         if(update_walker_status){
 
             //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,colision);
             bounced = updateWalkerPositionAndHandleBouncing(bounced_step, tmax, colision, t);
-
             // restarts the variables.
             
             update_walker_status = false;
@@ -1635,7 +1642,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
             }
         }
         sentinela.checkErrors(walker,params,(plyObstacles_list.size() == 0),bouncing_count);
-
+        walker.initial_location = walker.location;
     }while(bounced);
 
     if(tmax >= 0.0){

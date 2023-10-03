@@ -637,7 +637,6 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     // If in dendrite, check collision with the correct sphere
     else if(walker.in_dendrite_index >= 0)
     {
-
         int in_sph;
         if(walker.in_sph_index.size() > 0)
             in_sph = walker.in_sph_index[0];
@@ -664,7 +663,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         {
             for(size_t s=0; s < dendrites[dendrite_ids[d]].subbranches.size(); s++)
             {
-                if(dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, barrier_tickness, sph_ids, distances))
+                if(dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, -barrier_tickness, sph_ids, distances))
                 {
                     if(distances[0] < dist_min)
                     {
@@ -704,7 +703,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         (isPosInsideNeuron(colision.colision_point, -barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
     {
         walker.location = Walker::intra;
-        // cout << "intra" << endl;
+        cout << "intra" << endl;
     }
 
     if((in_soma == 0) & (walker.in_soma_index != 0) & (walker.in_dendrite_index >= 0))
@@ -1124,6 +1123,19 @@ vector<double> Neuron::get_Volume() const
         VolumeDendrites += dendrites[j].volumeDendrite();
 
     return {VolumeSoma, VolumeDendrites};
+}
+
+double Neuron::get_Area() const
+{
+    // Calculate the area of the soma
+    double AreaSoma = 4.0 * M_PI * pow(soma.radius, 2);
+
+    // Calculate the cylindrical area of each dendrite
+    double AreaDendrites = 0;
+    for (uint8_t j = 0; j < dendrites.size(); j++)
+        AreaDendrites += dendrites[j].areaDendrite();
+
+    return (AreaSoma + AreaDendrites);
 }
 
 TEST_CASE("add_projection")

@@ -84,6 +84,10 @@ int get_nb_subbranches();
  */
 double volumeDendrite() const;
 /**
+ * Get the area of a dendrite. 
+ */
+double areaDendrite() const;
+/**
  * Assign subbranches to subbranches. 
  *
  * @param subbranches std::vector<Axon>, set of axons.

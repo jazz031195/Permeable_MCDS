@@ -169,6 +169,34 @@ double Axon::volumeAxon() const
     return volume;
 }
 
+double Axon::areaAxon() const
+{
+    double area = 0;
+    // double tortuosity;
+    double ax_length = 0;
+    double mean_rad  = 0;
+    if (spheres.size() > 0)
+    {
+        for (uint j = 0; j < spheres.size(); j++){
+            if (j > 0){
+                // Length between two adjacent spheres' centers
+                double l = (spheres[j-1].center - spheres[j].center).norm();
+                ax_length += l;
+            }
+            mean_rad += spheres[j].radius;
+        }
+        mean_rad = mean_rad/spheres.size();
+        // tortuosity = ax_length/((this->begin - this->end).norm());
+        area     = 2.0 * M_PI * mean_rad * ax_length + M_PI * mean_rad * mean_rad;
+    }
+    else
+    {
+        //TODO [ines]: throw an error
+    }
+    
+    return area;
+}
+
 bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d const& step, double const& step_lenght, Collision &colision)
 {
     
@@ -511,6 +539,7 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& dista
         }
         // find common ids in all 3 axes
         std::vector<int> spheres_to_check_all_axes = findCommonIntegers(spheres_id_to_check[0], spheres_id_to_check[1], spheres_id_to_check[2]);
+
         for (size_t i = 0; i < spheres_to_check_all_axes.size(); ++i) 
         {
             Sphere sphere_to_check = spheres[spheres_to_check_all_axes[i]];

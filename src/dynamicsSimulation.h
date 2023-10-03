@@ -61,6 +61,7 @@ public:
     std::vector <Voxel> voxels_list;                /*!< vector with all the voxels to be simulated (if any)                        */
     Propagator propagator;                          /*!< Propagator object to compute and save the particles MSD                    */
     double icvf;                                    /*!< Stores the ICVF (1 - Intra-Extra) if needed                                */
+    double area;                                    /*!< Stores the area in mm² if needed                                */
     unsigned intra_tries, total_tries;              /*!< Helper variables to compute the estimated ICVF                             */
 
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
