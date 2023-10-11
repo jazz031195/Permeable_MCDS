@@ -49,6 +49,7 @@ public:
      *  @param out std::ostream where to write the info.
     */
     void printSubstrate(std::ostream &out) const;
+    void printSubstrate_swc(std::ostream &out) const;
     
 private:
 
@@ -144,6 +145,13 @@ private:
                                bool& stop_growth, int const& branch_id, Sphere* soma);
 
     Eigen::Vector3d rotateDirection(Eigen::Vector3d const& direction, double const& angle) const;
+    void print_tree(Neuron* const& neuron, std::vector<std::vector<int>> const& nodes) const;
+    std::vector<int> find_tree_path(Neuron* const& neuron, int const& dendrite_id, int const& subbranch_id) const;
+    std::vector<std::vector<int>> find_tree_paths(Neuron* const& neuron, int const& dendrite_id) const;
+
+
+
+
 
 };
 

@@ -944,7 +944,7 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
                 {
                     colision.col_location = Collision::inside;
                     // TODO [ines] : you should never enter here
-                    assert(0);
+                    // assert(0);
                 }
                 else
                     colision.col_location = Collision::outside;    

@@ -67,15 +67,15 @@ void NeuronDistribution::createSubstrate()
             for(int i = 0 ; i < num_obstacles; i++){
                 unsigned stuck = 0;
                 while(++stuck <= 10000){
-                    double t = udist(gen);
-                    double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
-                    t        = udist(gen);
-                    double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
-                    t        = udist(gen);
-                    double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
-                    // double x = (max_limits_vx[0] - min_limits_vx[0])/2;
-                    // double y = (max_limits_vx[1] - min_limits_vx[1])/2;
-                    // double z = (max_limits_vx[2] - min_limits_vx[2])/2;
+                    // double t = udist(gen);
+                    // double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
+                    // t        = udist(gen);
+                    // double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
+                    // t        = udist(gen);
+                    // double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
+                    double x = (max_limits_vx[0] - min_limits_vx[0])/2;
+                    double y = (max_limits_vx[1] - min_limits_vx[1])/2;
+                    double z = (max_limits_vx[2] - min_limits_vx[2])/2;
 
                     Eigen::Vector3d soma_center = {x, y, z};
                    
@@ -144,7 +144,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
     {   
         cout << "dendrite " << i << endl;
         int tries = 0;
-        int nb_branching = 1;//generateNbBranching();
+        int nb_branching = 3;//generateNbBranching();
         // Radius of each dendrite sphere [mm]
         double sphere_radius = 0.5e-3;
         // Don't initiate dendrite too close from the borders
@@ -178,14 +178,14 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                 for(int b=0; b < nb_branching; ++b)
                 {
                     // Length of a segment before branching
-                    double l_segment = 100e-3;//240e-3 / double(nb_branching);//generateLengthSegment();
+                    double l_segment = 240e-3 / double(nb_branching);//generateLengthSegment();
                     // Number of spheres per segment
                     int nb_spheres   = l_segment / (sphere_radius / 4.0); //Let's assume that dendrites have a radius of 0.5microns so far
                     vector<int> proximal_branch;
                     vector<int> distal_branch;
                     if(b == 0)
                     {
-                        proximal_branch = {};
+                        proximal_branch = {-1};
                         distal_branch = {largest_node + 1, largest_node + 2};
                         largest_node  = largest_node + 2;
                         bool stop_growth = false;
@@ -208,7 +208,10 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                             for(int c=0; c < static_cast<int>(branching_points[p].children_direction.size()); c++)
                             {
                                 proximal_branch = {branching_points[p].subbranch_id, branch_id + 1 - 2*c};
-                                distal_branch = {largest_node + 1, largest_node + 2};
+                                if((b + 1) == nb_branching)
+                                    distal_branch = {-1};
+                                else
+                                    distal_branch = {largest_node + 1, largest_node + 2};
                                 largest_node  = largest_node + 2;
                                 branching_points[p].direction = branching_points[p].children_direction[c];
                                 bool stop_growth = false;
@@ -216,7 +219,8 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                                 cout << "C id " << branch_id << endl;
                                 cout << "largest id " << largest_node << endl;
                                 cout << "prox " << proximal_branch[0] << proximal_branch[1] << endl;
-                                cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
+                                if(distal_branch.size() == 2)
+                                    cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
                                 branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[p], nb_spheres, sphere_radius, 
                                                                               proximal_branch, distal_branch, min_distance_from_border, 
                                                                               stop_growth, branch_id, &neuron.soma);
@@ -312,7 +316,7 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                 Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
                 if(sphere_id == 0)
                 {
-                    if(proximal_end.size() == 0)
+                    if(proximal_end[0] == -1)
                     {
                         sphere_to_add.add_neighbor(soma);
                         soma->add_neighbor(new Sphere(sphere_to_add));
@@ -602,6 +606,115 @@ void NeuronDistribution::printSubstrate(ostream &out) const
             // cout << "max " << max[0] << " " << max[1] << " " << max[2] << endl;
         }
         out << "Neuron " + to_string(i) << endl;
+    }
+}
+
+void NeuronDistribution::printSubstrate_swc(ostream &out) const
+{
+    /* 
+    SWC format :
+    SampleID TypeID x y z r ParentID
+
+    SampleID : Sample identifier. A positive integer.
+    TypeID : Type identifier. The basic set of types used in NeuroMorpho.org SWC files is:
+
+    -1  - root
+     0  - undefined
+     1  - soma
+     2  - axon
+     3  - (basal) dendrite
+     4  - apical dendrite
+     5+ - custom
+
+    In addition, some SWC-variants use the following types 5 and 6:
+
+    5 - branch point (redundant: branch is a point with multiple children)
+    6 - end point (redundant: end point is a point with zero children)
+
+    x : X-position in micrometers
+    y : Y-position in micrometers
+    z : Z-position in micrometers
+    r : Radius in micrometers (half the cylinder thickness)
+    ParentID : Parent sample identifier. This defines how points are connected to 
+               each other. In a tree, multiple points can have the same ParentID. 
+               The first point in the file must have a ParentID equal to -1, which 
+               represents the root point. Parent samples must be defined before they 
+               are being referred to. By counting how many points refer to the a 
+               given parent, the number of its children can be computed. 
+
+    Ref : https://neuroinformatics.nl/swcPlus/ 
+    */
+    for (size_t i = 0; i < neurons.size(); i++)
+    {
+        int line  = 1;
+    
+        // SampleID TypeID x y z r ParentID
+        cout << line                 << " " 
+        << 1                        << " "
+        << neurons[i].soma.center[0] << " "
+        << neurons[i].soma.center[1] << " "
+        << neurons[i].soma.center[2] << " "
+        << neurons[i].soma.radius    << " "
+        << -1                       << endl; 
+        line++;
+        int dendrite_id  = 0;
+        vector<vector<int>> path = find_tree_paths(new Neuron(neurons[i]), dendrite_id);
+        for(size_t i=0; i < path.size(); ++i)
+            for(size_t j=0; j < path[i].size(); ++j)
+                cout << path[i][j] << endl;
+        // for(size_t i=0; i < (*neuron).dendrites.size(); ++i)
+        // {
+        //     auto sphere_node = (*neuron).dendrites[i].subbranches[0].spheres[(*neuron).dendrites[i].subbranches[0].spheres.size() - 1];
+        //      // SampleID TypeID x y z r ParentID
+        //     out << 1                    << " " 
+        //     << 3                        << " "
+        //     << sphere_node.center[0]    << " "
+        //     << sphere_node.center[1]    << " "
+        //     << sphere_node.center[2]    << " "
+        //     << sphere_node.radius       << " "
+        //     << line                     << endl; 
+        //     line++;
+        //     for(size_t j=0; j < (*neuron).dendrites[i].subbranches[0].distal_branches.size(); ++j)
+        //     {
+        //         auto next_subbranch = (*neuron).dendrites[i].subbranches[0].distal_branches[]
+        //     } 
+        // }
+    }
+}
+
+
+vector<vector<int>> NeuronDistribution::find_tree_paths(Neuron* const& neuron, int const& dendrite_id) const
+{
+    int id_subbranch = (*neuron).dendrites[dendrite_id].subbranches.size() - 1;
+    vector<vector<int>> paths;
+    vector<int> path;
+    while(true)
+    {
+        if((*neuron).dendrites[dendrite_id].subbranches[id_subbranch].distal_branching[0] == -1)
+        {
+            paths.push_back(find_tree_path(neuron, dendrite_id, id_subbranch));
+            id_subbranch--;
+        }
+        else
+            return paths;
+    }
+}
+
+vector<int> NeuronDistribution::find_tree_path(Neuron* const& neuron, int const& dendrite_id, int const& subbranch_id) const
+{
+    vector<int> path;
+    path.insert(path.begin(), subbranch_id);
+    int subbranch_id_tmp = subbranch_id;
+    while(true)
+    {
+        vector<int> proximal_branching = (*neuron).dendrites[dendrite_id].subbranches[subbranch_id_tmp].proximal_branching;
+        if(proximal_branching.size() == 2)
+        {
+            path.insert(path.begin(), proximal_branching[0]);
+            subbranch_id_tmp = proximal_branching[0];
+        }
+        else
+            return path;
     }
 }
 

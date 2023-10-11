@@ -652,12 +652,13 @@ void ParallelMCSimulation::specialInitializations()
             params.voxels_list[0].second = params.max_limits;
         }
 
-        string file = params.output_base_name + "_neurons_list.txt";
+        // string file = params.output_base_name + "_neurons_list.txt";
+        string file = params.output_base_name + "_neurons_list.swc";
         params.neurons_files.push_back(file);
 
         ofstream out(file);
 
-        neuron_dist.printSubstrate(out);
+        neuron_dist.printSubstrate_swc(out);
 
         //params.cylinders_files.push_back(file);
         out.close();
