@@ -175,7 +175,7 @@ void PGSESequence::readSchemeParameters(Scheme scheme_){
 
     num_rep = scheme_.scheme.size();
 
-    for(unsigned i = 0 ; i < num_rep; i++){
+    for(int i = 0 ; i < num_rep; i++){
         DWI.push_back(0);
         DWIi.push_back(0);
         phase_shift.push_back(0);

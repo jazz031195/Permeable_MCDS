@@ -25,7 +25,7 @@ void UniformDistribution::displayDistribution()
     
     int p[11]={};
 
-    for(int i=0;i<this->num_obstacles.size(); ++i){
+    for(size_t i=0;i < this->num_obstacles.size(); ++i){
         double curr_r   = this->radiis_sphere[i];
         if (curr_r<10){
             p[int(curr_r)] += this->num_obstacles[i];
@@ -36,7 +36,7 @@ void UniformDistribution::displayDistribution()
         nrolls+=this->num_obstacles[i];
     }
 
-    for (int i=0; i<9; ++i) {
+    for (int i=0; i < 9; ++i) {
         message = std::to_string(i) + "-" + std::to_string(i+1) + ": " + std::string(p[i]*nstars/nrolls,'*');
         SimErrno::info(message,cout);
     }
@@ -55,7 +55,7 @@ std::vector<double> UniformDistribution::createRadiiList(){
 
 
     unsigned tot_num_obstacles = 0; 
-    for(int i=0;i<this->num_obstacles.size(); ++i){
+    for(size_t i=0;i < this->num_obstacles.size(); ++i){
         tot_num_obstacles += this->num_obstacles[i];
     }
    
@@ -64,7 +64,7 @@ std::vector<double> UniformDistribution::createRadiiList(){
     unsigned counter    = 0; 
     double rad_curr     = 0.0;
 
-    for(int i=0;i<this->num_obstacles.size(); ++i){
+    for(size_t i=0;i < this->num_obstacles.size(); ++i){
         unsigned curr_counter    = 0; 
         rad_curr = this->radiis_sphere[i]*1e-3 ;
                 

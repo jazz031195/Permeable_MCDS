@@ -68,9 +68,8 @@ void Parameters::readSchemeFile(std::string conf_file_path)
     }
 
     string tmp="";
-    int number_lines = 0;
+
     while((in >> tmp) && (str_dist(tmp,"<END>") >= 2) ){
-        //cout << "read line number :" << number_lines << endl;
         //cout << tmp << endl;
 
         std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
@@ -235,7 +234,6 @@ void Parameters::readSchemeFile(std::string conf_file_path)
             if( str_dist(tmp.substr(0,2),"</") > 0 )
                 SimErrno::warning("Parameter: " + tmp + " Unknown",cout);
         }
-        number_lines += 1;
     }
 
     if(scale_from_stu){

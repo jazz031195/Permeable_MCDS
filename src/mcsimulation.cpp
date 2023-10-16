@@ -324,7 +324,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
         in.open(params.axons_files[i]);
 
-        double x,y,z,r;
+        double x,y,z,r,p;
         int ax_id, sph_id;
         int last_ax_id = -1;
         std::string type_object;
@@ -340,7 +340,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             in >> header;
         
 
-        while (in >>ax_id >> sph_id >> type_object >> x >> y >> z >> r >> p){
+        while (in >> ax_id >> sph_id >> type_object >> x >> y >> z >> r >> p){
 
             // convert to mm
             x = x/1000.0;
@@ -592,7 +592,7 @@ vector<int> find_proximal(vector<vector<double>> const& segments, int const& seg
     if(segments[segment_id][0] == 0)
         return {-1};
 
-    for (size_t i=0; i < segments.size(); ++i) 
+    for (int i=0; i < segments.size(); ++i) 
     {
         if((segments[i][1] == segments[segment_id][0]) && (i != segment_id))
             ids.push_back(i);
@@ -610,7 +610,7 @@ vector<int> find_distal(std::vector<vector<double>> const& segments, int const& 
 {
     vector<int> ids;
 
-    for (size_t i=0; i < segments.size(); ++i) 
+    for (int i=0; i < segments.size(); ++i) 
     {
         if(segments[i][0] == segments[segment_id][1])
             ids.push_back(i);
@@ -908,7 +908,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
     in.close();
 
     double volume          = (params.max_limits[0] - params.min_limits[0]) * (params.max_limits[1] - params.min_limits[1]) * (params.max_limits[2] - params.min_limits[2]);
-    double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
+    // double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
 
     if (params.concentration != 0){
         if (params.ini_walker_flag == "intra")

@@ -23,7 +23,7 @@ void GaussianDistribution::displayDistribution()
     const int nrolls=10000;  // number of experiments
     const int nstars=100;    // maximum number of stars to distribute
     unsigned tot_num_obstacles = 0; 
-    for(int i=0;i<num_obstacles.size(); ++i){
+    for(size_t i=0; i < num_obstacles.size(); ++i){
         tot_num_obstacles += num_obstacles[i];
     }
 
@@ -34,18 +34,16 @@ void GaussianDistribution::displayDistribution()
     int p[11]={};  
 
 
-    for(int i=0;i<num_obstacles.size(); ++i){
-        unsigned curr_counter    = 0; 
+    for(size_t i=0; i < num_obstacles.size(); ++i){
         double curr_mean   = mu_mean[i];
         double curr_std    = sigma_std[i];
-        double curr_num_obstacle = num_obstacles[i];
 
         unsigned curr_nb_roll   = nrolls * num_obstacles[i]/tot_num_obstacles; 
 
         std::normal_distribution<double> distribution(curr_mean,curr_std);
 
 
-        for (int i=0; i<curr_nb_roll; ++i) {
+        for (size_t i=0; i < curr_nb_roll; ++i) {
             double number = distribution(generator);
             if (number<10) ++p[int(number)];
             else ++p[10];
@@ -70,16 +68,15 @@ std::vector<double> GaussianDistribution::createRadiiList(){
 
 
     unsigned tot_num_obstacles = 0; 
-    for(int i=0;i<num_obstacles.size(); ++i){
+    for(size_t i=0; i < num_obstacles.size(); ++i)
         tot_num_obstacles += num_obstacles[i];
-    }
    
     std::vector<double> radiis_packing(tot_num_obstacles,0.0);
 
     unsigned counter    = 0; 
     double rad_curr     = 0.0;
 
-    for(int i=0;i<num_obstacles.size(); ++i){
+    for(size_t i=0; i < num_obstacles.size(); ++i){
         unsigned curr_counter    = 0; 
         double curr_mean   = mu_mean[i];
         double curr_std    = sigma_std[i];

@@ -535,7 +535,7 @@ bool SimErrno::checkCylindersListFile(Parameters &params)
 bool SimErrno::checkAxonsListFile(Parameters &params)
 {
     for(unsigned i = 0; i < params.axons_files.size(); i++){
-        bool z_flag = false;
+        // bool z_flag = false;
         ifstream in(params.axons_files[i]);
 
         if(!in){
@@ -545,8 +545,8 @@ bool SimErrno::checkAxonsListFile(Parameters &params)
             return true;
         }
 
-        bool first=true;
-        unsigned enum_ = 1;
+        // bool first=true;
+        // unsigned enum_ = 1;
         for( std::string line; getline( in, line ); )
         {
 
@@ -572,7 +572,7 @@ bool SimErrno::checkAxonsListFile(Parameters &params)
 bool SimErrno::checkNeuronsListFile(Parameters &params)
 {
     for(unsigned i = 0; i < params.neurons_files.size(); i++){
-        bool z_flag = false;
+
         ifstream in(params.neurons_files[i]);
 
         if(!in){

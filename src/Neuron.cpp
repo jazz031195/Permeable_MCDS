@@ -1033,6 +1033,8 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
         return false;
     }
 
+    colision.type = Collision::null;
+    return false;
 }
 
 

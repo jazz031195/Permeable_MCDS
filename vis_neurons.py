@@ -47,7 +47,7 @@ def read_swc(neuron_file_name):
 
     if num_segs_limit > 0:
         # Limit the number of segments
-        segments = segments[0:self.num_segs_limit]
+        segments = segments[0:num_segs_limit]
         num_total_segments = len(segments)
 
     num_segments_in_file = num_total_segments
