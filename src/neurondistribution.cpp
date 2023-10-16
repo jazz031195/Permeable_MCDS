@@ -609,6 +609,33 @@ void NeuronDistribution::printSubstrate(ostream &out) const
     }
 }
 
+/* Function that orders the indices of the tree from the origin to the end
+   for all end nodes. */
+vector<int> order_tree_idx(vector<vector<int>> const& paths) 
+{
+    vector<int> order;
+    size_t idx_longest_branch = 0;
+    size_t max_branch_length  = 0;
+    for(size_t i=0; i < paths.size(); ++i)
+    {
+        if(paths[i].size() > max_branch_length)
+        {
+            max_branch_length  = paths[i].size();
+            idx_longest_branch = i;
+        }
+    }
+    for(size_t i=1; i < paths[idx_longest_branch].size(); ++i)
+    {
+        order.push_back(paths[idx_longest_branch][i]);
+    }
+    order.push_back(paths[idx_longest_branch + 1][paths[idx_longest_branch + 1].size() - 1]);
+    order.push_back(paths[idx_longest_branch + 2][paths[idx_longest_branch + 2].size() - 2]);
+    order.push_back(paths[idx_longest_branch + 2][paths[idx_longest_branch + 2].size() - 1]);
+    order.push_back(paths[idx_longest_branch + 3][paths[idx_longest_branch + 3].size() - 1]);
+
+    return order;
+}
+
 void NeuronDistribution::printSubstrate_swc(ostream &out) const
 {
     /* 
@@ -644,45 +671,80 @@ void NeuronDistribution::printSubstrate_swc(ostream &out) const
 
     Ref : https://neuroinformatics.nl/swcPlus/ 
     */
+
+    out << 1 << endl; //scale
+    out << 0 << endl; //volume_inc_perc
+    out << 0 << endl; //dyn_perc
+    out << icvf << endl;
+    out << min_limits_vx[0] << endl; //min_limits [mm]
+    out << max_limits_vx[0] << endl; //max_limits [mm]
+
     for (size_t i = 0; i < neurons.size(); i++)
     {
         int line  = 1;
     
         // SampleID TypeID x y z r ParentID
-        cout << line                 << " " 
-        << 1                        << " "
+        out << line                 << " " 
+        << 1                         << " "
         << neurons[i].soma.center[0] << " "
         << neurons[i].soma.center[1] << " "
         << neurons[i].soma.center[2] << " "
         << neurons[i].soma.radius    << " "
-        << -1                       << endl; 
+        << -1                        << endl; 
         line++;
-        int dendrite_id  = 0;
-        vector<vector<int>> path = find_tree_paths(new Neuron(neurons[i]), dendrite_id);
-        for(size_t i=0; i < path.size(); ++i)
-            for(size_t j=0; j < path[i].size(); ++j)
-                cout << path[i][j] << endl;
-        // for(size_t i=0; i < (*neuron).dendrites.size(); ++i)
-        // {
-        //     auto sphere_node = (*neuron).dendrites[i].subbranches[0].spheres[(*neuron).dendrites[i].subbranches[0].spheres.size() - 1];
-        //      // SampleID TypeID x y z r ParentID
-        //     out << 1                    << " " 
-        //     << 3                        << " "
-        //     << sphere_node.center[0]    << " "
-        //     << sphere_node.center[1]    << " "
-        //     << sphere_node.center[2]    << " "
-        //     << sphere_node.radius       << " "
-        //     << line                     << endl; 
-        //     line++;
-        //     for(size_t j=0; j < (*neuron).dendrites[i].subbranches[0].distal_branches.size(); ++j)
-        //     {
-        //         auto next_subbranch = (*neuron).dendrites[i].subbranches[0].distal_branches[]
-        //     } 
-        // }
+
+    
+        // TODO [ines] : remove this ugly hard code...
+        vector<int> line_node = {3, 4, 4, 3, 7, 7};
+        for(size_t dendrite_id=0; dendrite_id < neurons[i].dendrites.size(); ++dendrite_id)
+        {
+            auto sphere_begin = (neurons[i]).dendrites[dendrite_id].subbranches[0].spheres[0];
+            auto sphere_end   = (neurons[i]).dendrites[dendrite_id].subbranches[0].spheres[(neurons[i]).dendrites[dendrite_id].subbranches[0].spheres.size() - 1];
+            
+            // Soma to first node, at the soma surface
+            out << line                 << " " 
+            << 3                        << " "
+            << sphere_begin.center[0]   << " "
+            << sphere_begin.center[1]   << " "
+            << sphere_begin.center[2]   << " "
+            << sphere_begin.radius      << " "
+            << 1                        << endl; 
+            line++;
+
+            // First subbranch
+            out << line                 << " " 
+            << 3                        << " "
+            << sphere_end.center[0]     << " "
+            << sphere_end.center[1]     << " "
+            << sphere_end.center[2]     << " "
+            << sphere_end.radius        << " "
+            << line - 1                 << endl; 
+            line++;
+
+            vector<vector<int>> paths = find_tree_paths(new Neuron(neurons[i]), dendrite_id);
+            vector<int> order = order_tree_idx(paths);
+
+            for(size_t subbranch_id=0; subbranch_id < order.size(); ++subbranch_id)
+            {
+                auto spheres     = (neurons[i]).dendrites[dendrite_id].subbranches[order[subbranch_id]].spheres;
+                auto sphere_node = spheres[spheres.size() - 1];
+                
+                // SampleID TypeID x y z r ParentID
+                out << line                 << " " 
+                << 3                        << " "
+                << sphere_node.center[0]    << " "
+                << sphere_node.center[1]    << " "
+                << sphere_node.center[2]    << " "
+                << sphere_node.radius       << " "
+                << line_node[subbranch_id] + dendrite_id * 8 << endl; 
+                line++;
+            }
+        }
     }
 }
 
 
+/* Find all the paths from origin to end node */
 vector<vector<int>> NeuronDistribution::find_tree_paths(Neuron* const& neuron, int const& dendrite_id) const
 {
     int id_subbranch = (*neuron).dendrites[dendrite_id].subbranches.size() - 1;
@@ -700,6 +762,7 @@ vector<vector<int>> NeuronDistribution::find_tree_paths(Neuron* const& neuron, i
     }
 }
 
+/* Find the path from origin to end node */
 vector<int> NeuronDistribution::find_tree_path(Neuron* const& neuron, int const& dendrite_id, int const& subbranch_id) const
 {
     vector<int> path;

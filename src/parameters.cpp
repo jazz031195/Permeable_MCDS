@@ -852,6 +852,9 @@ void Parameters::readNeuronParams(ifstream &in)
         else if(str_dist(tmp,"icvf") <= 1){
             in >> packing_icvf;
         }
+        else if(str_dist(tmp,"sphere_overlap") <= 1){
+            in >> sphere_overlap;
+        }
         else if(str_dist(tmp,"") == 0){
             in.clear();
             //in.ignore();
@@ -1089,6 +1092,10 @@ void Parameters::readNeuronList(ifstream& in)
                 in >> path;
                 neuron_permeability_files.push_back(path);
             }
+        }
+        if(str_dist(tmp,"sphere_overlap") <= 1)
+        {
+            in >> sphere_overlap;
         }
     } 
 }

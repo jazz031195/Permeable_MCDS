@@ -98,6 +98,24 @@ private:
 
     void addSpheresObstaclesFromFiles();
 
+    /*! 
+    \brief Function that reads neurons from a list of overlapping spheres
+    \param file_id (int), id of the file to read
+    */
+    void readNeurons_fromList(int const& file_id);
+    /*! 
+    \brief Function that reads neurons from a swc file
+    \param file_id (int), id of the file to read
+    */
+    void readNeurons_fromSWC(int const& file_id);
+    /*! 
+    \brief Function that creates a dendrite from swc lines
+    \param lines (std::vector<std::vector<double>>), all the lines of the SWC file for this dendrite
+    \param scale (double), scale of the unit
+    \param perm  (double), permeability
+    */
+    Dendrite createDendrites(std::vector<std::vector<double>> const& lines, double const& scale, double& perm);
+
 };
 
 #endif // MCSIMULATION_H
