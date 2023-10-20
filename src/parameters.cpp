@@ -28,6 +28,7 @@ Parameters::Parameters()
     hex_packing     = false;
     packing_cyl     = false;
     packing_s       = false;
+    funnel          = false;
 
     packing_icvf    = 0;
     packing_output_configuration = 0.0;
@@ -853,6 +854,9 @@ void Parameters::readNeuronParams(ifstream &in)
         else if(str_dist(tmp,"sphere_overlap") <= 1){
             in >> sphere_overlap;
         }
+        else if(str_dist(tmp,"funnel") <= 1){
+            in >> funnel;
+        }
         else if(str_dist(tmp,"") == 0){
             in.clear();
             //in.ignore();
@@ -1094,6 +1098,10 @@ void Parameters::readNeuronList(ifstream& in)
         if(str_dist(tmp,"sphere_overlap") <= 1)
         {
             in >> sphere_overlap;
+        }
+        if(str_dist(tmp,"funnel") <= 1)
+        {
+            in >> funnel;
         }
     } 
 }

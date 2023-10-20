@@ -440,6 +440,56 @@ void MCSimulation::addAxonsObstaclesFromFiles()
     }
 }
 
+void MCSimulation::printSubstrate(ostream &out) 
+{
+    out << 1 << endl; //scale
+    out << 0 << endl; //volume_inc_perc
+    out << 0 << endl; //dyn_perc
+    out << dynamicsEngine->icvf << endl;
+    out << dynamicsEngine->params.min_limits[0] << endl; //min_limits [mm]
+    out << dynamicsEngine->params.max_limits[0] << endl; //max_limits [mm]
+
+    auto neurons = dynamicsEngine->neurons_list;
+    for (unsigned i = 0; i < neurons.size(); i++)
+    {
+        // Print for soma : x y z r bool_active
+        out << neurons[i].soma.center[0] << " " 
+        << neurons[i].soma.center[1] << " "
+        << neurons[i].soma.center[2] << " "
+        << neurons[i].soma.radius    << endl; 
+        out << "Soma " + to_string(i) << endl;
+
+        for (size_t j = 0; j < neurons[i].dendrites.size(); j++)
+        {
+            for (size_t k = 0; k < neurons[i].dendrites[j].subbranches.size(); k++)
+            {
+                for (size_t l = 0; l < neurons[i].dendrites[j].subbranches[k].spheres.size(); l++)
+                {
+                    // Print for each dendrite, each sphere
+                    out << neurons[i].dendrites[j].subbranches[k].spheres[l].center[0] << " "
+                    << neurons[i].dendrites[j].subbranches[k].spheres[l].center[1] << " "
+                    << neurons[i].dendrites[j].subbranches[k].spheres[l].center[2] << " "
+                    << neurons[i].dendrites[j].subbranches[k].spheres[l].radius << endl; 
+                        
+                }
+                out << "Segment " + to_string(k);
+                if(neurons[i].dendrites[j].subbranches[k].proximal_branching.size() == 2)
+                    out << " proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[1]);
+                else
+                    out << " proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]);
+
+                if(neurons[i].dendrites[j].subbranches[k].distal_branching.size() == 2)
+                    out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[1]) << endl;
+                else
+                    out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) << endl;
+
+            }
+            out << "Dendrite " + to_string(j) << endl;
+        }
+        out << "Neuron " + to_string(i) << endl;
+    }
+}
+
 void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
 {
     std::ifstream in(params.neurons_files[neurons_files_id]);
@@ -559,7 +609,7 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
     dendrites_.push_back(dendrite_);
     lines.clear();
 
-     Neuron neuron(dendrites_, soma);
+    Neuron neuron(dendrites_, soma);
 
     // Add the permeabilities to all the objects
     for(size_t d=0; d < neuron.dendrites.size(); ++d)
@@ -578,8 +628,15 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
     neuron.setDiffusion(diff_i, diff_e);
     dynamicsEngine->neurons_list.push_back(neuron);
     dynamicsEngine->area = dynamicsEngine->area + neuron.get_Area();
+
+    // string file = params.output_base_name + "_neurons_list.txt";
+    // ofstream out(file);
+    // printSubstrate(out); 
+
     dendrites_.clear();       
 }
+
+
 
 /* Function that finds the proximal indices to a segment 
    \param segments (vector<vector<double>>) : all the segments of a dendrite
@@ -651,7 +708,7 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
     });
 
     Eigen::Vector3d parent, child, begin;
-    double radius;
+    double radius, funnel_radius, target_radius;
     Eigen::Vector3d dir;
     vector<Sphere> spheres_to_add;
     // Display the sorted 2D vector
@@ -659,7 +716,7 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
 
         parent = {lines[segments[i][0]][1], lines[segments[i][0]][2], lines[segments[i][0]][3]};
         child  = {lines[segments[i][1]][1], lines[segments[i][1]][2], lines[segments[i][1]][3]};
-        radius = lines[segments[i][1]][4];
+        radius = target_radius = lines[segments[i][1]][4];
         dir    = (child - parent).normalized();
         
         vector<int> id_prox = find_proximal(segments, i);
@@ -667,12 +724,22 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
 
         Eigen::Vector3d center = parent;
         int j = 0;
+        double funnel_radius = radius;
+        if(params.funnel)
+            funnel_radius = 1.5e-3; // TODO [ines] : find optimal
+
+        double slope = 1.0 / 5.0; // radius from 1.5 to 0.5 over 5um
         // Continue until the next center reached the child center
         while((center - child).norm() > 1e-5)
-        {
+        {            
             // If 1st segment => starts from 0
             if(i == 0)
-                center = parent + double(j) * (radius / params.sphere_overlap) * dir;
+            {
+                radius = funnel_radius - slope * double(j) * (radius / params.sphere_overlap);
+                if(radius <= target_radius)
+                    radius = target_radius;
+                center = parent + double(j) * (target_radius / params.sphere_overlap) * dir;
+            }
             // If not => starts from 1, so that no overlay of spheres at the branching
             else
                 center = parent + double(j+1) * (radius / params.sphere_overlap) * dir;
@@ -692,6 +759,7 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
         dendrite.add_subbranch(subbranch);
         spheres_to_add.clear();
     }
+
     for(size_t j=0; j < dendrite.subbranches.size(); j++)
     {
         vector<int> dist = dendrite.subbranches[j].distal_branching;
@@ -705,7 +773,6 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
             dendrite.subbranches[dist[1]].spheres[0].add_neighbor(new Sphere(dendrite.subbranches[dist[0]].spheres[0]));    
         }
     }
-    auto last_sph = dendrite.subbranches[dendrite.subbranches.size() - 1].spheres[dendrite.subbranches[dendrite.subbranches.size() - 1].spheres.size() - 1];
     dendrite.add_projection();
     return dendrite;
 }
@@ -735,7 +802,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
         }
 
         std::vector<std::string> jkr = split(line,' ');
-        if (jkr.size() != 4 && jkr.size() != 2){
+        if (jkr.size() != 4 && jkr.size() != 2 && jkr.size() != 7){
             std::cout << jkr.size() <<  " elements per line" << std::endl;
             std::cout << "wrong number of elements per line in file" << std::endl;
         }
@@ -832,34 +899,31 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 soma.setDiffusion(diff_i, diff_e);
                 spheres_.clear();
             }
-            // If Segment, create it from spheres_ and store it into axons_
-            else if( part.find("Segment") != std::string::npos && spheres_.size() > 0)
-            {
-                Eigen::Vector3d begin = {min_limits, min_limits, min_limits};
-                Eigen::Vector3d end   = {max_limits, max_limits, max_limits};
-                Axon subbranch (id, begin, end, r);
-                subbranch.set_spheres(spheres_);
-
-                for (unsigned i = 0; i < spheres_.size(); i++){
-                    spheres_[i].setPercolation(perm_);
-                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                    diff_i = params.diffusivity_intra; 
-                    diff_e = params.diffusivity_extra;
-                    spheres_[i].setDiffusion(diff_i, diff_e);
-                }
-
-                spheres_.clear();
-                subbranches_.push_back(subbranch);
-                cout << "adding segment "  << endl;
-                //TODO [ines] : add proximal & distal branching reading
-            }
             // If dendrite, create it from spheres_ and store it into axons_
             else if( part.find("Dendrite") != std::string::npos && subbranches_.size() > 0)
             {
                 Dendrite dendrite;
-                dendrite.set_dendrite(subbranches_);
-                subbranches_.clear();
+
+                for(size_t i=0; i < subbranches_.size(); ++i)
+                {
+                    vector<int> prox_id = subbranches_[i].proximal_branching;
+                    if(prox_id.size() == 2)
+                    {
+                        subbranches_[i].spheres[0].add_neighbor(new Sphere(subbranches_[prox_id[0]].spheres[subbranches_[prox_id[0]].spheres.size() - 1]));
+                        subbranches_[i].spheres[0].add_neighbor(new Sphere(subbranches_[prox_id[1]].spheres[subbranches_[prox_id[1]].spheres.size() - 1]));
+                    }
+
+                    vector<int> dist_id = subbranches_[i].distal_branching;
+                    if(dist_id.size() == 2)
+                    {
+                        subbranches_[i].spheres[subbranches_[i].spheres.size() - 1].add_neighbor(new Sphere(subbranches_[dist_id[0]].spheres[0]));
+                        subbranches_[i].spheres[subbranches_[i].spheres.size() - 1].add_neighbor(new Sphere(subbranches_[dist_id[1]].spheres[0]));
+                    }
+                }
+
+                dendrite.set_dendrite(subbranches_);               
                 dendrites_.push_back(dendrite);
+                subbranches_.clear();
                 cout << "adding dendrite : "  << id << endl;
             }
             // If neuron, create it from soma and axons
@@ -897,6 +961,45 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 dendrites_.clear();
                 // TODO : why nb_dendrites not printed ? [ines]
                 cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
+            }
+        }
+        if(jkr.size() > 4)
+        {
+            part = jkr[0];
+            id   = stod(jkr[1]);
+            auto it = std::find_if( std::begin( jkr ), std::end( jkr ),
+                            [&]( const string s ){ return s == "distal"; } );
+        
+            const int pos = std::distance( jkr.begin(), it );
+
+            vector<int> prox_id = {int(stod(jkr[3]))};
+            if((pos - 3) == 2)
+                prox_id.push_back(int(stod(jkr[4])));
+            
+            vector<int> dist_id = {int(stod(jkr[pos + 1]))};
+            if((pos + 1) != (jkr.size() - 1)) // TODO [ines] : check if parentheses needed
+                dist_id.push_back(int(stod(jkr[pos + 2])));
+
+            // If Segment, create it from spheres_ and store it into axons_
+            if( part.find("Segment") != std::string::npos && spheres_.size() > 0)
+            {
+                Eigen::Vector3d begin = {min_limits, min_limits, min_limits};
+                Eigen::Vector3d end   = {max_limits, max_limits, max_limits};
+                Axon subbranch(id, r, begin, end, prox_id, dist_id);
+                subbranch.set_spheres(spheres_);
+
+                for (unsigned i = 0; i < spheres_.size(); i++){
+                    spheres_[i].setPercolation(perm_);
+                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                    diff_i = params.diffusivity_intra; 
+                    diff_e = params.diffusivity_extra;
+                    spheres_[i].setDiffusion(diff_i, diff_e);
+                }
+
+                spheres_.clear();
+                subbranches_.push_back(subbranch);
+                cout << "adding segment "  << endl;
+                //TODO [ines] : add proximal & distal branching reading
             }
         }
     }

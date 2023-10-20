@@ -179,8 +179,6 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                 {
                     // Length of a segment before branching
                     double l_segment = 240e-3 / double(nb_branching);//generateLengthSegment();
-                    // Number of spheres per segment
-                    int nb_spheres   = l_segment / (sphere_radius / 4.0); //Let's assume that dendrites have a radius of 0.5microns so far
                     vector<int> proximal_branch;
                     vector<int> distal_branch;
                     if(b == 0)
@@ -192,7 +190,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                         cout << "P id " << branching_points[0].subbranch_id << endl;
                         cout << "C id " << branch_id << endl;
                         cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
-                        branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[0], nb_spheres, sphere_radius, proximal_branch, distal_branch, 
+                        branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[0], l_segment, sphere_radius, proximal_branch, distal_branch, 
                                                                       min_distance_from_border, stop_growth, branch_id, &neuron.soma);
                         branch_id++;
                         branching_points[0] = branching_pt_new;
@@ -221,7 +219,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                                 cout << "prox " << proximal_branch[0] << proximal_branch[1] << endl;
                                 if(distal_branch.size() == 2)
                                     cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
-                                branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[p], nb_spheres, sphere_radius, 
+                                branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[p], l_segment, sphere_radius, 
                                                                               proximal_branch, distal_branch, min_distance_from_border, 
                                                                               stop_growth, branch_id, &neuron.soma);
                                 
@@ -290,7 +288,7 @@ std::tuple<double, double>  phi_theta_to_target (Eigen::Vector3d parent_dir)
 }
 
 NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& dendrite, NeuronDistribution::branching_pt const& parent, 
-                                      int const& nb_spheres, double const& sphere_radius, vector<int> const& proximal_end, 
+                                      double const& l_segment, double const& sphere_radius, vector<int> const& proximal_end, 
                                       vector<int> const& distal_end, double const& min_distance_from_border, bool& stop_growth,
                                       int const& branch_id, Sphere* soma)
 {
@@ -299,10 +297,11 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
     std::vector<Sphere> spheres_to_add;
     spheres_to_add.clear();
 
-    Eigen::Vector3d center = {0, 0, 0};
+    Eigen::Vector3d center = parent.origin;
+    Eigen::Vector3d end    = parent.origin + l_segment * parent.direction;
     bool discard_dendrite  = false;
-   
-    for(int sphere_id=0; sphere_id < nb_spheres ; ++sphere_id)
+    int sphere_id = 0;
+    while((center - end).norm() > 1e-6)
     {
         if(branch_id == 0)
             center = double(sphere_id) * parent.direction * sphere_radius / 4.0 + parent.origin;
@@ -345,6 +344,7 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                 }
                 
                 spheres_to_add.push_back(sphere_to_add);
+                sphere_id++;
             }
         }
         else
@@ -362,7 +362,7 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
         subbranch.set_spheres(spheres_to_add);
         dendrite.add_subbranch(subbranch);
     } 
-    
+
     float phi_to_target, theta_to_target;
     tie(phi_to_target, theta_to_target) = phi_theta_to_target(parent.direction);
 
@@ -562,7 +562,6 @@ void NeuronDistribution::printSubstrate(ostream &out) const
     for (unsigned i = 0; i < neurons.size(); i++)
     {
         // Print for soma : x y z r bool_active
-        // bool_active = 1 if the sphere can be activated (swollen)
         out << neurons[i].soma.center[0] << " " 
         << neurons[i].soma.center[1] << " "
         << neurons[i].soma.center[2] << " "
@@ -571,8 +570,6 @@ void NeuronDistribution::printSubstrate(ostream &out) const
 
         for (size_t j = 0; j < neurons[i].dendrites.size(); j++)
         {
-            // vector<double> min = {10, 10, 10};
-            // vector<double> max = {0, 0, 0};
             for (size_t k = 0; k < neurons[i].dendrites[j].subbranches.size(); k++)
             {
                 for (size_t l = 0; l < neurons[i].dendrites[j].subbranches[k].spheres.size(); l++)
@@ -582,28 +579,21 @@ void NeuronDistribution::printSubstrate(ostream &out) const
                     << neurons[i].dendrites[j].subbranches[k].spheres[l].center[1] << " "
                     << neurons[i].dendrites[j].subbranches[k].spheres[l].center[2] << " "
                     << neurons[i].dendrites[j].subbranches[k].spheres[l].radius << endl; 
-                    // for(int axis=0; axis < 3; axis++)
-                    // {
-                    //     if(neurons[i].dendrites[j].subbranches[k].spheres[l].center[axis] < min[axis])
-                    //         min[axis] = neurons[i].dendrites[j].subbranches[k].spheres[l].center[axis];
-                    //     if(neurons[i].dendrites[j].subbranches[k].spheres[l].center[axis] > max[axis])
-                    //         max[axis] = neurons[i].dendrites[j].subbranches[k].spheres[l].center[axis];
-                    // }
                         
                 }
-                //TODO [ines] : add proximal & distal branching writing
-                out << "Segment " + to_string(k) << endl;
+                 out << "Segment " + to_string(k);
+                if(neurons[i].dendrites[j].subbranches[k].proximal_branching.size() == 2)
+                    out << " proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[1]);
+                else
+                    out << " proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]);
+
+                if(neurons[i].dendrites[j].subbranches[k].distal_branching.size() == 2)
+                    out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[1]) << endl;
+                else
+                    out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) << endl;
                 
             }
             out << "Dendrite " + to_string(j) << endl;
-            out << neurons[i].dendrites[j].Box[0][0] << " "
-                    << neurons[i].dendrites[j].Box[0][1] << " "
-                    << neurons[i].dendrites[j].Box[1][0] << " "
-                    << neurons[i].dendrites[j].Box[1][1] << " "
-                    << neurons[i].dendrites[j].Box[2][0] << " "
-                    << neurons[i].dendrites[j].Box[2][1] << endl;
-            // cout << "min " << min[0] << " " << min[1] << " " << min[2] << endl;
-            // cout << "max " << max[0] << " " << max[1] << " " << max[2] << endl;
         }
         out << "Neuron " + to_string(i) << endl;
     }
@@ -698,8 +688,9 @@ void NeuronDistribution::printSubstrate_swc(ostream &out) const
         vector<int> line_node = {3, 4, 4, 3, 7, 7};
         for(size_t dendrite_id=0; dendrite_id < neurons[i].dendrites.size(); ++dendrite_id)
         {
-            auto sphere_begin = (neurons[i]).dendrites[dendrite_id].subbranches[0].spheres[0];
-            auto sphere_end   = (neurons[i]).dendrites[dendrite_id].subbranches[0].spheres[(neurons[i]).dendrites[dendrite_id].subbranches[0].spheres.size() - 1];
+            auto first_subbranch = (neurons[i]).dendrites[dendrite_id].subbranches[0];
+            auto sphere_begin    = first_subbranch.spheres[0];
+            auto sphere_end      = first_subbranch.spheres[first_subbranch.spheres.size() - 1];
             
             // Soma to first node, at the soma surface
             out << line                 << " " 

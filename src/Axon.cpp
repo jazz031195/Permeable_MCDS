@@ -29,10 +29,14 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
     double sph_highest_x_val = spheres_to_add[0].center[0] + spheres_to_add[0].radius;
     // value of center of sphere at y that has the highest y center value
     double sph_highest_y_val= spheres_to_add[0].center[1] +spheres_to_add[0].radius;
+    // value of center of sphere at z that has the highest z center value
+    double sph_highest_z_val= spheres_to_add[0].center[2] +spheres_to_add[0].radius;
     // value of center of sphere at x that has the lowest x center value
     double sph_lowest_x_val= spheres_to_add[0].center[0]- spheres_to_add[0].radius;
     // value of center of sphere at y has the lowest y center value
     double sph_lowest_y_val= spheres_to_add[0].center[1]- spheres_to_add[0].radius;
+    // value of center of sphere at z has the lowest z center value
+    double sph_lowest_z_val= spheres_to_add[0].center[2]- spheres_to_add[0].radius;
 
 
 
@@ -51,6 +55,11 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
  
             sph_highest_x_val = spheres_to_add[i].center[0]+spheres_to_add[i].radius;
         }
+        // highest z value
+        if (spheres_to_add[i].center[2]+spheres_to_add[i].radius > sph_highest_z_val){
+ 
+            sph_highest_z_val = spheres_to_add[i].center[2]+spheres_to_add[i].radius;
+        }
         // lowest x value
         if (spheres_to_add[i].center[0]-spheres_to_add[i].radius < sph_lowest_x_val){
      
@@ -60,6 +69,11 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
         if (spheres_to_add[i].center[1]-spheres_to_add[i].radius  < sph_lowest_y_val){
        
             sph_lowest_y_val = spheres_to_add[i].center[1]-spheres_to_add[i].radius;
+        }
+        // lowest z value
+        if (spheres_to_add[i].center[2]-spheres_to_add[i].radius  < sph_lowest_z_val){
+       
+            sph_lowest_z_val = spheres_to_add[i].center[2]-spheres_to_add[i].radius;
         }
     }
     if (spheres_to_add.size() != 0){
@@ -76,7 +90,7 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
         //y
         Box.push_back({sph_lowest_y_val , sph_highest_y_val});
         //z
-        Box.push_back({spheres_to_add[0].center[2] - spheres_to_add[0].radius, spheres_to_add[spheres_to_add.size()-1].center[2] + spheres_to_add[spheres_to_add.size()-1].radius});
+        Box.push_back({sph_lowest_z_val , sph_highest_z_val});
     }
 
     // permeability variables
@@ -241,7 +255,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d const& step, double c
             bool isinside; 
             
             //if the collision are too close or negative.
-            if(Walker::bouncing){
+            if(walker.status == Walker::bouncing){
                 if( t1 >= EPS_VAL ){
                     
                     if (walker.initial_location== Walker::intra){
@@ -489,9 +503,9 @@ std::vector<int> findCommonIntegers(const std::vector<int>& vec1, const std::vec
 
 bool Axon::isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside, std::vector<int> &sph_ids){
     sph_ids.clear();
-    //cout << "isSphereInsideAxon_ : " << id << endl;
+    // cout << "isSphereInsideAxon_ : " << id << endl;
     if(isNearAxon(position, distance_to_be_inside)){ // if near axon
-        //cout << "is near axon : " << id << endl;
+        // cout << "is near axon : " << id << endl;
         std::vector<std::vector<int>> spheres_id_to_check;
         for (auto axis = 0; axis < 3; ++axis) {
             spheres_id_to_check.push_back(checkAxisForCollision(position,distance_to_be_inside, axis)); // check for collision along 1 axis
@@ -526,6 +540,7 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_insi
 bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& distance_to_be_inside, vector<int> &sph_ids, vector<double>& distances)
 {
     sph_ids.clear();
+    distances.clear();
     if(isNearAxon(position, distance_to_be_inside))
     { 
         // check for collision along 1 axis
@@ -546,7 +561,8 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& dista
             if (sphere_to_check.minDistance(position) <= distance_to_be_inside)
             {
                 sph_ids.push_back(spheres_to_check_all_axes[i]);
-                distances.push_back((sphere_to_check.center - position).norm());
+                // We need the relative distance to know from which center it is the closest
+                distances.push_back((sphere_to_check.center - position).norm() / sphere_to_check.radius);
             }
         }
         spheres_id_to_check.clear();
@@ -555,16 +571,14 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& dista
     
     if (sph_ids.size() > 0)
     {
-        // sort by value
-        sort(sph_ids.begin(), sph_ids.end());
         double min_dist_to_center = 1000;
         int min_id = 1000;
         for(size_t sph_id=0; sph_id < sph_ids.size(); ++ sph_id)
         {
-            double dist_tmp = (spheres[sph_ids[sph_id]].center - position).norm();
-            if (dist_tmp < min_dist_to_center)
+                
+            if (distances[sph_id] < min_dist_to_center)
             {
-                min_dist_to_center = dist_tmp;
+                min_dist_to_center = distances[sph_id];
                 min_id = sph_ids[sph_id];
             }
                 
@@ -576,8 +590,8 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d const& position, double const& dista
 
         return true;
     }
-    else
-        return false;
+    
+    return false;
 }
 
 /*

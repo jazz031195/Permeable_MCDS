@@ -330,10 +330,12 @@ bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &di
         if (soma.isInside(position, distance_to_be_inside))
             in_soma_index_tmp = 0;
     }
+
     in_dendrite_index  = in_dendrite_index_tmp;
     in_subbranch_index = in_subbranch_index_tmp;
     in_sph_index       = in_sph_index_tmp;
     in_soma_index      = in_soma_index_tmp; 
+
     // If we are both in soma & dendrite
     if(in_soma_index_tmp == 0 && in_dendrite_index_tmp >=0)
     {
@@ -352,7 +354,7 @@ bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &di
 
     if(in_soma_index_tmp == 0 || in_dendrite_index_tmp >=0)
         return true;
-
+    
     return false;
 }
 
@@ -624,9 +626,28 @@ bool Neuron::isNearNeuron(Vector3d const &position, double const &distance_to_be
 bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double const &step_lenght, Collision &colision)
 {
     bool isColliding = false;
-    
-    int in_soma     = walker.in_soma_index;
-    int in_dendrite = walker.in_dendrite_index;
+    int in_soma      = walker.in_soma_index;
+    int in_dendrite  = walker.in_dendrite_index;
+    int in_sub       = walker.in_subbranch_index;
+    int in_sph       = 0;
+
+     if ((walker.location == Walker::intra) && 
+        (!isPosInsideNeuron(walker.pos_v, barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
+    {
+        walker.location = Walker::extra;
+        // cout << "extra" << endl;
+    }
+    else if((walker.location == Walker::extra) && 
+        (isPosInsideNeuron(walker.pos_v, -barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
+    {
+        walker.location = Walker::intra;
+        // cout << "intra" << endl;
+    }
+
+    if((in_soma == 0) & (walker.in_soma_index != 0) & (walker.in_dendrite_index >= 0))
+        walker.cross_soma_dendrites++;
+    else if((in_dendrite >= 0) & (walker.in_dendrite_index < 0) & (walker.in_soma_index == 0))
+        walker.cross_dendrites_soma++;
 
     // If in the soma, check Collision with soma
     if(walker.in_soma_index == 0)
@@ -637,7 +658,6 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     // If in dendrite, check collision with the correct sphere
     else if(walker.in_dendrite_index >= 0)
     {
-        int in_sph;
         if(walker.in_sph_index.size() > 0)
             in_sph = walker.in_sph_index[0];
         else
@@ -690,26 +710,6 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
             isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
         }
     }
-
-    
- 
-    if ((walker.location == Walker::intra) && 
-        (!isPosInsideNeuron(colision.colision_point, barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
-    {
-        walker.location = Walker::extra;
-        // cout << "extra" << endl;
-    }
-    else if((walker.location == Walker::extra) && 
-        (isPosInsideNeuron(colision.colision_point, -barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
-    {
-        walker.location = Walker::intra;
-        cout << "intra" << endl;
-    }
-
-    if((in_soma == 0) & (walker.in_soma_index != 0) & (walker.in_dendrite_index >= 0))
-        walker.cross_soma_dendrites++;
-    else if((in_dendrite >= 0) & (walker.in_dendrite_index < 0) & (walker.in_soma_index == 0))
-        walker.cross_dendrites_soma++;
 
     return isColliding;
 }
@@ -866,7 +866,7 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
     if (intersect)
     {        
         // if the collision are too close or negative.
-        if (Walker::bouncing)
+        if (walker.status == Walker::bouncing)
         {
             if (t1 >= EPS_VAL)
             {
@@ -881,6 +881,7 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
                 as.push_back(a);
             }
         }
+        // Not bouncing
         else
         {
             if (t1 >= 0)
@@ -897,22 +898,7 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
             }
         }    
     }
-    else
-    {
-        double dist_to_collision = 0;
-        if(t1 >= 0)
-            dist_to_collision = t1;
-        else if (t2 >= 0)
-            dist_to_collision = t2;
-        colision.type = Collision::hit;
-        colision.t = fmin(dist_to_collision, step_lenght);
-        colision.colision_point = walker.pos_v + colision.t * step;
-        Vector3d normal = (colision.colision_point - sphere->center).normalized();
-        Vector3d temp_step = step;
-        elasticBounceAgainsPlane(walker.pos_v, normal, colision.t, temp_step);
-        colision.bounced_direction = temp_step.normalized();
-        return true;
-    }
+  
 
     // If they are some intersections to consider
     if (dist_intersections.size() > 0)
@@ -926,43 +912,45 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
         double dist_to_collision = dist_intersections[index_];
         colision.t = fmin(dist_to_collision, step_lenght);
         colision.colision_point = walker.pos_v + colision.t * step;
+
         // If the distance is <= step_length => there is a collision
         if (dist_to_collision <= step_lenght + barrier_tickness)
         {
-        
             // All collisions are considered as hit 
             // (walls between intersecting spheres as well as outer boundary)
             colision.type = Collision::hit;
-            colision.rn = cs[index_];
+            colision.rn   = cs[index_];
+            walker.is_allowed_to_cross = false;
+            colision.perm_crossing     = 0.;
 
             // In case of intra water, check if collision with intra walls
             bool inner_collision = false;
             // if extra, cannot hit sphere from inside
             if (walker.location == Walker::extra)
             {
-                if (cs[index_] < -1e-15)
+                if (cs[index_] < -1e-10)
                 {
-                    colision.col_location = Collision::inside;
                     // TODO [ines] : you should never enter here
-                    // assert(0);
+                    colision.col_location = Collision::inside;
+                    walker.location       = Walker::intra;
                 }
+                else if (cs[index_] > 1e-10)
+                    colision.col_location = Collision::outside;
                 else
-                    colision.col_location = Collision::outside;    
+                    colision.col_location = Collision::unknown;
             }
-            // intra 
+            // intra
             else
             {
                 colision.col_location = Collision::inside;
                 // Check if the collision point is part of the neighboring spheres
                 for(size_t i=0; i < sphere->neighboring_spheres.size(); ++i)
-                    inner_collision = inner_collision || sphere->neighboring_spheres[i]->isInside(colision.colision_point, barrier_tickness);
+                    inner_collision = inner_collision || sphere->neighboring_spheres[i]->isInside(colision.colision_point, -barrier_tickness);
                 
                 // If yes, it is a collision without reflection (the walker keeps the same direction)
                 if(inner_collision)
                 {
                     colision.bounced_direction = step;
-                    colision.perm_crossing     = 0.;
-                    walker.is_allowed_to_cross = false;
                     return true;
                 }
             }
@@ -998,17 +986,15 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
                             return true;
                         }
                     }  
-                }
-
-                colision.perm_crossing     = 0.;
-                walker.is_allowed_to_cross = false;
+                }//end membrane permeability
 
                 if (fabs(as[index_]) < EPS_VAL)
                 {
                     colision.col_location = Collision::on_edge;
                     colision.bounced_direction = -step;
                 }
-                else{
+                else
+                {
                     Vector3d normal = (colision.colision_point - sphere->center).normalized();
                     Vector3d temp_step = step;
                     elasticBounceAgainsPlane(walker.pos_v, normal, colision.t, temp_step);
@@ -1025,12 +1011,6 @@ bool Neuron::checkCollision_branching(Walker &walker, Sphere* const& sphere, Vec
             colision.type = Collision::null;
             return false;
         }
-    }
-    else
-    {
-        // assert(0);
-        colision.type = Collision::null;
-        return false;
     }
 
     colision.type = Collision::null;

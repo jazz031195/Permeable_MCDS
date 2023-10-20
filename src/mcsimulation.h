@@ -115,7 +115,8 @@ private:
     \param perm  (double), permeability
     */
     Dendrite createDendrites(std::vector<std::vector<double>> const& lines, double const& scale, double& perm);
-
+    /*! Print the neuron sphere by sphere in txt format, as a check */
+    void printSubstrate(std::ostream &out);
 };
 
 #endif // MCSIMULATION_H

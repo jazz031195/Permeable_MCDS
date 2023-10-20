@@ -116,7 +116,9 @@ void Dendrite::add_projection()
             int size         = subbranches[b].spheres.size() - 1;
             double center0   = subbranches[b].spheres[0].center[axis];
             double centerEnd = subbranches[b].spheres[size].center[axis];
-            double radius    = subbranches[b].spheres[size].radius;
+            // Take the 1st sphere as it is the largest in subbranch 0 (funnel)
+            // TODO [ines] : take the max radius of the subbranch
+            double radius    = subbranches[b].spheres[0].radius;
             // Take a margin to account for approximation errors
             double eps       = 2.0 * radius;
 

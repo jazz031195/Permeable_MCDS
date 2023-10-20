@@ -127,20 +127,21 @@ private:
      * @param upper_bound double, upper bound of the interval, in [rad].
      */
     double generateBifurcationAngle(double const& lower_bound=(M_PI/4 - M_PI/16), double const& upper_bound=(M_PI/4 + M_PI/16));
+
+    Eigen::Vector3d generatePointOnSphere(Eigen::Vector3d const& center, double const& radius) const;
     /**
      * Grow a subbranch/segment of dendrite.
      *
      * @param dendrite                  Dendrite, dendrite to grow. 
      * @param parent  tuple<Eigen::Vector3d,int>, < origin of the subbranch, parent subbranch id>.
      * @param dendrite_direction Eigen::Vector3d, direction of the dendrite / attractor point.
-     * @param nb_spheres                     int, number of spheres in the segment.
+     * @param l_segment                   double, length the segment.
      * @param sphere_radius               double, radius of the spheres in the segment.
      * @param proximal_end          TODO : to complete [ines]
      * @param distal_end
      * @param min_distance_from_border
      */
-    Eigen::Vector3d generatePointOnSphere(Eigen::Vector3d const& center, double const& radius) const;
-    branching_pt growSubbranch(Dendrite& dendrite, branching_pt const& parent, int const& nb_spheres, double const& sphere_radius, 
+    branching_pt growSubbranch(Dendrite& dendrite, branching_pt const& parent, double const& l_segment, double const& sphere_radius, 
                                std::vector<int> const& proximal_end, std::vector<int> const& distal_end, double const& min_distance_from_border, 
                                bool& stop_growth, int const& branch_id, Sphere* soma);
 

@@ -24,7 +24,8 @@ class Parameters
 public:
 
     double sphere_overlap;                          /*!< Adjacent spheres overlap with r/sphere_overlap */
-    unsigned num_walkers = 1;                           /*!< N, number of walkers                                                       */
+    bool funnel;                                    /*!< Do funnels between soma and dendrites */
+    unsigned num_walkers = 1;                       /*!< N, number of walkers                                                       */
     unsigned num_steps;                             /*!< T, number of steps                                                         */
     double diffusivity_intra;                       /*!< Di, intra-cellular diffusivity constant                                    */
     double diffusivity_extra;                       /*!< De, extra-cellular diffusivity constant                                    */
