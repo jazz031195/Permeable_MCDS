@@ -1369,17 +1369,20 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     cout << "area " << area * 1e-6  << " m²" << endl;
     cout << "crossings " << (walker.crossing_in + walker.crossing_ext) << endl;
 
+    if(walker.in_soma_index >= 0 || walker.in_dendrite_index >= 0)
+    {
+        ofstream out(params.output_base_name+"_count_walker.txt", std::ofstream::app);
+        out << "Number walker in soma, begin : " << count_soma_begin << endl;
+        out << "Number walker in soma, end : " << count_soma_end << endl;
+        out << "Number walker in dendrites, begin : " << count_dendrites_begin << endl;
+        out << "Number walker in dendrites, end : " << count_dendrites_end << endl;
+        out << "Crossed soma -> dendrites : " << walker.cross_soma_dendrites << endl;
+        out << "Crossed dendrites -> soma : " << walker.cross_dendrites_soma << endl;
+        out.close();
 
-    ofstream out(params.output_base_name+"_count_walker.txt", std::ofstream::app);
-    out << "Number walker in soma, begin : " << count_soma_begin << endl;
-    out << "Number walker in soma, end : " << count_soma_end << endl;
-    out << "Number walker in dendrites, begin : " << count_dendrites_begin << endl;
-    out << "Number walker in dendrites, end : " << count_dendrites_end << endl;
-    out << "Crossed soma -> dendrites : " << walker.cross_soma_dendrites << endl;
-    out << "Crossed dendrites -> soma : " << walker.cross_dendrites_soma << endl;
-    out.close();
-
-    cout << "Perc crossings " << neurons_list[0].count_perc_crossings << endl;
+        cout << "Perc crossings " << neurons_list[0].count_perc_crossings << endl;
+    }
+    
     /*********************   WARNING  **********************/
     /*                                                     */
     /*         END OF THE DYNAMIC SIMULATION CORE          */

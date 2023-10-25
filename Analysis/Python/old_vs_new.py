@@ -1,31 +1,34 @@
 # To compare ADC between multiple DWI files with varying N values
 
 import numpy as np
-import json
-import matplotlib
 import matplotlib.pyplot as plt
 import os
 import sys
 import pandas as pd
 import seaborn as sns
 from pathlib import Path
-from scipy import stats
 import warnings
 warnings.filterwarnings("ignore")
 sys.path.insert(1, '/home/localadmin/Documents/analytical_formula/')
 from my_murdaycotts import my_murdaycotts
 import math
 import statannot
-import array
-import binascii
 
 cur_path = os.getcwd()
 giro = 2.6751525e8 #Gyromagnetic radio given in rad/(ms*T)
 scheme_file = cur_path + "/results/funnel/overlap_4/n1/PGSE_21_dir_12_b.scheme"
 icvf = 0.38
 def get_dwi_array(dwi_path):
-    # create array with dwi values
-    return np.fromfile(dwi_path, dtype="float32")
+
+    if ".bfloat" in str(dwi_path):
+        # create array with dwi values
+        return np.fromfile(dwi_path, dtype="float32")
+    else:
+        signal = []
+        with open(dwi_path) as f:
+            [signal.append(float(line)) for line in f.readlines()]
+        return np.array(signal)
+        
 
 def get_psge_data():
     data_dwi = pd.DataFrame(columns = ["x", "y","z","G","Delta","delta","TE"])
@@ -60,9 +63,9 @@ def get_psge_data():
     return data_dwi
 
 def create_data(dwi_path, name, extension):
+    print(dwi_path / f"{name}.{extension}")
     dwi_signal_re = get_dwi_array(dwi_path / f"{name}.{extension}")
-    dwi_signal_im = get_dwi_array(dwi_path / f"{name}_img.{extension}")
-    dwi_signal    = np.sqrt(dwi_signal_re**2 + dwi_signal_im**2)
+    dwi_signal    = dwi_signal_re
     data_psge     = get_psge_data()
     data_psge["DWI"] = list(dwi_signal)
     nb_G = len(data_psge["G"].unique())
@@ -72,7 +75,6 @@ def create_data(dwi_path, name, extension):
         data_dir = data_psge.iloc[i*nb_G:(i+1)*nb_G]
         b0 = list(data_dir["b [ms/um²]"])[0]
         Sb0 = list(data_dir.loc[data_dir["b [ms/um²]"]== b0]["DWI"])[0]
-        # print(Sb0)
         signal = list(map(lambda Sb : Sb/Sb0, list(data_dir["DWI"])))
         signal_log = list(map(lambda Sb : np.log(Sb/Sb0), list(data_dir["DWI"])))
         adc = list(map(lambda b,Sb : -np.log(Sb/Sb0)/(b-b0) if b!= b0 else np.nan, list(data_dir["b [ms/um²]"]),list(data_dir["DWI"])))
@@ -87,28 +89,18 @@ def create_df(DWI_folder):
     print(DWI_folder)
     df_dwi = pd.DataFrame()
     df_crossings = pd.DataFrame()
-    for overlap in os.listdir(DWI_folder):
-        print(overlap)
-        for neuron in os.listdir(DWI_folder / overlap):
-            print(neuron)
-            f    = open(DWI_folder / overlap / neuron / "params.json")
-            data = json.load(f)
-            N                 = data.get("N")                 # Number of Walkers / water particles
-            T                 = data.get("T")                 # Number of timesteps
-            duration          = data.get("duration")          # Simulation duration in s
-            diff_intra        = data.get("diffusivity_intra") # Simulation diffusivity in m²/s
-            diff_extra        = data.get("diffusivity_extra") # Simulation diffusivity in m²/s
-            sphere_overlap    = data.get("sphere_overlap")    # the spheres are radius/sphere_overlap appart
-            funnel            = data.get("funnel")            # boolean, do a funnel between soma & dendrites
+    for neuron in os.listdir(DWI_folder):
+        print(neuron)
 
-            # Open the file in read mode
-            
-            # Iterate through the files in the folder
-            for filename in os.listdir(DWI_folder / overlap / neuron):
-                if "simu" in filename:
-                    with open(DWI_folder / overlap / neuron / filename, 'r') as file:
-                        N = int(filename.split('_')[1])
-                        T = int(filename.split('_')[3])
+        # Open the file in read mode
+        
+        # Iterate through the files in the folder
+        for filename in os.listdir(DWI_folder / neuron):
+            if "simu" in filename:
+                T = int(filename.split("_")[3])
+                N = int(filename.split("_")[1])
+                if T == 5000:
+                    with open(DWI_folder / neuron / filename, 'r') as file:
                         # Read the file line by line
                         for line in file:
                             # Check if the line contains the relevant information
@@ -120,26 +112,30 @@ def create_df(DWI_folder):
                         d = {'nb_crossings': [num_particles_crossings], 'N': [N], 'T': [T]}
                         df_avg_crossings = pd.DataFrame(d)
                         df_crossings = pd.concat([df_crossings, df_avg_crossings])
-                # Check if the filename contains "_rep_" and "DWI"
-                if "DWI_img" in filename:
-                    name = ('_').join(filename.split('_')[:-1])
-                    N = int(name.split('_')[1])
-                    T = int(name.split('_')[3])
-                    extension = filename.split('_')[-1].split('.')[-1]
-                    dwi_intra = create_data(DWI_folder / overlap / neuron, name, extension)
+            # Check if the filename contains "_rep_" and "DWI"
+            if ("DWI.txt" in filename and "soma_dendrites_ex" in filename) or "DWI.bfloat" in filename:
+                T = int(filename.split("_")[3])
+                N = int(filename.split("_")[1])
+                print(filename)
+                if T == 5000:
+                    if "soma_dendrites_ex" in filename:
+                        name = filename.split('.')[0]
+                        old  = True
+                    else:
+                        name = filename.split('.')[0]
+                        old  = False
+                    extension = filename.split('.')[-1]
+                    dwi_intra = create_data(DWI_folder / neuron, name, extension)
                     nb_G   = len(dwi_intra["G"].unique())
                     nb_dir = int(len(dwi_intra["x"].values) / nb_G)
                     for i in range(nb_G):
                         sb_so = []
-                        adc   = []
                         for j in range(nb_dir):
                             sb_so.append(dwi_intra.iloc[nb_G*j + i, :]["Sb/So"])
-                            adc.append(dwi_intra.iloc[nb_G*j + i, :]["adc [ms/um²]"])
                             b_lab = dwi_intra.iloc[nb_G*j + i, :]["b [ms/um²]"]
-                        mean     = np.mean(sb_so)
-                        mean_adc = np.mean(adc)
+                        mean = np.mean(sb_so)
                         b_labels = dwi_intra["b [ms/um²]"].unique()
-                        d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, "adc [ms/um²]": mean_adc, 'b [ms/um²]': b_lab, 'neuron': neuron, 'overlap': int(overlap.split('_')[-1])}
+                        d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, 'b [ms/um²]': b_lab, 'neuron': neuron, 'old': old}
                         df_avg_dwi = pd.DataFrame(d, index=[i])
                         df_dwi = pd.concat([df_dwi, df_avg_dwi])
 
@@ -160,7 +156,7 @@ if log:
     y_lim_max = 0.1
 else:
     y_lim_min = 0.
-    y_lim_max = 1.5
+    y_lim_max = 1
 
 if plot:
     MEDIUM_SIZE = 14
@@ -174,53 +170,45 @@ if plot:
     plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
     plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
+DWI_folder_old = Path("/home/localadmin/Documents/MCDS_code/MCDS-dFMRI/MCDC_Simulator_public-master/instructions/demos/output/neurons/intra/exchange/")
+DWI_folder_new = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/no_funnel/overlap_4")
 
-DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/no_funnel/")
-df_dwi, df_crossings = create_df(DWI_folder)
-print(df_dwi)
+df_dwi_old, _ = create_df(DWI_folder_old)
+df_dwi_new, _ = create_df(DWI_folder_new)
+df_dwi_old["old"] = True
+df_dwi_new["old"] = False
 
-# df_dwi = df_dwi[df_dwi['case'] != ""]
-T_labels = df_dwi['T'].unique()
-N_labels = df_dwi['N'].unique()
-overlaps = [2, 4, 8, 16, 32]
-b_labels = df_dwi["b [ms/um²]"].unique()
+df_all = df_dwi_old.append(df_dwi_new)
+
+T_labels = df_all['T'].unique()
+N_labels = df_all['N'].unique()
+b_labels = df_all["b [ms/um²]"].unique()
 
 fig, ax = plt.subplots(1, 1)
-sns.violinplot(data=df_dwi[(df_dwi['b [ms/um²]'] > 0) & (df_dwi["T"] == 5000)], x='b [ms/um²]', y='adc [ms/um²]', hue='overlap', ax=ax)
+sns.violinplot(data=df_all[df_all['b [ms/um²]'] > 0], x='b [ms/um²]', y='Sb/So', hue='old', hue_order=[True, False], ax=ax)
 ax.set_xticklabels([f'{float(blab):.3f}' for blab in b_labels[1:]])
 
 couples = []
 couples_end = []
-for b in df_dwi[df_dwi['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
-    for i, branch in enumerate(df_dwi['overlap'].unique()):
+for b in df_all[df_all['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
+    for i, branch in enumerate(df_all['old'].unique()):
         couples.append((b, branch))    
 
 for i in range(1, len(couples) + 1):
-    if i % 5 == 0:
-        couples_end.append((couples[i-5], couples[i-4]))
-        couples_end.append((couples[i-5], couples[i-3]))
-        couples_end.append((couples[i-5], couples[i-2]))
-        couples_end.append((couples[i-5], couples[i-1]))
-        couples_end.append((couples[i-4], couples[i-3]))
-        couples_end.append((couples[i-4], couples[i-2]))
-        couples_end.append((couples[i-4], couples[i-1]))
-        couples_end.append((couples[i-3], couples[i-2]))
-        couples_end.append((couples[i-3], couples[i-1]))
+    if i % 2 == 0:
         couples_end.append((couples[i-2], couples[i-1]))
 
 statannot.add_stat_annotation(
     ax,
-    data=df_dwi[(df_dwi['b [ms/um²]'] > 0) & (df_dwi["T"] == 5000)],
-    y='adc [ms/um²]', x='b [ms/um²]',
-    hue='overlap',
+    data=df_all[df_all['b [ms/um²]'] > 0],
+    y='Sb/So', x='b [ms/um²]',
+    hue='old',
+    hue_order=[True, False],
     box_pairs=couples_end,
     test="Mann-Whitney",
     text_format="star",
     loc="inside"
     )
-ax.set_title(f'N = {N_labels[0]}, T = {T_labels[0]}')
-
-
 
 # Analytical solutions & Mesh
 if plot:
@@ -291,52 +279,20 @@ if plot:
             ax2.plot(b_labels[1:], soma_signal, label=f"Soma (analytic)", color='b')
             ax2.plot(b_labels[1:], neurites_signal, label=f"Neurites (analytic)", color='orange')
             ax2.plot(b_labels[1:], both_signal, label=f"Neurites & soma (analytic)", color='g')
-            # sns.lineplot(b_labels, soma_signal, label=f"Soma (analytic)", color='b', ax=ax)
-            # # ax2.errorbar([b_lab + 0.05 for b_lab in b_labels], soma_signal_neuman, 
-            # #                 yerr=[0], label=f"Soma (analytic, Neuman)", fmt='o', color='blue')
-            # sns.lineplot(b_labels, neurites_signal, label=f"Neurites (analytic)", color='orange', ax=ax)
-            # sns.lineplot(b_labels, both_signal, label=f"Neurites & soma (analytic)", color='g', ax=ax)
-            # if log:
-            #     sns.lineplot(b_labels, [-b_lab*D0*1e9 for b_lab in b_labels], label="D = 2.5 [ms/um²]")
+            if log:
+                sns.lineplot(b_labels, [-b_lab*D0*1e9 for b_lab in b_labels], label="D = 2.5 [ms/um²]")
             ax2.legend(loc=3)
             ax2.set_yticklabels([])
             ax2.set_ylim([y_lim_min, y_lim_max])
             ax.set_ylim([y_lim_min, y_lim_max])
-            # step_length = np.sqrt(6 * D0 * TE[0] / int(t))
-            # # ax2.set_title(f"T = {T_labels[i]}, step length = {step_length*1e6:.3f} um")
-            # i = i + 1
+            step_length = np.sqrt(6 * D0 * TE[0] / int(t))
+            ax2.set_title(f"T = {T_labels[i]}, step length = {step_length*1e6:.3f} um")
+            i = i + 1
 if log:
     fig.suptitle('ln(S/S0) average over 21 directions, ' + branching, y=0.95)
 else:
     fig.suptitle('S/S0 average over 21 directions, ' + branching, y=0.95)
 
-plt.show()
 
-df_dwi = df_dwi[df_dwi["T"] == 50000]
-print(df_dwi)
-fig, ax = plt.subplots(1, 1)
-sns.violinplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='b [ms/um²]', y='adc [ms/um²]', hue='overlap', ax=ax, inner="points")
-ax.set_xticklabels([f'{float(blab):.3f}' for blab in b_labels[1:]])
 
-couples = []
-couples_end = []
-for b in df_dwi[df_dwi['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
-    for i, branch in enumerate(df_dwi['overlap'].unique()):
-        couples.append((b, branch))    
-
-for i in range(1, len(couples) + 1):
-    if i % 2 == 0:
-        couples_end.append((couples[i-2], couples[i-1]))
-
-statannot.add_stat_annotation(
-    ax,
-    data=df_dwi[df_dwi['b [ms/um²]'] > 0],
-    y='adc [ms/um²]', x='b [ms/um²]',
-    hue='overlap',
-    box_pairs=couples_end,
-    test="Mann-Whitney",
-    text_format="star",
-    loc="inside"
-    )
-ax.set_title(f'N = {N_labels[0]}, T = {T_labels[0]}')
 plt.show()
