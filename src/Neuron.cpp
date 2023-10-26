@@ -302,54 +302,43 @@ bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &di
     // if position is in box with Dendrite inside
     // distance_to_be_inside = position.sphere.radius + constant
     // id of the dendrite. {} if not in neuron
-    vector<int> part_id = isNearDendrite(position, distance_to_be_inside);
-    if (part_id.size() > 0)
+    if(in_dendrite_index >= 0)
     {
-        for (size_t p=0; p < part_id.size(); p++)
+        vector<int> part_id = isNearDendrite(position, distance_to_be_inside);
+        if (part_id.size() > 0)
         {
-            for (size_t b=0; b < dendrites[part_id[p]].subbranches.size(); b++)
+            for (size_t p=0; p < part_id.size(); p++)
             {
-                if (dendrites[part_id[p]].subbranches[b].isPosInsideAxon_(position, distance_to_be_inside, in_sph_index_tmp_tmp, distances))
+                for (size_t b=0; b < dendrites[part_id[p]].subbranches.size(); b++)
                 {
-                    // Find the minimum distance walker-center for this subbranch
-                    double min = *min_element(begin(distances), end(distances));
-                    if(min < min_dist)
+                    if (dendrites[part_id[p]].subbranches[b].isPosInsideAxon_(position, distance_to_be_inside, in_sph_index_tmp_tmp, distances))
                     {
-                        min_dist = min;
-                        in_sph_index_tmp = in_sph_index_tmp_tmp;
-                        in_dendrite_index_tmp  = part_id[p];
-                        in_subbranch_index_tmp = b;
+                        // Find the minimum distance walker-center for this subbranch
+                        double min = *min_element(begin(distances), end(distances));
+                        if(min < min_dist)
+                        {
+                            min_dist = min;
+                            in_sph_index_tmp = in_sph_index_tmp_tmp;
+                            in_dendrite_index_tmp  = part_id[p];
+                            in_subbranch_index_tmp = b;
+                        }
                     }
                 }
             }
         }
+        in_dendrite_index  = in_dendrite_index_tmp;
+        in_subbranch_index = in_subbranch_index_tmp;
+        in_sph_index       = in_sph_index_tmp;
     }
 
-    if (isNearSoma(position, distance_to_be_inside))
+    if(in_soma_index >= 0)
     {
-        if (soma.isInside(position, distance_to_be_inside))
-            in_soma_index_tmp = 0;
-    }
-
-    in_dendrite_index  = in_dendrite_index_tmp;
-    in_subbranch_index = in_subbranch_index_tmp;
-    in_sph_index       = in_sph_index_tmp;
-    in_soma_index      = in_soma_index_tmp; 
-
-    // If we are both in soma & dendrite
-    if(in_soma_index_tmp == 0 && in_dendrite_index_tmp >=0)
-    {
-        Sphere dendrite_sphere(dendrites[in_dendrite_index_tmp].subbranches[in_subbranch_index_tmp].spheres[in_sph_index[0]]);
-        // We are closer to the dendrite
-        if((soma.center - position).norm()/soma.radius > (dendrite_sphere.center - position).norm()/dendrite_sphere.radius)
-            in_soma_index      = -1;
-        // We are closer to the soma
-        else
+        if (isNearSoma(position, distance_to_be_inside))
         {
-            in_dendrite_index  = -1;
-            in_subbranch_index = -1;
-            in_sph_index.clear();
+            if (soma.isInside(position, distance_to_be_inside))
+                in_soma_index_tmp = 0;
         }
+        in_soma_index = in_soma_index_tmp;
     }
 
     if(in_soma_index_tmp == 0 || in_dendrite_index_tmp >=0)

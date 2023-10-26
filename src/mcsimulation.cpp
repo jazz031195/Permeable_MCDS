@@ -589,8 +589,6 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
             if(lines.size() > 0)
             {
                 Dendrite dendrite_ = createDendrites(lines, scale, perm_);
-                dendrite_.subbranches[0].spheres[0].add_neighbor(new Sphere(soma));
-                soma.add_neighbor(new Sphere(dendrite_.subbranches[0].spheres[0]));
                 dendrites_.push_back(dendrite_);
                 
                 // Start fresh for the next dendrite
@@ -604,8 +602,6 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
 
     // Add the last dendrite
     Dendrite dendrite_ = createDendrites(lines, scale, perm_);
-    dendrite_.subbranches[0].spheres[0].add_neighbor(new Sphere(soma));
-    soma.add_neighbor(new Sphere(dendrite_.subbranches[0].spheres[0]));
     dendrites_.push_back(dendrite_);
     lines.clear();
 
