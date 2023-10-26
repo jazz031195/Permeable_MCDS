@@ -16,13 +16,97 @@ sys.path.insert(1, '/home/localadmin/Documents/analytical_formula/')
 from my_murdaycotts import my_murdaycotts
 import math
 import statannot
-import array
-import binascii
+import dipy.reconst.dki as dki
+import dipy.reconst.dti as dti
+from dipy.core.gradients import gradient_table
+import nibabel as nib
+
+
 
 cur_path = os.getcwd()
 giro = 2.6751525e8 #Gyromagnetic radio given in rad/(ms*T)
 scheme_file = cur_path + "/results/funnel/overlap_4/n1/PGSE_21_dir_12_b.scheme"
 icvf = 0.38
+
+def read_and_extract_bvals(file_path):
+    column_4 = []  # Initialize an empty list to store the values from the 4th column
+
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split each line into space-separated values and extract the 4th column
+                columns = line.strip().split()
+                if len(columns) >= 5:
+                    G = float(columns[3])*1e-3
+                    giro = 2.6751525e8 #Gyromagnetic radio given in rad/(ms*T)
+                    delta = float(columns[5])
+                    Delta = float(columns[4])
+                    b = pow(G * giro * delta, 2) * (Delta - delta/ 3) / 1000
+                    column_4.append(b)  # Assuming columns are 0-based
+
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+    
+    return np.array(column_4)
+
+def read_and_extract_bvecs(file_path):
+    columns_1_to_3 = []  # Initialize an empty list to store the values from the first three columns
+
+    try:
+        with open(file_path, 'r') as file:
+            for line in file:
+                # Split each line into space-separated values and extract the first three columns
+                columns = line.strip().split()[:3]  # Assuming columns are 0-based
+                if len(columns) == 3:
+                    b_value = float(line.strip().split()[3])
+                    if b_value != 0:
+                        columns = [float(val) for val in columns]  # Convert to float if needed
+                        columns_1_to_3.append(columns)
+                    else :
+
+                        columns_1_to_3.append([0,0,0])
+
+    except FileNotFoundError:
+        print(f"File not found: {file_path}")
+    
+    return np.array(columns_1_to_3)
+
+def calculate_DKI(path_scheme, dwi):
+
+    bvals = read_and_extract_bvals(path_scheme)
+    bvecs = read_and_extract_bvecs(path_scheme)
+
+    gtab = gradient_table(bvals, bvecs)
+
+    #dwi = txt_to_nifti(path_to_DWI)
+
+    # build model
+    dkimodel = dki.DiffusionKurtosisModel(gtab)
+    #dtimodel = dti.TensorModel(gtab)
+    #tenfit = dtimodel.fit(dwi.get_fdata())
+    dkifit = dkimodel.fit(dwi.get_fdata())
+    # save maps
+
+    FA = dkifit.fa
+    MD = dkifit.md
+    AD = dkifit.ad
+    RD = dkifit.rd
+    MK = dkifit.mk(0, 10)
+    AK = dkifit.ak(0, 10)
+    RK = dkifit.rk(0, 10)
+
+    #FA = tenfit.fa
+    #MD = tenfit.md
+    #AD = tenfit.ad
+    #RD = tenfit.rd
+
+    #RK= 0
+    #AK = 0
+    #MK = 0
+
+
+    return FA, MD, AD, RD, MK, AK, RK
+
 def get_dwi_array(dwi_path):
     # create array with dwi values
     return np.fromfile(dwi_path, dtype="float32")
@@ -63,7 +147,12 @@ def create_data(dwi_path, name, extension):
     dwi_signal_re = get_dwi_array(dwi_path / f"{name}.{extension}")
     dwi_signal_im = get_dwi_array(dwi_path / f"{name}_img.{extension}")
     dwi_signal    = np.sqrt(dwi_signal_re**2 + dwi_signal_im**2)
-    data_psge     = get_psge_data()
+    # Create an empty 4x4 affine matrix with ones on the diagonal
+    affine = np.eye(4)
+    img = nib.Nifti1Image(dwi_signal, affine)
+    FA, MD, AD, RD, MK, AK, RK = calculate_DKI(scheme_file, img)
+
+    data_psge        = get_psge_data()
     data_psge["DWI"] = list(dwi_signal)
     nb_G = len(data_psge["G"].unique())
     nb_dir = int(len(dwi_signal) / nb_G)
@@ -80,6 +169,13 @@ def create_data(dwi_path, name, extension):
         data_dir["log(Sb/So)"] = signal_log
         data_dir["adc [ms/um²]"] = adc
         data_dwi = pd.concat([data_dwi, data_dir])
+    data_dwi["FA"] = FA
+    data_dwi["MD"] = MD
+    data_dwi["AD"] = AD
+    data_dwi["RD"] = RD
+    data_dwi["MK"] = MK
+    data_dwi["AK"] = AK
+    data_dwi["RK"] = RK
     return data_dwi
 
 
@@ -127,6 +223,13 @@ def create_df(DWI_folder):
                     T = int(name.split('_')[3])
                     extension = filename.split('_')[-1].split('.')[-1]
                     dwi_intra = create_data(DWI_folder / overlap / neuron, name, extension)
+                    FA = dwi_intra["FA"][0]
+                    MD = dwi_intra["MD"][0]
+                    AD = dwi_intra["AD"][0]
+                    RD = dwi_intra["RD"][0]
+                    MK = dwi_intra["MK"][0]
+                    AK = dwi_intra["AK"][0]
+                    RK = dwi_intra["RK"][0]
                     nb_G   = len(dwi_intra["G"].unique())
                     nb_dir = int(len(dwi_intra["x"].values) / nb_G)
                     for i in range(nb_G):
@@ -139,7 +242,9 @@ def create_df(DWI_folder):
                         mean     = np.mean(sb_so)
                         mean_adc = np.mean(adc)
                         b_labels = dwi_intra["b [ms/um²]"].unique()
-                        d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, "adc [ms/um²]": mean_adc, 'b [ms/um²]': b_lab, 'neuron': neuron, 'overlap': int(overlap.split('_')[-1])}
+                        d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, "adc [ms/um²]": mean_adc, 
+                             'b [ms/um²]': b_lab, 'neuron': neuron, 'overlap': int(overlap.split('_')[-1]),
+                             'FA': FA, 'MD': MD, 'RD': RD, 'AD': AD, 'MK': MK, 'RK': RK, 'AK': AK}
                         df_avg_dwi = pd.DataFrame(d, index=[i])
                         df_dwi = pd.concat([df_dwi, df_avg_dwi])
 
