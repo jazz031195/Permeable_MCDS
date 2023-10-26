@@ -41,3 +41,7 @@ build
 instructions
 
 results
+
+build_glibc_2.28
+
+.DS_Store
