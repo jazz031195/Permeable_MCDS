@@ -288,11 +288,11 @@ void DynamicsSimulation::computeICVF()
 
 bool DynamicsSimulation::finalPositionCheck()
 {   
-    int ax_id, neuron_id, dendrite_id, subbranch_id;
+    int ax_id, neuron_id, soma_id, dendrite_id, subbranch_id;
     vector<int> sph_id;
     if(plyObstacles_list.size()>0 and sentinela.deport_illegals and params.obstacle_permeability <=0){
 
-        bool isIntra = isInIntra(this->walker.pos_v, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0);
+        bool isIntra = isInIntra(this->walker.pos_v, ax_id, neuron_id, soma_id, dendrite_id, subbranch_id, sph_id, 0);
 
         if((isIntra and this->walker.initial_location==Walker::extra) or ((!isIntra and this->walker.initial_location==Walker::intra))){
             //cout << "Im working" << endl;
@@ -520,13 +520,13 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
         // => initial_position re-assigned to [-1, -1, -1]
         if(initial_position[0] == -1)
         {
-            getAnIntraCellularPosition(intra_pos, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+            getAnIntraCellularPosition(intra_pos, walker.in_ax_index, walker.in_neuron_index, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
             walker.setInitialPosition(intra_pos);
         }
         else
         {
             bool random_pos = false;
-            isInIntra(initial_position, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            isInIntra(initial_position, walker.in_ax_index, walker.in_neuron_index, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if(walker.in_soma_index >= 0)
                 intra_pos = getAnIntraCellularPosition_soma(random_pos);
             else if (walker.in_dendrite_index >= 0)
@@ -545,18 +545,18 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
     else if(voxels_list.size() > 0 or params.custom_sampling_area){
         walker.setRandomInitialPosition(params.min_sampling_area,params.max_sampling_area);
 
-        int ax_id, neuron_id, dendrite_id, subbranch_id;
+        int ax_id, neuron_id, soma_id, dendrite_id, subbranch_id;
         vector<int> sph_id;
 
         // Walker initial position - Required for multiple diffusivities
-        if (isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0))
+        if (isInIntra(walker.ini_pos, ax_id, neuron_id, soma_id, dendrite_id, subbranch_id, sph_id, 0.0))
             walker.initial_location = walker.location = Walker::intra;
         else 
             walker.initial_location = walker.location = Walker::extra;
 
 
         if(params.computeVolume)
-            isInIntra(walker.ini_pos, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, 0.0);
+            isInIntra(walker.ini_pos, ax_id, neuron_id, soma_id, dendrite_id, subbranch_id, sph_id, 0.0);
 
     }
     else
@@ -700,7 +700,7 @@ void DynamicsSimulation::updateCollitionSphere(unsigned t)
     }
 }
 
-void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax_id, int& neuron_id, int& dendrite_id, int& subbranch_id, vector<int>& sph_id)
+void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax_id, int& neuron_id, int& soma_id, int& dendrite_id, int& subbranch_id, vector<int>& sph_id)
 {
 
     std::random_device rd;
@@ -741,7 +741,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
         // cout << initialization_gap[2] << endl;
             Vector3d pos_temp = {x,y,z};
 
-            if(checkIfPosInsideVoxel(pos_temp) && (isInIntra(pos_temp, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, -0.1))){
+            if(checkIfPosInsideVoxel(pos_temp) && (isInIntra(pos_temp, ax_id, neuron_id, soma_id, dendrite_id, subbranch_id, sph_id, -0.1))){
                 intra_pos = pos_temp;
                 return;
             }
@@ -796,7 +796,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             double y = sin(phi) * sin(theta) * probaRadius * somaRadius + somaCenter[1];
             double z = cos(phi) * probaRadius * somaRadius + somaCenter[2];
             Vector3d pos_temp = {x, y, z};
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
                 cout << "starts in soma" << endl;
@@ -825,7 +825,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             double y = sin(phi) * sin(theta) * probaRadius * somaRadius + somaCenter[1];
             double z = cos(phi) * probaRadius * somaRadius + somaCenter[2];
             Vector3d pos_temp = {x, y, z};
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
                 cout << "starts in soma" << endl;
@@ -872,7 +872,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             Vector3d center   = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].center;
             Vector3d pos_temp = center;
 
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_soma_index,walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
                 cout << "starts in dendrite" << endl;
@@ -896,7 +896,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             int sphere_id = sphere_dist(gen);
             Vector3d center = spheres[sphere_id].center;
             Vector3d pos_temp = center;
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
                 cout << "starts in dendrite" << endl;
@@ -941,10 +941,10 @@ void DynamicsSimulation::getAnExtraCellularPosition(Vector3d &extra_pos)
 
         Vector3d pos_temp = {x,y,z};
 
-        int ax_id, neuron_id, dendrite_id, subbranch_id;
+        int ax_id, neuron_id, soma_id, dendrite_id, subbranch_id;
         vector<int> sph_id;
 
-        if(checkIfPosInsideVoxel(pos_temp) && (!isInIntra(pos_temp, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id, barrier_tickness))){
+        if(checkIfPosInsideVoxel(pos_temp) && (!isInIntra(pos_temp, ax_id, neuron_id, soma_id, dendrite_id, subbranch_id, sph_id, barrier_tickness))){
             extra_pos = pos_temp;
             return;
         }
@@ -1088,15 +1088,15 @@ bool DynamicsSimulation::isInsideAxons(Eigen::Vector3d &position, int &ax_id, do
     return false;
 }
 
-bool DynamicsSimulation::isInsideNeurons(Vector3d &position, int &neuron_id, int &dendrite_id, int &subbranch_id, vector<int> &in_sph_id, double barrier_thickness)
+bool DynamicsSimulation::isInsideNeurons(Vector3d &position, int &neuron_id, int& soma_id, int &dendrite_id, int &subbranch_id, vector<int> &in_sph_id, double barrier_thickness)
 {
     for (unsigned i = 0; i < neurons_list.size(); i++)
     {
         bool isinside;
         if(walker.location == Walker::intra)
-            isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+            isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, soma_id, dendrite_id, subbranch_id, in_sph_id);
         else
-            isinside = neurons_list.at(i).isPosInsideNeuron(position, -barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+            isinside = neurons_list.at(i).isPosInsideNeuron(position, -barrier_thickness, soma_id, dendrite_id, subbranch_id, in_sph_id);
 
         if (isinside)
         {
@@ -1187,7 +1187,7 @@ bool DynamicsSimulation::isInsideSpheres(Vector3d &position, double distance_to_
 }
 
 
-bool DynamicsSimulation::isInIntra(Vector3d &position, int &ax_id, int& neuron_id, int& dendrite_id, int& subbranch_id, vector<int>& in_sph_id, double distance_to_be_intra_ply)
+bool DynamicsSimulation::isInIntra(Vector3d &position, int &ax_id, int& neuron_id, int& soma_id, int& dendrite_id, int& subbranch_id, vector<int>& in_sph_id, double distance_to_be_intra_ply)
 {
     bool isIntra = false;
     total_tries++;
@@ -1201,7 +1201,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &ax_id, int& neuron_i
     }
 
     if(neurons_list.size()>0){
-        isIntra|= this->isInsideNeurons(position, neuron_id, dendrite_id, subbranch_id, in_sph_id, barrier_tickness);
+        isIntra|= this->isInsideNeurons(position, neuron_id, soma_id, dendrite_id, subbranch_id, in_sph_id, barrier_tickness);
     }
 
     if(plyObstacles_list.size()>0){
@@ -1339,6 +1339,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         // If no backtracking, delete the initial position
         walker.ini_pos = Vector3d(-1, -1, -1);
+        walker.in_neuron_index    = -1;
+        walker.in_dendrite_index  = -1;
+        walker.in_subbranch_index = -1;
+        walker.in_sph_index.clear();
+        walker.in_soma_index      = -1;
 
         if(walker.in_soma_index == 0)
             ++ count_soma_end;
@@ -1862,9 +1867,9 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_st
         getAnExtraCellularPosition(position);
     }
     else{
-        int ax_id, neuron_id, dendrite_id, subbranch_id;
+        int ax_id, neuron_id, soma_id, dendrite_id, subbranch_id;
         vector<int> sph_id;
-        getAnIntraCellularPosition(position, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id);
+        getAnIntraCellularPosition(position, ax_id, neuron_id, soma_id, dendrite_id, subbranch_id, sph_id);
         walker.in_ax_index = ax_id;
     }
     walker.setVoxelPosition(position);

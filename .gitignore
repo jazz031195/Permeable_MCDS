@@ -38,6 +38,10 @@ OUTPUT/*
 
 build
 
+build_glibc_2.28
+
+.DS_Store
+
 instructions
 
 results
