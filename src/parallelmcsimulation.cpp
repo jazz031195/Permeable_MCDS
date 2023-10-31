@@ -60,7 +60,7 @@ void ParallelMCSimulation::startSimulation()
     cout<<setfill('-');
     cout << SH_FG_PURPLE << "/********************   MC/DC Simulation START:  *************************/" << SH_DEFAULT << "\n";
 
-    unsigned int count_simu=0, max_nb_proc=15;
+    unsigned int count_simu=0, max_nb_proc=48;
 
     for(unsigned int i =0; i < simulations.size(); i++){
     
