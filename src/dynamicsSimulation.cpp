@@ -801,7 +801,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
-                cout << "starts in soma" << endl;
+                // cout << "starts in soma" << endl;
                 return pos_temp;
             }
             count++;
@@ -829,7 +829,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
-                cout << "starts in soma" << endl;
+                // cout << "starts in soma" << endl;
                 return pos_temp;
             }
             count++;
@@ -871,7 +871,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
-                cout << "starts in dendrite" << endl;
+                // cout << "starts in dendrite" << endl;
                 return pos_temp;
             }
             count++;
@@ -895,7 +895,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
-                cout << "starts in dendrite" << endl;
+                // cout << "starts in dendrite" << endl;
                 return pos_temp;
             }
             count++;
@@ -1373,19 +1373,19 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     cout << "area " << area * 1e-6  << " m²" << endl;
     cout << "crossings " << (walker.crossing_in + walker.crossing_ext) << endl;
 
-    if(walker.in_soma_index >= 0 || walker.in_dendrite_index >= 0)
-    {
-        ofstream out(params.output_base_name+"_count_walker.txt", std::ofstream::app);
-        out << "Number walker in soma, begin : " << count_soma_begin << endl;
-        out << "Number walker in soma, end : " << count_soma_end << endl;
-        out << "Number walker in dendrites, begin : " << count_dendrites_begin << endl;
-        out << "Number walker in dendrites, end : " << count_dendrites_end << endl;
-        out << "Crossed soma -> dendrites : " << walker.cross_soma_dendrites << endl;
-        out << "Crossed dendrites -> soma : " << walker.cross_dendrites_soma << endl;
-        out.close();
+    // if(walker.in_soma_index >= 0 || walker.in_dendrite_index >= 0)
+    // {
+    //     ofstream out(params.output_base_name+"_count_walker.txt", std::ofstream::app);
+    //     out << "Number walker in soma, begin : " << count_soma_begin << endl;
+    //     out << "Number walker in soma, end : " << count_soma_end << endl;
+    //     out << "Number walker in dendrites, begin : " << count_dendrites_begin << endl;
+    //     out << "Number walker in dendrites, end : " << count_dendrites_end << endl;
+    //     out << "Crossed soma -> dendrites : " << walker.cross_soma_dendrites << endl;
+    //     out << "Crossed dendrites -> soma : " << walker.cross_dendrites_soma << endl;
+    //     out.close();
 
-        cout << "Perc crossings " << neurons_list[0].count_perc_crossings << endl;
-    }
+    //     cout << "Perc crossings " << neurons_list[0].count_perc_crossings << endl;
+    // }
     
     /*********************   WARNING  **********************/
     /*                                                     */

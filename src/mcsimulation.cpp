@@ -544,7 +544,7 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
     double diff_e = params.diffusivity_extra;
 
     in.open(params.neurons_files[neurons_files_id]);
-    cout << params.neurons_files[neurons_files_id] << endl;
+    // cout << params.neurons_files[neurons_files_id] << endl;
     double l, x, y, z, r, p;
     double scale;
     double volume_inc_perc, dyn_perc, icvf;
@@ -643,7 +643,7 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
    \param segment_id (int) : indice of the segment of interest
 */
 vector<int> find_proximal(vector<vector<double>> const& segments, int const& segment_id)
-{
+{x
     vector<int> ids;
     // If first segment => linked to soma => id proximal = -1
     if(segments[segment_id][0] == 0)
@@ -831,7 +831,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
     double diff_e;
 
     in.open(params.neurons_files[neurons_files_id]);
-    cout << params.neurons_files[neurons_files_id] << endl;
+    // cout << params.neurons_files[neurons_files_id] << endl;
     double x,y,z,r;
     double scale;
     double volume_inc_perc, dyn_perc, icvf;
@@ -881,7 +881,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 soma.add_neighbor(new Sphere(sphere_));
                 sphere_.add_neighbor(new Sphere(soma));
             }
-            cout << "adding sphere, radius :" << sphere_.radius  << endl;
+            // cout << "adding sphere, radius :" << sphere_.radius  << endl;
         
         }
         if(jkr.size() == 2){
@@ -924,7 +924,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 dendrite.set_dendrite(subbranches_);               
                 dendrites_.push_back(dendrite);
                 subbranches_.clear();
-                cout << "adding dendrite : "  << id << endl;
+                // cout << "adding dendrite : "  << id << endl;
             }
             // If neuron, create it from soma and axons
             else if( part.find("Neuron") != std::string::npos)
@@ -960,7 +960,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 dynamicsEngine->area = dynamicsEngine->area + neuron.get_Area();
                 dendrites_.clear();
                 // TODO : why nb_dendrites not printed ? [ines]
-                cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
+                // cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
             }
         }
         if(jkr.size() > 4)
@@ -998,7 +998,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
 
                 spheres_.clear();
                 subbranches_.push_back(subbranch);
-                cout << "adding segment "  << endl;
+                // cout << "adding segment "  << endl;
                 //TODO [ines] : add proximal & distal branching reading
             }
         }
