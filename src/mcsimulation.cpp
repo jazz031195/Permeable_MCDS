@@ -643,7 +643,7 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
    \param segment_id (int) : indice of the segment of interest
 */
 vector<int> find_proximal(vector<vector<double>> const& segments, int const& segment_id)
-{x
+{
     vector<int> ids;
     // If first segment => linked to soma => id proximal = -1
     if(segments[segment_id][0] == 0)
@@ -870,17 +870,6 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
             
             spheres_.push_back(sphere_);
     
-            if(subbranches_.size() > 0 && spheres_.size() == 0)
-            {
-                sphere_.add_neighbor(new Sphere(subbranches_[0].spheres[0]));
-                subbranches_[0].spheres[0].add_neighbor(new Sphere(sphere_));
-                
-            }
-            else if (spheres_.size() == 0)
-            {
-                soma.add_neighbor(new Sphere(sphere_));
-                sphere_.add_neighbor(new Sphere(soma));
-            }
             // cout << "adding sphere, radius :" << sphere_.radius  << endl;
         
         }
@@ -983,6 +972,12 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
             // If Segment, create it from spheres_ and store it into axons_
             if( part.find("Segment") != std::string::npos && spheres_.size() > 0)
             {
+                if(id == 0)
+                {
+                    soma.add_neighbor(new Sphere(spheres_[0]));
+                    spheres_[0].add_neighbor(new Sphere(soma));
+                }
+
                 Eigen::Vector3d begin = {min_limits, min_limits, min_limits};
                 Eigen::Vector3d end   = {max_limits, max_limits, max_limits};
                 Axon subbranch(id, r, begin, end, prox_id, dist_id);
