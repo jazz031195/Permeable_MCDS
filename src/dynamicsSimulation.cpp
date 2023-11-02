@@ -758,10 +758,14 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
         bool random_pos = true;
         // In soma
         if (proba < volume_soma_dendrite[0]/VolumeNeuron)
-           intra_pos = getAnIntraCellularPosition_soma(random_pos);
+            intra_pos = getAnIntraCellularPosition_soma(random_pos);
         // In dendrite
         else
             intra_pos = getAnIntraCellularPosition_dendrite(random_pos);
+        
+        // std::ofstream out;
+        // out.open("ini_pos_file.txt", std::ios::app);
+        // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
     }
 }
 

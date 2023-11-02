@@ -20,6 +20,7 @@ import dipy.reconst.dki as dki
 import dipy.reconst.dti as dti
 from dipy.core.gradients import gradient_table
 import nibabel as nib
+from scipy.special import hyp1f1
 
 
 
@@ -74,7 +75,10 @@ def read_and_extract_bvecs(file_path):
 def calculate_DKI(path_scheme, dwi):
 
     bvals = read_and_extract_bvals(path_scheme)
+    idx   = bvals <= 1
+    bvals = bvals[idx]    
     bvecs = read_and_extract_bvecs(path_scheme)
+    bvecs = bvecs[idx]    
 
     gtab = gradient_table(bvals, bvecs)
 
@@ -146,36 +150,46 @@ def get_psge_data():
 def create_data(dwi_path, name, extension):
     dwi_signal_re = get_dwi_array(dwi_path / f"{name}.{extension}")
     dwi_signal_im = get_dwi_array(dwi_path / f"{name}_img.{extension}")
-    dwi_signal    = np.sqrt(dwi_signal_re**2 + dwi_signal_im**2)
+    dwi_signal_no_noise = np.sqrt(dwi_signal_re**2 + dwi_signal_im**2)
+
+    sigma = 0.024
+    dwi_signal_noise = np.sqrt((dwi_signal_re/dwi_signal_re[0]+ np.random.randn(1, dwi_signal_re.shape[0])*sigma)**2 
+                             + (dwi_signal_im/dwi_signal_re[0]+ np.random.randn(1, dwi_signal_re.shape[0])*sigma)**2)
+
     # Create an empty 4x4 affine matrix with ones on the diagonal
     affine = np.eye(4)
-    img = nib.Nifti1Image(dwi_signal, affine)
+
+    bvals = read_and_extract_bvals(scheme_file)
+    idx   = bvals <= 1
+    img   = nib.Nifti1Image(dwi_signal_no_noise[idx], affine)
     FA, MD, AD, RD, MK, AK, RK = calculate_DKI(scheme_file, img)
 
-    data_psge        = get_psge_data()
-    data_psge["DWI"] = list(dwi_signal)
+
+    data_psge          = get_psge_data()
+    data_psge["Sb/So"] = list(dwi_signal_noise.reshape((-1, 1)))
     nb_G = len(data_psge["G"].unique())
-    nb_dir = int(len(dwi_signal) / nb_G)
+    nb_dir = int(len(dwi_signal_noise.reshape((-1, 1))) / nb_G)
     data_dwi = pd.DataFrame()
     for i in range(nb_dir):
         data_dir = data_psge.iloc[i*nb_G:(i+1)*nb_G]
         b0 = list(data_dir["b [ms/um²]"])[0]
-        Sb0 = list(data_dir.loc[data_dir["b [ms/um²]"]== b0]["DWI"])[0]
-        # print(Sb0)
-        signal = list(map(lambda Sb : Sb/Sb0, list(data_dir["DWI"])))
-        signal_log = list(map(lambda Sb : np.log(Sb/Sb0), list(data_dir["DWI"])))
-        adc = list(map(lambda b,Sb : -np.log(Sb/Sb0)/(b-b0) if b!= b0 else np.nan, list(data_dir["b [ms/um²]"]),list(data_dir["DWI"])))
-        data_dir["Sb/So"] = signal
+        # Sb0 = list(data_dir.loc[data_dir["b [ms/um²]"]== b0]["DWI"])[0]
+        # signal = list(map(lambda Sb : Sb/Sb0, list(data_dir["DWI"])))
+        signal_log = list(map(lambda Sb : np.log(Sb), list(data_dir["Sb/So"])))
+        adc = list(map(lambda b,Sb : -np.log(Sb)/(b-b0) if b!= b0 else np.nan, list(data_dir["b [ms/um²]"]),list(data_dir["Sb/So"])))
+        # data_dir["Sb/So"] = signal
         data_dir["log(Sb/So)"] = signal_log
         data_dir["adc [ms/um²]"] = adc
+        data_dir["FA"] = [FA] * len(adc)
+        data_dir["MD"] = [MD] * len(adc)
+        data_dir["AD"] = [AD] * len(adc)
+        data_dir["RD"] = [RD] * len(adc)
+        data_dir["MK"] = [MK] * len(adc)
+        data_dir["AK"] = [AK] * len(adc)
+        data_dir["RK"] = [RK] * len(adc)
         data_dwi = pd.concat([data_dwi, data_dir])
-    data_dwi["FA"] = FA
-    data_dwi["MD"] = MD
-    data_dwi["AD"] = AD
-    data_dwi["RD"] = RD
-    data_dwi["MK"] = MK
-    data_dwi["AK"] = AK
-    data_dwi["RK"] = RK
+    
+    
     return data_dwi
 
 
@@ -265,7 +279,7 @@ if log:
     y_lim_max = 0.1
 else:
     y_lim_min = 0.
-    y_lim_max = 1.5
+    y_lim_max = 1.1
 
 if plot:
     MEDIUM_SIZE = 14
@@ -282,166 +296,200 @@ if plot:
 
 DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/no_funnel/")
 df_dwi, df_crossings = create_df(DWI_folder)
-print(df_dwi)
 
-# df_dwi = df_dwi[df_dwi['case'] != ""]
 T_labels = df_dwi['T'].unique()
 N_labels = df_dwi['N'].unique()
-overlaps = [2, 4, 8, 16, 32]
+overlaps = [1, 2, 4, 8, 16, 32]
 b_labels = df_dwi["b [ms/um²]"].unique()
 
-fig, ax = plt.subplots(1, 1)
-sns.violinplot(data=df_dwi[(df_dwi['b [ms/um²]'] > 0) & (df_dwi["T"] == 5000)], x='b [ms/um²]', y='adc [ms/um²]', hue='overlap', ax=ax)
-ax.set_xticklabels([f'{float(blab):.3f}' for blab in b_labels[1:]])
+# fig, ax = plt.subplots(1, 1)
+# sns.violinplot(data=df_dwi[(df_dwi['b [ms/um²]'] > 0) & (df_dwi["T"] == 15000)], x='b [ms/um²]', y='Sb/So', hue='overlap', ax=ax)
+# ax.set_xticklabels([f'{float(blab):.3f}' for blab in b_labels[1:]])
+# handles, labels = ax.get_legend_handles_labels()
+# fig.legend(handles, labels, loc='center right', title='overlap')
+# ax.legend([],[], frameon=False)
 
-couples = []
-couples_end = []
-for b in df_dwi[df_dwi['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
-    for i, branch in enumerate(df_dwi['overlap'].unique()):
-        couples.append((b, branch))    
+# couples = []
+# couples_end = []
+# for b in df_dwi[df_dwi['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
+#     for i, branch in enumerate(df_dwi['overlap'].unique()):
+#         couples.append((b, branch))    
 
-for i in range(1, len(couples) + 1):
-    if i % 5 == 0:
-        couples_end.append((couples[i-5], couples[i-4]))
-        couples_end.append((couples[i-5], couples[i-3]))
-        couples_end.append((couples[i-5], couples[i-2]))
-        couples_end.append((couples[i-5], couples[i-1]))
-        couples_end.append((couples[i-4], couples[i-3]))
-        couples_end.append((couples[i-4], couples[i-2]))
-        couples_end.append((couples[i-4], couples[i-1]))
-        couples_end.append((couples[i-3], couples[i-2]))
-        couples_end.append((couples[i-3], couples[i-1]))
-        couples_end.append((couples[i-2], couples[i-1]))
+# for i in range(1, len(couples) + 1):
+#     if i % 6 == 0:
+#         couples_end.append((couples[i-6], couples[i-5]))
+#         couples_end.append((couples[i-6], couples[i-4]))
+#         couples_end.append((couples[i-6], couples[i-3]))
+#         couples_end.append((couples[i-6], couples[i-2]))
+#         couples_end.append((couples[i-6], couples[i-1]))
+#         couples_end.append((couples[i-5], couples[i-4]))
+#         couples_end.append((couples[i-5], couples[i-3]))
+#         couples_end.append((couples[i-5], couples[i-2]))
+#         couples_end.append((couples[i-5], couples[i-1]))
+#         couples_end.append((couples[i-4], couples[i-3]))
+#         couples_end.append((couples[i-4], couples[i-2]))
+#         couples_end.append((couples[i-4], couples[i-1]))
+#         couples_end.append((couples[i-3], couples[i-2]))
+#         couples_end.append((couples[i-3], couples[i-1]))
+#         couples_end.append((couples[i-2], couples[i-1]))
 
-statannot.add_stat_annotation(
-    ax,
-    data=df_dwi[(df_dwi['b [ms/um²]'] > 0) & (df_dwi["T"] == 5000)],
-    y='adc [ms/um²]', x='b [ms/um²]',
-    hue='overlap',
-    box_pairs=couples_end,
-    test="Mann-Whitney",
-    text_format="star",
-    loc="inside"
-    )
-ax.set_title(f'N = {N_labels[0]}, T = {T_labels[0]}')
+# statannot.add_stat_annotation(
+#     ax,
+#     data=df_dwi[(df_dwi['b [ms/um²]'] > 0) & (df_dwi["T"] == 15000)],
+#     y='Sb/So', x='b [ms/um²]',
+#     hue='overlap',
+#     box_pairs=couples_end,
+#     test="Mann-Whitney",
+#     text_format="star",
+#     loc="inside"
+#     )
+# ax.set_title(f'N = {N_labels[0]}, T = {T_labels[0]}')
 
 
 
-# Analytical solutions & Mesh
-if plot:
-    # Analytical solutions
-    G         = np.array([0.015, 0.034, 0.048, 0.059, 0.068, 0.076, 0.083, 0.090, 0.096, 0.102, 0.107]) # in T/m
-    Delta     = np.array([0.05] * G.size)  # in s
-    delta     = np.array([0.0165] * G.size)# in s
-    TE        = np.array([0.067] * G.size) # in s
-    D0        = 2.5e-9 #m²/s
-    gamma     = 2.6751525e8 #rad/(s*T)
-    bb        = gamma**2 * G**2 * delta**2 * (Delta - delta/3) # rad² * s / m²
-    # print((D0/(gamma*G))**(1/3))
-    # print("b val ", bb)
 
-    nb_neurites     = 20
-    r_soma    = 10e-6 #m
-    r_neurite = 0.5e-6 #m
-    if branching == 'branching':
-        nb_branching = 3
-        l_neurite       = 80e-6 #m
-        volume_neurites = nb_neurites * (2**nb_branching + 1) * np.pi*r_neurite**2*l_neurite # in m³
-    else:
-        l_neurite       = 240e-6 # m
-        volume_neurites = nb_neurites * np.pi*r_neurite**2*l_neurite # in m³
-    volume_neurites = 3767.95 #8782.71 #5.64898e-06 (2 branching)
-    volume_soma     = 4/3 * np.pi * r_soma**3 # in m³
-    volume_soma     = volume_soma * 1e18
-    volume_neuron   = volume_neurites + volume_soma
-    neurite_fraction= volume_neurites / volume_neuron
-    soma_fraction   = volume_soma / volume_neuron
-    print("soma volume {:e}".format((volume_soma*1e18)))
-    print("neurites volume {:e}".format((volume_neurites*1e18)))
-    print("neuron {:e}".format((volume_neuron*1e18)))
-    print("soma fraction {:e}".format(soma_fraction))
 
-    soma_signal   = []
-    soma_signal_neuman   = []
-    neurites_signal = []
-    both_signal     = []
-    for i in range(bb.size):
-        mlnS, mlnSneuman, mlnSnp, bardelta, b = my_murdaycotts(Delta[i], delta[i], r_soma, D0, bb[i])
-        if log:
-            soma_signal.append(-mlnS)
-            soma_signal_neuman.append(-mlnSneuman)
-        else:
-            soma_signal.append(math.exp(-mlnS))
-            soma_signal_neuman.append(math.exp(-mlnSneuman))
+# # Analytical solutions & Mesh
+# if plot:
+#     # Analytical solutions
+#     G         = np.array([0.015, 0.034, 0.048, 0.059, 0.068, 0.076, 0.083, 0.090, 0.096, 0.102, 0.107]) # in T/m
+#     Delta     = np.array([0.05] * G.size)  # in s
+#     delta     = np.array([0.0165] * G.size)# in s
+#     TE        = np.array([0.067] * G.size) # in s
+#     D0        = 2.5e-9 #m²/s
+#     gamma     = 2.6751525e8 #rad/(s*T)
+#     bb        = gamma**2 * G**2 * delta**2 * (Delta - delta/3) # rad² * s / m²
+#     # print((D0/(gamma*G))**(1/3))
+#     # print("b val ", bb)
+
+#     nb_neurites     = 20
+#     r_soma    = 10e-6 #m
+#     r_neurite = 0.5e-6 #m
+#     if branching == 'branching':
+#         nb_branching = 3
+#         l_neurite       = 80e-6 #m
+#         volume_neurites = nb_neurites * (2**nb_branching + 1) * np.pi*r_neurite**2*l_neurite # in m³
+#     else:
+#         l_neurite       = 240e-6 # m
+#         volume_neurites = nb_neurites * np.pi*r_neurite**2*l_neurite # in m³
+#     volume_neurites = 8784.68 #5.64898e-06 (2 branching)
+#     volume_soma     = 4/3 * np.pi * r_soma**3 # in m³
+#     volume_soma     = volume_soma * 1e18
+#     volume_neuron   = volume_neurites + volume_soma
+#     neurite_fraction= volume_neurites / volume_neuron
+#     soma_fraction   = volume_soma / volume_neuron
+#     print("soma volume {:e}".format((volume_soma*1e18)))
+#     print("neurites volume {:e}".format((volume_neurites*1e18)))
+#     print("neuron {:e}".format((volume_neuron*1e18)))
+#     print("soma fraction {:e}".format(soma_fraction))
+
+#     soma_signal   = []
+#     soma_signal_neuman   = []
+#     neurites_signal = []
+#     both_signal     = []
+#     for i in range(bb.size):
+#         mlnS, mlnSneuman, mlnSnp, bardelta, b = my_murdaycotts(Delta[i], delta[i], r_soma, D0, bb[i])
+#         if log:
+#             soma_signal.append(-mlnS)
+#             soma_signal_neuman.append(-mlnSneuman)
+#         else:
+#             soma_signal.append(math.exp(-mlnS))
+#             soma_signal_neuman.append(math.exp(-mlnSneuman))
 
   
-        # Signal intra sticks
-        if log:
-            Ain = np.log(np.sqrt(np.pi/(4 * bb[i] * D0)) * math.erf(np.sqrt(bb[i] * D0)))
-        else:
-            Ain = np.sqrt(np.pi/(4 * bb[i] * D0)) * math.erf(np.sqrt(bb[i] * D0))
-        neurites_signal.append(Ain)
-        if log:
-            both_signal.append(neurite_fraction * Ain + soma_fraction * -mlnS)
-        else:
-            both_signal.append(neurite_fraction * Ain + soma_fraction * math.exp(-mlnS))
+#         # Signal intra sticks
+#         if log:
+#             Ain = np.log(np.sqrt(np.pi/(4 * bb[i] * D0)) * math.erf(np.sqrt(bb[i] * D0)))
+#         else:
+#             Ain = np.sqrt(np.pi/(4 * bb[i] * D0)) * math.erf(np.sqrt(bb[i] * D0))
+#         neurites_signal.append(Ain)
+#         if log:
+#             both_signal.append(neurite_fraction * Ain + soma_fraction * -mlnS)
+#         else:
+#             both_signal.append(neurite_fraction * Ain + soma_fraction * math.exp(-mlnS))
 
 
-    i = 0
-    for t_i, t in enumerate(T_labels):
+#     i = 0
+#     for t_i, t in enumerate(T_labels):
 
-        if plot:
-            ax2 = ax.twinx()
-            # Replace the NaN corresponding to b=0 to 1
-            ax2.plot(b_labels[1:], soma_signal, label=f"Soma (analytic)", color='b')
-            ax2.plot(b_labels[1:], neurites_signal, label=f"Neurites (analytic)", color='orange')
-            ax2.plot(b_labels[1:], both_signal, label=f"Neurites & soma (analytic)", color='g')
-            # sns.lineplot(b_labels, soma_signal, label=f"Soma (analytic)", color='b', ax=ax)
-            # # ax2.errorbar([b_lab + 0.05 for b_lab in b_labels], soma_signal_neuman, 
-            # #                 yerr=[0], label=f"Soma (analytic, Neuman)", fmt='o', color='blue')
-            # sns.lineplot(b_labels, neurites_signal, label=f"Neurites (analytic)", color='orange', ax=ax)
-            # sns.lineplot(b_labels, both_signal, label=f"Neurites & soma (analytic)", color='g', ax=ax)
-            # if log:
-            #     sns.lineplot(b_labels, [-b_lab*D0*1e9 for b_lab in b_labels], label="D = 2.5 [ms/um²]")
-            ax2.legend(loc=3)
-            ax2.set_yticklabels([])
-            ax2.set_ylim([y_lim_min, y_lim_max])
-            ax.set_ylim([y_lim_min, y_lim_max])
-            # step_length = np.sqrt(6 * D0 * TE[0] / int(t))
-            # # ax2.set_title(f"T = {T_labels[i]}, step length = {step_length*1e6:.3f} um")
-            # i = i + 1
-if log:
-    fig.suptitle('ln(S/S0) average over 21 directions, ' + branching, y=0.95)
-else:
-    fig.suptitle('S/S0 average over 21 directions, ' + branching, y=0.95)
+#         if plot:
+#             ax2 = ax.twinx()
+#             # Replace the NaN corresponding to b=0 to 1
+#             ax2.plot(b_labels[1:], soma_signal, label=f"Soma (analytic)", color='b', linestyle="dotted")
+#             ax2.plot(b_labels[1:], neurites_signal, label=f"Neurites (analytic)", color='orange', linestyle="dotted")
+#             ax2.plot(b_labels[1:], both_signal, label=f"Neurites & soma (analytic)", color='g', linestyle="dotted")
+#             # sns.lineplot(b_labels, soma_signal, label=f"Soma (analytic)", color='b', ax=ax)
+#             # # ax2.errorbar([b_lab + 0.05 for b_lab in b_labels], soma_signal_neuman, 
+#             # #                 yerr=[0], label=f"Soma (analytic, Neuman)", fmt='o', color='blue')
+#             # sns.lineplot(b_labels, neurites_signal, label=f"Neurites (analytic)", color='orange', ax=ax)
+#             # sns.lineplot(b_labels, both_signal, label=f"Neurites & soma (analytic)", color='g', ax=ax)
+#             # if log:
+#             #     sns.lineplot(b_labels, [-b_lab*D0*1e9 for b_lab in b_labels], label="D = 2.5 [ms/um²]")
+#             ax2.legend(loc=3)
+#             ax2.set_yticklabels([])
+#             ax2.set_ylim([y_lim_min, y_lim_max])
+#             ax.set_ylim([y_lim_min, y_lim_max])
+#             # step_length = np.sqrt(6 * D0 * TE[0] / int(t))
+#             # # ax2.set_title(f"T = {T_labels[i]}, step length = {step_length*1e6:.3f} um")
+#             # i = i + 1
+# if log:
+#     fig.suptitle('ln(S/S0) average over 21 directions, ' + branching, y=0.95)
+# else:
+#     fig.suptitle('S/S0 average over 21 directions, ' + branching, y=0.95)
 
-plt.show()
+# plt.show()
 
-df_dwi = df_dwi[df_dwi["T"] == 50000]
-print(df_dwi)
-fig, ax = plt.subplots(1, 1)
-sns.violinplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='b [ms/um²]', y='adc [ms/um²]', hue='overlap', ax=ax, inner="points")
-ax.set_xticklabels([f'{float(blab):.3f}' for blab in b_labels[1:]])
+df_dwi = df_dwi[df_dwi["T"] == 15000]
+# fig, axes = plt.subplots(2, 2)
+# axes = axes.ravel()
+# sns.violinplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='FA', hue='neuron', hue_order=['n1', 'n2', 'n3', 'n4', 'n5'], inner="points", ax=axes[0])
+# sns.violinplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='MD', hue='neuron', hue_order=['n1', 'n2', 'n3', 'n4', 'n5'], inner="points", ax=axes[1])
+# sns.violinplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='AD', hue='neuron', hue_order=['n1', 'n2', 'n3', 'n4', 'n5'], inner="points", ax=axes[2])
+# sns.violinplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='RD', hue='neuron', hue_order=['n1', 'n2', 'n3', 'n4', 'n5'], inner="points", ax=axes[3])
+# handles, labels = axes[0].get_legend_handles_labels()
+# fig.legend(handles, labels, loc='center right', title='neuron')
+# axes[0].legend([],[], frameon=False)
+# axes[1].legend([],[], frameon=False)
+# axes[2].legend([],[], frameon=False)
+# axes[3].legend([],[], frameon=False)
+# ax.set_xticklabels([f'{float(blab):.3f}' for blab in b_labels[1:]])
 
-couples = []
-couples_end = []
-for b in df_dwi[df_dwi['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
-    for i, branch in enumerate(df_dwi['overlap'].unique()):
-        couples.append((b, branch))    
+# couples = []
+# couples_end = []
+# for b in df_dwi[df_dwi['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
+#     for i, branch in enumerate(df_dwi['overlap'].unique()):
+#         couples.append((b, branch))    
 
-for i in range(1, len(couples) + 1):
-    if i % 2 == 0:
-        couples_end.append((couples[i-2], couples[i-1]))
+# for i in range(1, len(couples) + 1):
+#     if i % 2 == 0:
+#         couples_end.append((couples[i-2], couples[i-1]))
 
-statannot.add_stat_annotation(
-    ax,
-    data=df_dwi[df_dwi['b [ms/um²]'] > 0],
-    y='adc [ms/um²]', x='b [ms/um²]',
-    hue='overlap',
-    box_pairs=couples_end,
-    test="Mann-Whitney",
-    text_format="star",
-    loc="inside"
-    )
-ax.set_title(f'N = {N_labels[0]}, T = {T_labels[0]}')
+# statannot.add_stat_annotation(
+#     ax,
+#     data=df_dwi[df_dwi['b [ms/um²]'] > 0],
+#     y='adc [ms/um²]', x='b [ms/um²]',
+#     hue='overlap',
+#     box_pairs=couples_end,
+#     test="Mann-Whitney",
+#     text_format="star",
+#     loc="inside"
+#     )
+# ax.set_title(f'N = {N_labels[0]}, T = {T_labels[0]}')
+# plt.show()
+
+
+# fig, axes = plt.subplots(2, 2)
+# axes = axes.ravel()
+# sns.boxplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='FA', ax=axes[0])
+# sns.boxplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='MD', ax=axes[1])
+# sns.boxplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='AD', ax=axes[2])
+# sns.boxplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='RD', ax=axes[3])
+# plt.show()
+
+fig, _ = plt.subplots(1,1)
+ax = sns.boxplot(data=df_dwi[df_dwi['b [ms/um²]'] > 0], x='overlap', y='MD', palette="Blues")
+labels = ['R/' + item.get_text() for item in ax.get_xticklabels()]
+ax.set_xticklabels(labels)
+ax.set_xlabel('Distance between overlapping spheres')
+ax.set_ylabel('Mean diffusivity')
 plt.show()
