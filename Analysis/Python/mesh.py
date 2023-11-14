@@ -101,7 +101,7 @@ def create_df_all(experience_folder, scheme_file_path):
     return df_all_data, df_crossings
 
 
-log = True
+log = False
 
 if log:
     y_lim_min = -3
@@ -115,11 +115,11 @@ BIGGER_SIZE = 19
 
 plt.rc('font', size=MEDIUM_SIZE)          # controls default text sizes
 plt.rc('axes', titlesize=MEDIUM_SIZE)     # fontsize of the axes title
-plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+plt.rc('axes', labelsize=MEDIUM_SIZE)     # fontsize of the x and y labels
 plt.rc('xtick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
-plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+plt.rc('figure', titlesize=BIGGER_SIZE)   # fontsize of the figure title
 
 experience_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/exch")
 df_all_data, df_crossings = create_df_all(experience_folder, scheme_file)
@@ -182,7 +182,6 @@ ax2.plot(bvals*1e-9, neurites_signal, label=f"Dendrites", color='orange', linest
 ax2.plot(bvals*1e-9, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
 if log:
     ax2.plot(bvals*1e-9, -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
-ax2.legend(title='Analytical solution', loc=3)
 ax2.set_yticklabels([])
 ax2.set_yticks([])
 ax2.set_ylim([y_lim_min, y_lim_max])

@@ -6,6 +6,8 @@ import nibabel as nib
 import pandas as pd
 from my_murdaycotts import my_murdaycotts
 import math
+import os
+import warnings
 
 giro = 2.6751525e8 # Gyromagnetic radio [rad/(s*T)]
 
@@ -210,13 +212,21 @@ def create_data(data_folder, SNR, name, extension, scheme_file_path):
     """
 
     dwi_real      = get_dwi(data_folder / f"{name}.{extension}")
-    dwi_imaginary = get_dwi(data_folder / f"{name}_img.{extension}")
-    dwi_no_noise  = np.sqrt(dwi_real**2 + dwi_imaginary**2)
+    # There is an imaginary part to the signal
+    if os.path.exists(data_folder / f"{name}_img.{extension}"):
+        dwi_imaginary = get_dwi(data_folder / f"{name}_img.{extension}")
+        dwi_no_noise  = np.sqrt(dwi_real**2 + dwi_imaginary**2)
 
-    # Add Gaussian noise on the real and imaginary part => same as rician noise. Should converge to sqrt(pi/2)*sigma
-    sigma = 1/SNR
-    dwi_noise = np.sqrt((dwi_real/dwi_real[0]+ np.random.randn(1, dwi_real.shape[0])*sigma)**2 
-                             + (dwi_imaginary/dwi_real[0]+ np.random.randn(1, dwi_real.shape[0])*sigma)**2)
+        # Add Gaussian noise on the real and imaginary part => same as rician noise. Should converge to sqrt(pi/2)*sigma
+        sigma = 1/SNR
+        dwi_noise = np.sqrt((dwi_real/dwi_real[0] + np.random.randn(1, dwi_real.shape[0])*sigma)**2 
+                            + (dwi_imaginary/dwi_real[0] + np.random.randn(1, dwi_real.shape[0])*sigma)**2)
+    else:
+        dwi_no_noise = dwi_real
+        # Add Gaussian noise on the real and imaginary part => same as rician noise. Should converge to sqrt(pi/2)*sigma
+        sigma = 1/SNR
+        dwi_noise = (dwi_real/dwi_real[0] + np.random.randn(1, dwi_real.shape[0])*sigma)
+        warnings.warn("Warning...........The signal is purely real")
 
     FA, MD, AD, RD, MK, AK, RK = calculate_DKI(scheme_file_path, dwi_no_noise)
 
