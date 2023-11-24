@@ -14,19 +14,22 @@
 #include "constants.h"
 #include "Neuron.h"
 
+const int SIZE_LUT = 200; // R
 
 class NeuronDistribution 
 {
 public:
-    std::vector<Neuron> neurons;                    /*!< All neurons of the simulation                                              */
-    Eigen::Vector3d min_limits_vx;                  /*!< voxel min limits (if any) (bottom left corner)                             */
-    Eigen::Vector3d max_limits_vx;                  /*!< voxel max limits (if any)                                                  */
-    
+    std::vector<Neuron> neurons;                          /*!< All neurons of the simulation                                              */
+    Eigen::Vector3d min_limits_vx;                        /*!< voxel min limits (if any) (bottom left corner)                             */
+    Eigen::Vector3d max_limits_vx;                        /*!< voxel max limits (if any)                                                  */
+    int sphere_overlap;                                   /*!< each adjacent sphere overlaps of radius/sphere_overlap                     */
+    bool LUT[SIZE_LUT][SIZE_LUT][SIZE_LUT] = {{{false}}}; /*!< Look-up table to store the environment                                     */ 
     struct branching_pt{
         Eigen::Vector3d origin;
         Eigen::Vector3d direction;
         vector<Eigen::Vector3d> children_direction;
         int subbranch_id;
+        double radius;
     };
 
     NeuronDistribution(){}
@@ -39,7 +42,7 @@ public:
      *  @param step_length double, length of a walker step, based on Einstein equation.
     */
     NeuronDistribution(int const& num_obstacles, double const& icvf, Eigen::Vector3d const& min_limits_vx_, 
-                       Eigen::Vector3d const& max_limits_vx_, double const& step_length);
+                       Eigen::Vector3d const& max_limits_vx_, int const& sphere_overlap_, double const& step_length);
     /**
      *  @brief Populate the simulation voxel with Neurons.
     */ 
@@ -50,7 +53,20 @@ public:
     */
     void printSubstrate(std::ostream &out) const;
     void printSubstrate_swc(std::ostream &out) const;
-    
+    void updateLUT(Eigen::Vector3d const& sphere_center, double const& sphere_radius);
+    void updateLUT(vector<Sphere> const& spheres_to_add, int const& nb_spheres_to_remove);
+    Eigen::Vector3d generateNextDirection(double const& phi_to_target, double const& theta_to_target, double const& STD) const;
+    /**
+     * Check if a sphere characterized by its center sphere_center and 
+     * its radius sphere_radius is colliding with this.
+     * 
+     * @param sphere_center Eigen::Vector3d, center of the sphere.
+     * @param sphere_radius double         , radius of the sphere.
+    */
+    bool isSphereColliding(Eigen::Vector3d const& sphere_center, double const& sphere_radius);
+    bool isSphereCollidingSphere(Eigen::Vector3d const& pos1, Eigen::Vector3d const& pos2, double const& radius1, double const& radius2, double const& minDistance) const; 
+    bool isSphereColliding(Eigen::Vector3d const& sphere_center, double const& sphere_radius, Eigen::Vector3d const& sphere_to_ignore_center, double const& sphere_to_ignore_radius);
+
 private:
 
     int num_obstacles;                              /*!< number of neurons to fit inside the substrate                              */
@@ -74,22 +90,8 @@ private:
      *  Compute the max_limits_vx based on the target icvf and the radiis of the axons 
     */
     // void computeMinimalSize(std::vector<double> const& radiis, double &icvf_, Eigen::Vector3d &l) const;
-    bool isSphereColliding(Eigen::Vector3d const& sphere_center, double const& sphere_radius, vector<Eigen::Vector3d> const& soma_centers);
-    /**
-     * Check if a sphere sph is colliding with this.
-     * 
-     * @param sph Sphere, sphere to test.
-    */
-    bool isSphereColliding(Sphere const& sph);
-    /**
-     * Check if a sphere characterized by its center sphere_center and 
-     * its radius sphere_radius is colliding with this.
-     * 
-     * @param sphere_center Eigen::Vector3d, center of the sphere.
-     * @param sphere_radius double         , radius of the sphere.
-    */
-    bool isSphereColliding(Eigen::Vector3d const& sphere_center, double const& sphere_radius);
-    bool isSphereCollidingSphere(Eigen::Vector3d const& pos1, Eigen::Vector3d const& pos2, double const& radius1, double const& radius2, double const& minDistance) const; 
+    
+    
     void createTwinSphere(Eigen::Vector3d &center, double const& sphere_radius, bool &discard_dendrite, size_t const& j);
     /**
      * Check if a position pos is inside the simulation voxel
@@ -105,7 +107,7 @@ private:
      * 
      * @param neuron Neuron.
     */
-    void growDendrites(Neuron& neuron);
+    void growDendrites(Neuron& neuron, std::vector<Eigen::Vector3d> soma_centers, double const& soma_radius);
     /**
      * Generate the number of consecutive branching of a dendrite.
      *
@@ -128,7 +130,7 @@ private:
      */
     double generateBifurcationAngle(double const& lower_bound=(M_PI/4 - M_PI/16), double const& upper_bound=(M_PI/4 + M_PI/16));
 
-    Eigen::Vector3d generatePointOnSphere(Eigen::Vector3d const& center, double const& radius) const;
+    Eigen::Vector3d generatePointOnSphere() const;
     /**
      * Grow a subbranch/segment of dendrite.
      *
@@ -143,12 +145,13 @@ private:
      */
     branching_pt growSubbranch(Dendrite& dendrite, branching_pt const& parent, double const& l_segment, double const& sphere_radius, 
                                std::vector<int> const& proximal_end, std::vector<int> const& distal_end, double const& min_distance_from_border, 
-                               bool& stop_growth, int const& branch_id, Sphere* soma);
+                               bool& stop_growth, int const& branch_id);
 
     Eigen::Vector3d rotateDirection(Eigen::Vector3d const& direction, double const& angle) const;
     void print_tree(Neuron* const& neuron, std::vector<std::vector<int>> const& nodes) const;
     std::vector<int> find_tree_path(Neuron* const& neuron, int const& dendrite_id, int const& subbranch_id) const;
     std::vector<std::vector<int>> find_tree_paths(Neuron* const& neuron, int const& dendrite_id) const;
+    bool avoid_somas(double const& min_distance, std::vector<Eigen::Vector3d> soma_centers, double const& soma_radius, Eigen::Vector3d const& soma_to_ignore, Eigen::Vector3d const &step_dir, Eigen::Vector3d const &traj_origin) const;
 
 
 

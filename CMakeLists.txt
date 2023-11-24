@@ -34,6 +34,24 @@ ExternalProject_Add(
 ExternalProject_Get_Property(eigen SOURCE_DIR)
 set(EIGEN_INCLUDE_DIR ${SOURCE_DIR})
 
+ExternalProject_Add(
+    matplotlibcpp
+    URL https://codeload.github.com/lava/matplotlib-cpp/zip/refs/heads/master
+    DOWNLOAD_EXTRACT_TIMESTAMP ON
+    # PATCH_COMMAND ${GIT_EXECUTABLE} apply --ignore-whitespace -v ${CMAKE_CURRENT_SOURCE_DIR}/eigen_warnings.patch
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+)
+ExternalProject_Get_Property(matplotlibcpp SOURCE_DIR)
+set(MATPLOTLIB_INCLUDE_DIR ${SOURCE_DIR})
+
+find_package(Python3 COMPONENTS Development NumPy REQUIRED)
+if (${Python3_FOUND})
+    message("Found python3 " ${Python3_VERSION} ", " ${Python3_INCLUDE_DIRS})
+else()
+    message("Python3 not found")
+endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
 set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g3 -fsanitize=address -fsanitize=undefined")
@@ -76,8 +94,9 @@ add_executable(${MAIN_TARGET} ${CPP_FILES} ${SRC_DIR}/main.cpp)
 # Possible woraround:
 # https://gitlab.mel.vin/mirror/doctest/-/commit/6b61e8aa3818c5ea100cedc1bb48a60ea10df6e8
 target_compile_options(${MAIN_TARGET} PUBLIC ${COMPILER_OPTIONS} -DDONT_RUN_TESTS)
-target_include_directories(${MAIN_TARGET} PUBLIC ${SRC_DIR} ${DOCTEST_INCLUDE_DIR} ${EIGEN_INCLUDE_DIR})
+target_include_directories(${MAIN_TARGET} PUBLIC ${SRC_DIR} ${DOCTEST_INCLUDE_DIR} ${EIGEN_INCLUDE_DIR} ${MATPLOTLIB_INCLUDE_DIR} ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
 target_link_libraries(${MAIN_TARGET} PRIVATE Threads::Threads)
+target_link_libraries(${MAIN_TARGET} PRIVATE Python3::Python Python3::Module Python3::NumPy)
 add_dependencies(${MAIN_TARGET} eigen doctest)
 
 # Using a central precompiled header can increase compilation speed
@@ -94,6 +113,7 @@ add_dependencies(${MAIN_TARGET} eigen doctest)
 
 add_executable(tests ${CPP_FILES})
 target_compile_options(tests PUBLIC ${COMPILER_OPTIONS})
-target_include_directories(tests PUBLIC ${SRC_DIR} ${DOCTEST_INCLUDE_DIR} ${EIGEN_INCLUDE_DIR})
+target_include_directories(tests PUBLIC ${SRC_DIR} ${DOCTEST_INCLUDE_DIR} ${EIGEN_INCLUDE_DIR} ${MATPLOTLIB_INCLUDE_DIR} ${Python3_INCLUDE_DIRS} ${Python3_NumPy_INCLUDE_DIRS})
 target_link_libraries(tests Threads::Threads)
+target_link_libraries(tests Python3::Python Python3::Module Python3::NumPy)
 add_dependencies(tests eigen doctest)

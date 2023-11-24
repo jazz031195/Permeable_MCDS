@@ -1038,7 +1038,6 @@ TEST_CASE("intersection_sphere_vector")
 
     CHECK_EQ(intercept1, doctest::Approx(radius));
     CHECK_EQ(intercept2, doctest::Approx(-radius));
-    // CHECK_EQ(c, ); // TODO: [ines]
 
     traj_origin = {0.04, 0.05, 0.05};
     CHECK(Neuron::intersection_sphere_vector(intercept1, intercept2, sphere, direction, step_length, traj_origin, c, a));

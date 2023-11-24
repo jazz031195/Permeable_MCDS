@@ -1,3 +1,6 @@
+#include "doctest.h"
+
+#include "matplotlibcpp.h"
 #include "neurondistribution.h"
 #include <algorithm> // std::sort
 #include <random>
@@ -5,9 +8,12 @@
 
 using namespace std;
 using namespace Eigen;
+    
+namespace plt = matplotlibcpp;
+using namespace plt;
 
-NeuronDistribution::NeuronDistribution(int const& num_obstacles_, double const& icvf_, Vector3d const& min_limits_vx_, Vector3d const& max_limits_vx_, double const& step_length_):
-min_limits_vx(min_limits_vx_), max_limits_vx(max_limits_vx_), num_obstacles(num_obstacles_), icvf(icvf_), step_length(step_length_)
+NeuronDistribution::NeuronDistribution(int const& num_obstacles_, double const& icvf_, Vector3d const& min_limits_vx_, Vector3d const& max_limits_vx_, int const& sphere_overlap_, double const& step_length_):
+min_limits_vx(min_limits_vx_), max_limits_vx(max_limits_vx_), num_obstacles(num_obstacles_), sphere_overlap(sphere_overlap_), icvf(icvf_), step_length(step_length_)
 {
     neurons.clear();
     projections_x.clear();
@@ -18,80 +24,261 @@ min_limits_vx(min_limits_vx_), max_limits_vx(max_limits_vx_), num_obstacles(num_
     SimErrno::info(message, std::cout);
 }
 
-// void NeuronDistribution::computeMinimalSize(std::vector<double> const& radiis, double &icvf_, Vector3d &l) const
-// {
+TEST_CASE("updateLUT_add")
+{
+    int num_obstacles = 1;
+    double ICVF = 0;
+    Vector3d min_limits_vx = {0.0, 0.0, 0.0};
+    Vector3d max_limits_vx = {0.1, 0.1, 0.1};
+    int sphere_overlap = 4;
+    double step_length = 0.5e-3;
+    NeuronDistribution neuronDist(num_obstacles, ICVF, min_limits_vx, max_limits_vx, sphere_overlap, step_length);
+    
+    SUBCASE("Soma")
+    {
+        Vector3d sphere_center = {0.05, 0.05, 0.05};
+        double sphere_radius   = 10e-3;
 
-//     /*A little heuristic for complicated ICVF: > 0.7*/
-//     if (icvf_ >= 0.7 && icvf_ < 0.99)
-//         icvf_ += 0.01;
+        neuronDist.updateLUT(sphere_center, sphere_radius);
 
-//     double area = 0;
+        // TODO [ines] : check if starts at left, middle, right part of the subvoxel, check if size correct...
 
-//     for (uint i = 0; i < radiis.size(); i++)
-//         area += radiis[i] * radiis[i] * M_PI;
+        CHECK(!neuronDist.LUT[0][0][0]);
+        CHECK(neuronDist.LUT[81][100][100]);
+        CHECK(!neuronDist.LUT[80][80][100]);
+    }
+    SUBCASE("Soma-dendrites-y")
+    {
+        Vector3d soma_center = {0.05, 0.05, 0.05};
+        double soma_radius     = 10e-3;
 
-//     double l_ = sqrt(area / icvf_);
+        neuronDist.updateLUT(soma_center, soma_radius);
 
-//     l = {l_, l_, l_};
-// }
+        double dendrite_radius = 0.5e-3;
+        Vector3d dendrite_center;
+        Vector3d dir = {0.0, 1.0, 0.0};
+        for(size_t i=0; i < 50; ++i)
+        {
+            dendrite_center = soma_center + dir * (soma_radius + double(i) * dendrite_radius / 2.0);
+            neuronDist.updateLUT(dendrite_center, dendrite_radius);
+        }
 
+        CHECK(!neuronDist.LUT[0][0][0]);
+        CHECK(neuronDist.LUT[100][120][100]);
+        CHECK(!neuronDist.LUT[80][80][100]);
+    }
+    SUBCASE("Soma-dendrites-yz")
+    {
+        Vector3d soma_center = {0.05, 0.05, 0.05};
+        double soma_radius     = 10e-3;
+
+        neuronDist.updateLUT(soma_center, soma_radius);
+
+        double dendrite_radius = 0.5e-3;
+        Vector3d dendrite_center;
+        Vector3d dir = {0.0, 1.0/sqrt(2.0), 1.0/sqrt(2.0)};
+        for(size_t i=0; i < 50; ++i)
+        {
+            dendrite_center = soma_center + dir * (soma_radius + double(i) * dendrite_radius / 2.0);
+            neuronDist.updateLUT(dendrite_center, dendrite_radius);
+        }
+        // TODO [ines] : check if starts at left, middle, right part of the subvoxel, check if size correct...
+        // imshow((unsigned char *)&neuronDist.LUT[100], SIZE_LUT, SIZE_LUT, 1);
+        // show(); 
+
+        CHECK(!neuronDist.LUT[0][0][0]);
+        CHECK(neuronDist.LUT[100][120][120]);
+        CHECK(!neuronDist.LUT[80][80][100]);
+    }
+}
+
+void NeuronDistribution::updateLUT(Vector3d const& sphere_center, double const& sphere_radius)
+{
+    // TODO [ines] : bitwise operations => 8x more resolution
+    // uint8_t array[10];
+    // constexpr uint8_t size = sizeof(array[0]);
+    // size_t index = 75;
+    // bool current_state = array[index / size] & (1 << (index % size)) > 0;
+    uint16_t min_x, min_y, min_z, max_x, max_y, max_z;
+    min_x = floor((sphere_center[0] - sphere_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT)) - 1;
+    max_x = floor((sphere_center[0] + sphere_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT)) - 1;
+    min_y = floor((sphere_center[1] - sphere_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT)) - 1;
+    max_y = floor((sphere_center[1] + sphere_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT)) - 1;
+    min_z = floor((sphere_center[2] - sphere_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT)) - 1;
+    max_z = floor((sphere_center[2] + sphere_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT)) - 1;
+
+    // cout << min_x << " " << max_x << " " << min_y << " " << max_y << " " << min_z << " " << max_z << endl;
+
+    for(size_t x=min_x; x <= max_x; ++x)
+    {
+        for(size_t y=min_y; y <= max_y; ++y)
+        {
+            for(size_t z=min_z; z <= max_z; ++z)
+            {
+                double x_real = x * (max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT;
+                double y_real = y * (max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT;
+                double z_real = z * (max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT;
+                if(((sphere_center[0] - x_real)*(sphere_center[0] - x_real) + 
+                   (sphere_center[1] - y_real)*(sphere_center[1] - y_real) +
+                   (sphere_center[2] - z_real)*(sphere_center[2] - z_real)) <= sphere_radius * sphere_radius)
+                   {
+                        LUT[x][y][z] = true; 
+                        // cout << x << " " << y << " " << z << " " << endl;
+                   } 
+            }
+        }
+    }
+    // imshow((unsigned char *)&LUT[int((min_x + max_x)/2)], SIZE_LUT, SIZE_LUT, 1);
+    // show(); 
+}
+
+TEST_CASE("updateLUT_remove")
+{
+    int num_obstacles = 1;
+    double ICVF = 0;
+    Vector3d min_limits_vx = {0.0, 0.0, 0.0};
+    Vector3d max_limits_vx = {0.1, 0.1, 0.1};
+    int sphere_overlap = 4;
+    double step_length = 0.5e-3;
+    NeuronDistribution neuronDist(num_obstacles, ICVF, min_limits_vx, max_limits_vx, sphere_overlap, step_length);
+    
+    SUBCASE("Soma-dendrites-y")
+    {
+        vector<Sphere> spheres;
+        Vector3d soma_center = {0.05, 0.05, 0.05};
+        double soma_radius   = 10e-3;
+        Sphere soma(0, 0, soma_center, soma_radius);
+        spheres.push_back(soma);
+
+        neuronDist.updateLUT(soma_center, soma_radius);
+
+        double dendrite_radius = 0.5e-3;
+        Vector3d dendrite_center;
+        Vector3d dir = {0.0, 1.0, 0.0};
+        for(size_t i=0; i < 50; ++i)
+        {
+            dendrite_center = soma_center + dir * (soma_radius + double(i) * dendrite_radius / 2.0);
+            Sphere s(0, 0, dendrite_center, dendrite_radius);
+            spheres.push_back(s);
+            neuronDist.updateLUT(dendrite_center, dendrite_radius);
+        }
+
+        CHECK(!neuronDist.LUT[0][0][0]);
+        CHECK(neuronDist.LUT[100][144][100]);
+        CHECK(!neuronDist.LUT[80][80][100]);
+
+        // Remove 25 spheres
+        neuronDist.updateLUT(spheres, 25);
+
+        CHECK(!neuronDist.LUT[0][0][0]);
+        CHECK(!neuronDist.LUT[100][144][100]);
+        CHECK(!neuronDist.LUT[80][80][100]);
+    }
+}
+
+void NeuronDistribution::updateLUT(vector<Sphere> const& spheres_to_add, int const& nb_spheres_to_remove)
+{
+    // Remove the last spheres
+    for(size_t sph_id = spheres_to_add.size() - 1; sph_id >= spheres_to_add.size() - 1 - nb_spheres_to_remove; sph_id--)
+    {
+        uint16_t min_x, min_y, min_z, max_x, max_y, max_z;
+        min_x = floor((spheres_to_add[sph_id].center[0] - spheres_to_add[sph_id].radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+        max_x = floor((spheres_to_add[sph_id].center[0] + spheres_to_add[sph_id].radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+        min_y = floor((spheres_to_add[sph_id].center[1] - spheres_to_add[sph_id].radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+        max_y = floor((spheres_to_add[sph_id].center[1] + spheres_to_add[sph_id].radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+        min_z = floor((spheres_to_add[sph_id].center[2] - spheres_to_add[sph_id].radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+        max_z = floor((spheres_to_add[sph_id].center[2] + spheres_to_add[sph_id].radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+
+        for(size_t x=min_x; x < max_x; ++x)
+        {
+            for(size_t y=min_y; y < max_y; ++y)
+            {
+                for(size_t z=min_z; z < max_z; ++z)
+                {
+                    double x_real = x * (max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT;
+                    double y_real = y * (max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT;
+                    double z_real = z * (max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT;
+                    if(((spheres_to_add[sph_id].center[0] - x_real)*(spheres_to_add[sph_id].center[0] - x_real) + 
+                    (spheres_to_add[sph_id].center[1] - y_real)*(spheres_to_add[sph_id].center[1] - y_real) +
+                    (spheres_to_add[sph_id].center[2] - z_real)*(spheres_to_add[sph_id].center[2] - z_real)) <= spheres_to_add[sph_id].radius * spheres_to_add[sph_id].radius)
+                    {
+                            LUT[x][y][z] = false;  
+                            
+                    } 
+                }
+            }
+        }
+    }
+    
+    // Add again the last sphere to keep
+    size_t sph_id = spheres_to_add.size() - 2 - nb_spheres_to_remove;
+    uint16_t min_x, min_y, min_z, max_x, max_y, max_z;
+    min_x = floor((spheres_to_add[sph_id].center[0] - spheres_to_add[sph_id].radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    max_x = floor((spheres_to_add[sph_id].center[0] + spheres_to_add[sph_id].radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    min_y = floor((spheres_to_add[sph_id].center[1] - spheres_to_add[sph_id].radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    max_y = floor((spheres_to_add[sph_id].center[1] + spheres_to_add[sph_id].radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    min_z = floor((spheres_to_add[sph_id].center[2] - spheres_to_add[sph_id].radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+    max_z = floor((spheres_to_add[sph_id].center[2] + spheres_to_add[sph_id].radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+
+    for(size_t x=min_x; x < max_x; ++x)
+    {
+        for(size_t y=min_y; y < max_y; ++y)
+        {
+            for(size_t z=min_z; z < max_z; ++z)
+            {
+                double x_real = x * (max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT;
+                double y_real = y * (max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT;
+                double z_real = z * (max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT;
+                if(((spheres_to_add[sph_id].center[0] - x_real)*(spheres_to_add[sph_id].center[0] - x_real) + 
+                (spheres_to_add[sph_id].center[1] - y_real)*(spheres_to_add[sph_id].center[1] - y_real) +
+                (spheres_to_add[sph_id].center[2] - z_real)*(spheres_to_add[sph_id].center[2] - z_real)) <= spheres_to_add[sph_id].radius * spheres_to_add[sph_id].radius)
+                {
+                        LUT[x][y][z] = true;  
+                        
+                } 
+            }
+        }
+    } 
+}
 
 void NeuronDistribution::createSubstrate()
 {
-
-    uint repetition = 1;
-    uint max_adjustments = 5;
-    // double best_icvf = 0;
-    // Eigen::Vector3d best_max_limits;
+    uint repetition    = 1;
+    double soma_radius = 10e-3; //mm
+    // Let enough distance for the radius and for a step_length so that 
+    // mirroring border conditions are ok
+    double min_distance_from_border = 10 * barrier_tickness + soma_radius;
 
     bool achieved = false;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> udist(0,1);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<double> udistx(min_limits_vx[0] + min_distance_from_border, max_limits_vx[0] - min_distance_from_border);
+    uniform_real_distribution<double> udisty(min_limits_vx[1] + min_distance_from_border, max_limits_vx[1] - min_distance_from_border);
+    uniform_real_distribution<double> udistz(min_limits_vx[1] + min_distance_from_border, max_limits_vx[1] - min_distance_from_border);
 
     uint adjustments = 0;
-     // We increease 1% the total area. (Is prefered to fit all the spheres than achieve a perfect ICVF.)
-    // double adj_increase = icvf*0.01;
     while(!achieved){
 
-        // double target_icvf = this->icvf+adjustments*adj_increase;
-        double soma_radius = 10e-3; //mm
-        // Let enough distance for the radius and for a step_length so that 
-        // mirroring border conditions are ok
-        double min_distance_from_border = barrier_tickness + soma_radius;
+        
         for(uint t = 0 ;  t < repetition; t++){
             neurons.clear();
-            vector<Eigen::Vector3d> soma_centers;
+            vector<Vector3d> soma_centers;
             soma_centers.clear();
-            
+
             for(int i = 0 ; i < num_obstacles; i++){
                 unsigned stuck = 0;
                 while(++stuck <= 10000){
-                    // double t = udist(gen);
-                    // double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
-                    // t        = udist(gen);
-                    // double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
-                    // t        = udist(gen);
-                    // double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
-                    double x = (max_limits_vx[0] - min_limits_vx[0])/2;
-                    double y = (max_limits_vx[1] - min_limits_vx[1])/2;
-                    double z = (max_limits_vx[2] - min_limits_vx[2])/2;
+                    double x = udistx(gen);
+                    double y = udisty(gen);
+                    double z = udistz(gen);
 
-                    Eigen::Vector3d soma_center = {x, y, z};
-                   
-                    // If too close to the border, discard
-                    if ((x - min_limits_vx[0] <= min_distance_from_border) ||
-                        (max_limits_vx[0] - x <= min_distance_from_border) ||
-                        (y - min_limits_vx[1] <= min_distance_from_border) ||
-                        (max_limits_vx[1] - y <= min_distance_from_border) ||
-                        (z - min_limits_vx[2] <= min_distance_from_border) ||
-                        (max_limits_vx[2] - z <= min_distance_from_border))
-                        {
-                            continue;
-                        } 
-                    if (!isSphereColliding(soma_center, soma_radius, soma_centers))
+                    Vector3d soma_center = {x, y, z};
+
+                    if (!isSphereColliding(soma_center, soma_radius))
                     {
+                        cout << "soma " << i << endl;
                         soma_centers.push_back(soma_center);
+                        updateLUT(soma_center, soma_radius);
                         break;
                     }  
                 }
@@ -99,8 +286,8 @@ void NeuronDistribution::createSubstrate()
             for(size_t i=0; i < soma_centers.size(); ++i)
             {
                 Neuron neuron(soma_centers[i], soma_radius, neurons.size());
-                growDendrites(neuron); 
-                neuron.add_projection();
+                growDendrites(neuron, soma_centers, soma_radius); 
+                // neuron.add_projection();
                 neurons.push_back(neuron);
                 cout << " End of neuron " << i << endl;
             }
@@ -108,33 +295,13 @@ void NeuronDistribution::createSubstrate()
 
             double icvf, somaFraction, dendritesFraction;
             tie(icvf, somaFraction, dendritesFraction) = computeICVF(0);
-            cout << icvf << somaFraction << dendritesFraction << endl;
+            cout << "icvf " << icvf << " soma " << somaFraction << " dendrites " << dendritesFraction << endl;
             achieved = true;
-
-            // if(this->icvf - best_icvf  < 0.0005){
-            //     achieved = true;
-            //     break;
-            // }
-        }
-
-        adjustments++;
-        if(adjustments > max_adjustments){
-            break;
         }
     }
-
-    // spheres = best_spheres;
-    // max_limits = best_max_limits;
-
-    // //TODO cambiar a INFO
-    // int perc_;
-    // double icvf_current = computeICVF(spheres,min_limits_vx, max_limits_vx,perc_);
-    // string  message = "Percentage of spheres  selected: "+ to_string(double(perc_)/radiis.size()*100.0)
-    //        + "%,\nICVF achieved: " + to_string(icvf_current*100) + "  ("+ to_string( int((icvf_current/icvf*100))) + "% of the desired icvf)\n";
-    // SimErrno::info(message,cout);
 }
 
-void NeuronDistribution::growDendrites(Neuron& neuron)
+void NeuronDistribution::growDendrites(Neuron& neuron, vector<Vector3d> soma_centers, double const& soma_radius)
 {
     // Store all the starting points of dendrites, on the soma of the neuron
     std::vector<Eigen::Vector3d> start_dendrites;
@@ -144,20 +311,26 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
     {   
         cout << "dendrite " << i << endl;
         int tries = 0;
-        int nb_branching = 3;//generateNbBranching();
+        int nb_branching = 1;//generateNbBranching();
         // Radius of each dendrite sphere [mm]
         double sphere_radius = 0.5e-3;
         // Don't initiate dendrite too close from the borders
-        double min_distance_from_border = barrier_tickness + sphere_radius + step_length;
+        double min_distance_from_border = barrier_tickness + sphere_radius;
         
         while(tries < max_tries)
         {
-            Vector3d dendrite_start = generatePointOnSphere(neuron.soma.center, neuron.soma.radius);
+            Vector3d dendrite_dir     = generatePointOnSphere();
+            Vector3d dendrite_start   = dendrite_dir * neuron.soma.radius + neuron.soma.center;
+            Vector3d dendrite_to_test = dendrite_dir * 50e-3 + neuron.soma.center;
             Dendrite dendrite;
 
-            while(!isInVoxel(dendrite_start, min_distance_from_border) || (isSphereColliding(dendrite_start, sphere_radius)))
+            while(!isInVoxel(dendrite_to_test, min_distance_from_border) || 
+                  isSphereColliding(dendrite_start, sphere_radius, neuron.soma.center, neuron.soma.radius) ||
+                  !avoid_somas(50e-3, soma_centers, soma_radius, neuron.soma.center, dendrite_dir, dendrite_start))
             {
-               dendrite_start = generatePointOnSphere(neuron.soma.center, neuron.soma.radius);
+               dendrite_dir     = generatePointOnSphere();
+               dendrite_to_test = dendrite_dir * 50e-3 + neuron.soma.center;
+               dendrite_start   = dendrite_dir * neuron.soma.radius + neuron.soma.center;
             }
 
             // If the vector is not already contained in start_dendrites, add it. 
@@ -170,7 +343,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                 Eigen::Vector3d dendrite_direction = dendrite_start - neuron.soma.center;
                 dendrite_direction.normalize();
                 vector<Vector3d> children_dir;
-                vector<branching_pt> branching_points     = {{dendrite_start, dendrite_direction, children_dir, 0}};
+                vector<branching_pt> branching_points     = {{neuron.soma.center, dendrite_direction, children_dir, 0, neuron.soma.radius}};
                 vector<branching_pt> branching_points_new;
                 int branch_id      = 0;
                 int largest_node   = 0;
@@ -178,7 +351,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                 for(int b=0; b < nb_branching; ++b)
                 {
                     // Length of a segment before branching
-                    double l_segment = 240e-3 / double(nb_branching);//generateLengthSegment();
+                    double l_segment = 100e-3;//generateLengthSegment();
                     vector<int> proximal_branch;
                     vector<int> distal_branch;
                     if(b == 0)
@@ -187,22 +360,20 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                         distal_branch = {largest_node + 1, largest_node + 2};
                         largest_node  = largest_node + 2;
                         bool stop_growth = false;
-                        cout << "P id " << branching_points[0].subbranch_id << endl;
-                        cout << "C id " << branch_id << endl;
-                        cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
                         branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[0], l_segment, sphere_radius, proximal_branch, distal_branch, 
-                                                                      min_distance_from_border, stop_growth, branch_id, &neuron.soma);
+                                                                      min_distance_from_border, stop_growth, branch_id);
                         branch_id++;
                         branching_points[0] = branching_pt_new;
-                        cout << "Subbranch 1 added " << endl;
                         if(stop_growth)
                             break;
-                    }
+                    } // branching 0
                     else
-                    {
+                    {   
+                        cout << "s2" << branching_points.size() << endl;
+
                         for(size_t p=0; p < branching_points.size(); p++)
                         {
-                                                        // The branching point is split into 2 children
+                            // The branching point is split into 2 children
                             for(int c=0; c < static_cast<int>(branching_points[p].children_direction.size()); c++)
                             {
                                 proximal_branch = {branching_points[p].subbranch_id, branch_id + 1 - 2*c};
@@ -213,15 +384,9 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                                 largest_node  = largest_node + 2;
                                 branching_points[p].direction = branching_points[p].children_direction[c];
                                 bool stop_growth = false;
-                                cout << "P id " << branching_points[p].subbranch_id << endl;
-                                cout << "C id " << branch_id << endl;
-                                cout << "largest id " << largest_node << endl;
-                                cout << "prox " << proximal_branch[0] << proximal_branch[1] << endl;
-                                if(distal_branch.size() == 2)
-                                    cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
                                 branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[p], l_segment, sphere_radius, 
                                                                               proximal_branch, distal_branch, min_distance_from_border, 
-                                                                              stop_growth, branch_id, &neuron.soma);
+                                                                              stop_growth, branch_id);
                                 
                                 branch_id++; 
                                 if(stop_growth)
@@ -231,20 +396,29 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                                 }
                                 branching_points_new.push_back(branching_pt_new);  
                             }
-                        }
+                        } // grow each branch points
 
                         branching_points = branching_points_new;
                         branching_points_new = {};
-                    }   
+                    } // Subbranchings
                 }        
             }
-            neuron.add_dendrite(dendrite);
-            break;
+            if(dendrite.subbranches.size() == 0)
+            {
+                cout << "nothing to add" << endl;
+                tries++;
+            }
+            else
+            {
+                neuron.add_dendrite(dendrite);
+                break;
+            }
+            
         }
     } 
 }
 
-std::tuple<double, double>  phi_theta_to_target (Eigen::Vector3d parent_dir) 
+tuple<double, double> phi_theta_to_target(Vector3d parent_dir) 
 {
     /*
     Find phi and theta angles in spherical coordinates
@@ -258,98 +432,125 @@ std::tuple<double, double>  phi_theta_to_target (Eigen::Vector3d parent_dir)
     // varies between 0 and 2pi
     theta_to_target = atan2(vector_to_target[1], vector_to_target[0]);
     if (theta_to_target < 0)
-    {
         theta_to_target += 2 * M_PI;
-    }
     // phi is angle between (0,0,1) and (x,y,z)
     // varies between 0 and pi
     if (vector_to_target[2] == 0)
-    {
         phi_to_target = M_PI / 2.0;
-    }
     else if (vector_to_target == Eigen::Vector3d({0, 0, -1}))
-    {
         phi_to_target = M_PI;
-    }
     else if (vector_to_target == Eigen::Vector3d({0, 0, 1}))
-    {
         phi_to_target = 0;
-    }
     else
     {
         // varies between -pi/2 and pi/2
         phi_to_target = atan((sqrt(vector_to_target[0] * vector_to_target[0] + vector_to_target[1] * vector_to_target[1])) / vector_to_target[2]);
         if (phi_to_target < 0)
-        {
             phi_to_target += M_PI;
-        }
     }
-    return std::make_tuple(phi_to_target, theta_to_target);
+    return make_tuple(phi_to_target, theta_to_target);
 }
 
 NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& dendrite, NeuronDistribution::branching_pt const& parent, 
                                       double const& l_segment, double const& sphere_radius, vector<int> const& proximal_end, 
                                       vector<int> const& distal_end, double const& min_distance_from_border, bool& stop_growth,
-                                      int const& branch_id, Sphere* soma)
+                                      int const& branch_id)
 {
-    Eigen::Vector3d begin;
+    Vector3d begin;
     Axon subbranch(branch_id, sphere_radius, begin, begin, proximal_end, distal_end);
-    std::vector<Sphere> spheres_to_add;
+    vector<Sphere> spheres_to_add;
     spheres_to_add.clear();
 
-    Eigen::Vector3d center = parent.origin;
-    Eigen::Vector3d end    = parent.origin + l_segment * parent.direction;
-    bool discard_dendrite  = false;
+    Vector3d center, center_to_test;
+    double last_radius;
+    Vector3d end  = parent.origin + (l_segment + parent.radius) * parent.direction;
     int sphere_id = 0;
-    while((center - end).norm() > 1e-6)
+    float phi_to_target, theta_to_target;
+    tie(phi_to_target, theta_to_target) = phi_theta_to_target(parent.direction);
+    Vector3d last_sphere_center = parent.origin + parent.radius * parent.direction;
+    // size_t nb_spheres_to_interpolate = sphere_overlap / 2 - 1;
+    while((last_sphere_center - end).norm() > 1e-6)
     {
-        if(branch_id == 0)
-            center = double(sphere_id) * parent.direction * sphere_radius / 4.0 + parent.origin;
-        else
-            center = double(sphere_id + 1) * parent.direction * sphere_radius / 4.0 + parent.origin;
-
-        if(isInVoxel(center, min_distance_from_border))
+        Vector3d next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
+        // 1st sphere of 1st subbranch
+        if((branch_id == 0) && (sphere_id == 0))
         {
-            if (!isSphereColliding(center, sphere_radius))
-            {
-                Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
-                if(sphere_id == 0)
-                {
-                    if(proximal_end[0] == -1)
-                    {
-                        sphere_to_add.add_neighbor(soma);
-                        soma->add_neighbor(new Sphere(sphere_to_add));
-                    }  
-                    else
-                    {
-                        sphere_to_add.add_neighbor(new Sphere(dendrite.subbranches[proximal_end[0]].spheres[dendrite.subbranches[proximal_end[0]].spheres.size()-1]));
-                        dendrite.subbranches[proximal_end[0]].spheres[dendrite.subbranches[proximal_end[0]].spheres.size()-1].add_neighbor(new Sphere(sphere_to_add));
-                        cout << "b id " << branch_id << endl;
-                        cout << "current sph id" << sphere_to_add.id << " ax id " << sphere_to_add.ax_id << endl;
-                        cout << "sph id " << dendrite.subbranches[proximal_end[0]].spheres[dendrite.subbranches[proximal_end[0]].spheres.size()-1].id << endl;
-                        cout << "ax id " << dendrite.subbranches[proximal_end[0]].spheres[dendrite.subbranches[proximal_end[0]].spheres.size()-1].ax_id<< endl;
-                        if(branch_id > proximal_end[1])
-                        {
-                            sphere_to_add.add_neighbor(new Sphere(dendrite.subbranches[proximal_end[1]].spheres[0]));
-                            dendrite.subbranches[proximal_end[1]].spheres[0].add_neighbor(new Sphere(sphere_to_add));
-                            cout << "sph id " << dendrite.subbranches[proximal_end[1]].spheres[0].id<< endl;
-                            cout << "ax id " << dendrite.subbranches[proximal_end[1]].spheres[0].ax_id<< endl;
-                        }
-                    }
-                }
-                else
-                {
-                    spheres_to_add[spheres_to_add.size() - 1].add_neighbor(new Sphere(sphere_to_add));
-                    sphere_to_add.add_neighbor(new Sphere(spheres_to_add[spheres_to_add.size() - 1]));
-                }
-                
-                spheres_to_add.push_back(sphere_to_add);
-                sphere_id++;
-            }
+            center         = last_sphere_center;
+            center_to_test = parent.origin;
+            last_radius    = 10e-3;
         }
         else
         {
-            if(spheres_to_add.size() > 0)
+            center         = next_direction * sphere_radius / 2.0 + last_sphere_center;
+            if(sphere_id == 0)
+                center_to_test = parent.origin;
+            else
+                center_to_test = last_sphere_center;
+            last_radius    = sphere_radius;
+        }
+
+        if(isInVoxel(center, min_distance_from_border))
+        {
+            if (!isSphereColliding(center, sphere_radius, center_to_test, last_radius))
+            {
+                Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
+                spheres_to_add.push_back(sphere_to_add);
+                sphere_id++; 
+                last_sphere_center = center;
+            }
+            // Try other directions
+            else
+            {
+                bool achieved = false;
+                int number_trials = 10;
+                while (number_trials > 0)
+                {
+                    next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
+                    center         = next_direction * sphere_radius / 2.0 + last_sphere_center; 
+
+                    if(isInVoxel(center, min_distance_from_border) && (!isSphereColliding(center, sphere_radius, center_to_test, last_radius)))
+                    {
+                        Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
+                        spheres_to_add.push_back(sphere_to_add);
+                        sphere_id++;
+                        achieved = true;
+                        last_sphere_center = center;
+                    }
+                    number_trials--;
+                }
+
+                double sphere_radius_shrink = sphere_radius;
+                while (sphere_radius_shrink > 0.15e-3)
+                {
+                    sphere_radius_shrink -= 0.1 * sphere_radius;
+                    next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
+                    center         = next_direction * sphere_radius / 2.0 + last_sphere_center; 
+                    if(isInVoxel(center, min_distance_from_border) && (!isSphereColliding(center, sphere_radius_shrink, center_to_test, last_radius)))
+                    {
+                        Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius_shrink);
+                        spheres_to_add.push_back(sphere_to_add);
+                        sphere_id++;
+                        achieved = true;
+                        last_sphere_center = center;
+                    }
+                }
+                
+                // If we didn't manage to continue the branch but it's long enough
+                double length_branch = (spheres_to_add[0].center - spheres_to_add[spheres_to_add.size() - 1].center).norm();
+                if(!achieved && (length_branch > 15e-3))
+                {
+                    subbranch.set_spheres(spheres_to_add);
+                    dendrite.add_subbranch(subbranch);
+                    return {};
+                }
+                return {};
+            } // isColliding
+        }
+        // Outside of the voxel. If long enough, keep the branch
+        else
+        {
+            double length_branch = (spheres_to_add[0].center - spheres_to_add[spheres_to_add.size() - 1].center).norm();
+            if(length_branch > 50e-3)
             {
                 subbranch.set_spheres(spheres_to_add);
                 dendrite.add_subbranch(subbranch);
@@ -357,14 +558,12 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
             return {};
         } 
     }
-    if (!discard_dendrite)
+    double length_branch = (spheres_to_add[0].center - spheres_to_add[spheres_to_add.size() - 1].center).norm();
+    if(length_branch > 50e-3)
     {
         subbranch.set_spheres(spheres_to_add);
         dendrite.add_subbranch(subbranch);
-    } 
-
-    float phi_to_target, theta_to_target;
-    tie(phi_to_target, theta_to_target) = phi_theta_to_target(parent.direction);
+    }
 
     random_device dev;
     mt19937 rng(dev());
@@ -401,14 +600,9 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
 
     children_dir[0] = (m * children_dir[0]).normalized();
     children_dir[1] = (m * children_dir[1]).normalized();
-    // cout << acos(children_dir[0].dot(children_dir[1])) << endl;
-    // cout << 2*delta_theta << endl;
-    // cout << subbranch.projections.axon_projections[0][0] << " " << subbranch.projections.axon_projections[0][1];
-    // cout << subbranch.projections.axon_projections[1][0] << " " << subbranch.projections.axon_projections[1][1];
-    // cout << subbranch.projections.axon_projections[2][0] << " " << subbranch.projections.axon_projections[2][1];
     
     // Return the next branching point
-    return {spheres_to_add[spheres_to_add.size()-1].center, parent.direction, children_dir, branch_id};
+    return {spheres_to_add[spheres_to_add.size()-1].center, parent.direction, children_dir, branch_id, sphere_radius};
     
 }
 
@@ -433,30 +627,51 @@ double NeuronDistribution::generateBifurcationAngle(double const& lower_bound, d
     return bifurcationAngle(rng);
 }
 
-Vector3d NeuronDistribution::generatePointOnSphere(Vector3d const& center, double const& radius) const
+Vector3d NeuronDistribution::generatePointOnSphere() const
 {
     std::random_device rd{};
     std::mt19937 generator{rd()};
-    std::normal_distribution<double> distribution(0.0, 1.0);
+    std::uniform_real_distribution<double> phi_dist(-1.0, 1.0);
+    std::uniform_real_distribution<double> theta_dist(0.0, 2.0 * M_PI);
 
-    // Find a point at the surface of the soma
-    double x = distribution(generator); 
-    double y = distribution(generator);
-    double z = distribution(generator);
+    double theta   = theta_dist(generator);
+    double cos_phi = phi_dist(generator);
+    double phi     = acos(cos_phi);
+    double x       = sin(phi) * cos(theta);
+    double y       = sin(phi) * sin(theta);
+    double z       = cos(phi);
 
-    // Avoid division by 0 while normalizing
-    while(x==0 && y==0 && z==0)
-    {
-        x = distribution(generator);
-        y = distribution(generator);
-        z = distribution(generator);
-    }
-    double normalization_factor = sqrt(x*x + y*y + z*z);
-    x = x/normalization_factor*radius + center[0];
-    y = y/normalization_factor*radius + center[1];
-    z = z/normalization_factor*radius + center[2];
-    
     return {x, y, z};   
+}
+
+Vector3d NeuronDistribution::generateNextDirection(double const& phi_to_target, double const& theta_to_target, double const& STD) const
+{
+    random_device rd{};
+    mt19937 gen{rd()};
+
+    // Generate tortuosity : theta ~ N(theta/(2*pi), STD)
+    normal_distribution<double> theta_dist(theta_to_target / (2.0 * M_PI), STD);
+    double theta = theta_dist(gen) * 2.0 * M_PI;
+    if(theta > 2.0 * M_PI)
+        theta = 2.0 * M_PI;
+    else if (theta < -2.0 * M_PI)
+        theta = -2.0 * M_PI;
+
+    // Generate tortuosity : cos(phi) ~ N(cos(phi), STD*2*pi)
+    double cos_phi_to_target = cos(phi_to_target);
+    normal_distribution<double> cos_phi_dist(cos_phi_to_target, STD * 2.0 * M_PI);
+    double cos_phi = cos_phi_dist(gen);
+    if(cos_phi > 1)
+        cos_phi = 1;
+    else if (cos_phi < -1)
+        cos_phi = -1;
+    double phi = acos(cos_phi);
+ 
+    double x     = sin(phi) * cos(theta);
+    double y     = sin(phi) * sin(theta);
+    double z     = cos(phi);
+    
+    return {x, y, z};
 }
 
 Vector3d NeuronDistribution::rotateDirection(Vector3d const& direction, double const& angle) const
@@ -504,29 +719,135 @@ void NeuronDistribution::createTwinSphere(Vector3d &center, double const& sphere
     }
 }
 
-bool NeuronDistribution::isSphereColliding(Sphere const& sph) 
+TEST_CASE("isSphereColliding")
 {
-    Vector3d position = sph.center;
-    double distance_to_be_inside = sph.radius + 2 * barrier_tickness;
-    int dummy;
-    vector<int> dummy2;
-    for (unsigned i = 0; i < neurons.size() ; i++){
-        bool isinside = neurons[i].isPosInsideNeuron(position, distance_to_be_inside, dummy, dummy, dummy, dummy2);
-        if (isinside)
-            return true;
+    int num_obstacles = 1;
+    double ICVF = 0;
+    Vector3d min_limits_vx = {0.0, 0.0, 0.0};
+    Vector3d max_limits_vx = {0.1, 0.1, 0.1};
+    int sphere_overlap = 4;
+    double step_length = 0.5e-3;
+    NeuronDistribution neuronDist(num_obstacles, ICVF, min_limits_vx, max_limits_vx, sphere_overlap, step_length);
+
+    // Add soma
+    Vector3d soma_center = {0.05, 0.05, 0.05};
+    double soma_radius   = 10e-3;
+    neuronDist.updateLUT(soma_center, soma_radius);
+
+    SUBCASE("non-colliding sphere")
+    {
+        Vector3d dir = {1.0, 0.0, 0.0};
+        double dendrite_radius  = 0.5e-3;
+        Vector3d center_to_test = soma_center + dir * (soma_radius + 3 * dendrite_radius);
+        CHECK(!neuronDist.isSphereColliding(center_to_test, dendrite_radius));
     }
-    return false;
+    SUBCASE("colliding sphere")
+    {
+        Vector3d dir = {1.0, 0.0, 0.0};
+        double dendrite_radius  = 0.5e-3;
+        Vector3d center_to_test = soma_center + dir * soma_radius;
+        CHECK(neuronDist.isSphereColliding(center_to_test, dendrite_radius));
+    }
+    
 }
 
-bool NeuronDistribution::isSphereColliding(Vector3d const& sphere_center, double const& sphere_radius, vector<Vector3d> const& soma_centers) 
+bool NeuronDistribution::isSphereColliding(Vector3d const& sphere_center, double const& sphere_radius) 
 {
-    double distance_to_be_inside = 2 * barrier_tickness;
-    for (unsigned i = 0; i < soma_centers.size() ; i++){
-        bool isinside = isSphereCollidingSphere(sphere_center, soma_centers[i], sphere_radius, sphere_radius, distance_to_be_inside);
-        if (isinside)
-            return true;
+    uint16_t min_x, min_y, min_z, max_x, max_y, max_z;
+    min_x = floor((sphere_center[0] - sphere_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    max_x = floor((sphere_center[0] + sphere_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    min_y = floor((sphere_center[1] - sphere_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    max_y = floor((sphere_center[1] + sphere_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    min_z = floor((sphere_center[2] - sphere_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+    max_z = floor((sphere_center[2] + sphere_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+    // cout << min_x << " " << max_x << " " << min_y << " " << max_y << " " << min_z << " " << max_z << endl;
+
+    for(size_t x=min_x; x < max_x; ++x)
+        for(size_t y=min_y; y < max_y; ++y)
+            for(size_t z=min_z; z < max_z; ++z)
+                if(LUT[x][y][z])
+                    return true;
+    return false; 
+}
+
+TEST_CASE("isSphereColliding_ignore")
+{
+    int num_obstacles = 1;
+    double ICVF = 0;
+    Vector3d min_limits_vx = {0.0, 0.0, 0.0};
+    Vector3d max_limits_vx = {0.1, 0.1, 0.1};
+    int sphere_overlap = 4;
+    double step_length = 0.5e-3;
+    NeuronDistribution neuronDist(num_obstacles, ICVF, min_limits_vx, max_limits_vx, sphere_overlap, step_length);
+
+    // Add soma
+    Vector3d soma_center = {0.05, 0.05, 0.05};
+    double soma_radius   = 10e-3;
+    neuronDist.updateLUT(soma_center, soma_radius);
+
+    SUBCASE("non-colliding sphere (non-touching)")
+    {
+        Vector3d dir = {1.0, 0.0, 0.0};
+        double dendrite_radius  = 0.5e-3;
+        Vector3d center_to_test = soma_center + dir * (soma_radius + 3 * dendrite_radius);
+        CHECK(!neuronDist.isSphereColliding(center_to_test, dendrite_radius, soma_center, soma_radius));
     }
-    return false;
+    SUBCASE("non-colliding sphere (touching)")
+    {
+        Vector3d dir = {1.0, 0.0, 0.0};
+        double dendrite_radius  = 0.5e-3;
+        Vector3d center_to_test = soma_center + dir * soma_radius;
+        CHECK(!neuronDist.isSphereColliding(center_to_test, dendrite_radius, soma_center, soma_radius));
+    }
+    SUBCASE("dendrite")
+    {
+        Vector3d dendrite_center;
+        Vector3d dir = {1.0, 0.0, 0.0};
+        double dendrite_radius  = 0.5e-3;
+        Vector3d last_center = soma_center + dir * soma_radius;
+        for(size_t i=1; i < 50; ++i)
+        {
+            dendrite_center = soma_center + dir * (soma_radius + double(i) * dendrite_radius / 2.0);
+            CHECK(!neuronDist.isSphereColliding(dendrite_center, dendrite_radius, last_center, dendrite_radius));
+            neuronDist.updateLUT(dendrite_center, dendrite_radius);
+            last_center = dendrite_center;
+        }
+    }   
+}
+
+bool NeuronDistribution::isSphereColliding(Vector3d const& sphere_center, double const& sphere_radius, Vector3d const& sphere_to_ignore_center, double const& sphere_to_ignore_radius) 
+{
+    uint16_t min_x = floor((sphere_center[0] - sphere_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    uint16_t max_x = floor((sphere_center[0] + sphere_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    uint16_t min_y = floor((sphere_center[1] - sphere_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    uint16_t max_y = floor((sphere_center[1] + sphere_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    uint16_t min_z = floor((sphere_center[2] - sphere_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+    uint16_t max_z = floor((sphere_center[2] + sphere_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+
+
+    uint16_t min_ign_x = floor((sphere_to_ignore_center[0] - sphere_to_ignore_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    uint16_t max_ign_x = floor((sphere_to_ignore_center[0] + sphere_to_ignore_radius) / ((max_limits_vx[0] - min_limits_vx[0]) / SIZE_LUT));
+    uint16_t min_ign_y = floor((sphere_to_ignore_center[1] - sphere_to_ignore_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    uint16_t max_ign_y = floor((sphere_to_ignore_center[1] + sphere_to_ignore_radius) / ((max_limits_vx[1] - min_limits_vx[1]) / SIZE_LUT));
+    uint16_t min_ign_z = floor((sphere_to_ignore_center[2] - sphere_to_ignore_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+    uint16_t max_ign_z = floor((sphere_to_ignore_center[2] + sphere_to_ignore_radius) / ((max_limits_vx[2] - min_limits_vx[2]) / SIZE_LUT));
+    
+    // cout << min_x << " " << max_x << " " << min_y << " " << max_y << " " << min_z << " " << max_z << endl;
+    // cout << min_ign_x << " " << max_ign_x << " " << min_ign_y << " " << max_ign_y << " " << min_ign_z << " " << max_ign_z << endl;
+    for(size_t x=min_x; x < max_x; ++x)
+        for(size_t y=min_y; y < max_y; ++y)
+            for(size_t z=min_z; z < max_z; ++z)
+                if(LUT[x][y][z])
+                {
+                    if(!((min_ign_x <= x) && (max_ign_x >= x) &&
+                         (min_ign_y <= y) && (max_ign_y >= y) &&
+                         (min_ign_z <= z) && (max_ign_z >= z)))
+                         {
+                            return true;      
+                         }
+                }
+                    
+    return false; 
 }
 
 bool NeuronDistribution::isSphereCollidingSphere(Vector3d const& pos1, Vector3d const& pos2, double const& radius1, double const& radius2, double const& minDistance) const 
@@ -537,18 +858,6 @@ bool NeuronDistribution::isSphereCollidingSphere(Vector3d const& pos1, Vector3d 
     return distance_to_sphere < minDistance;
 }
 
-bool NeuronDistribution::isSphereColliding(Vector3d const& sphere_center, double const& sphere_radius) 
-{
-    double distance_to_be_inside = sphere_radius + 2 * barrier_tickness;
-    int dummy;
-    vector<int> dummy2;
-    for (unsigned i = 0; i < neurons.size() ; i++){
-        bool isinside = neurons[i].isPosInsideNeuron(sphere_center, distance_to_be_inside, dummy, dummy, dummy, dummy2);
-        if (isinside)
-            return true;
-    }
-    return false;
-}
 
 void NeuronDistribution::printSubstrate(ostream &out) const
 {
@@ -811,3 +1120,39 @@ tuple<double, double, double> NeuronDistribution::computeICVF(double const& min_
     double ICVF              = somaFraction + dendritesFraction;
     return make_tuple(ICVF, somaFraction, dendritesFraction);
 }
+
+bool intersection_sphere_vector(double const& min_distance, Vector3d const& sphere_center, double const& sphere_radius, Vector3d const& step_dir, Vector3d const& traj_origin)
+{
+    Vector3d m = traj_origin - sphere_center;
+    double rad = sphere_radius;
+
+    int a = 1;
+    double b = m.dot(step_dir);
+    double c = m.dot(m) - rad * rad;
+
+    double discr = b * b - a * c;
+
+    if (discr < 0.0)
+        return false;
+
+    auto intercept1 = (-b + sqrt(discr)) / a;
+    auto intercept2 = (-b - sqrt(discr)) / a;
+
+    if((intercept1 < min_distance && intercept1 > 0) || 
+       (intercept2 < min_distance && intercept2 > 0))
+        return true;
+    else
+        return false;
+}
+
+bool NeuronDistribution::avoid_somas(double const& min_distance, vector<Vector3d> soma_centers, double const& soma_radius, Vector3d const& soma_to_ignore, Vector3d const &step_dir, Vector3d const &traj_origin) const
+{
+    for(size_t soma_id=0; soma_id < soma_centers.size(); ++soma_id)
+    {
+        if(((soma_centers[soma_id]-soma_to_ignore).norm() > 2.0 * soma_radius) &&
+            intersection_sphere_vector(min_distance, soma_centers[soma_id], soma_radius, step_dir, traj_origin))
+            return false;
+    }
+    return true;
+}
+

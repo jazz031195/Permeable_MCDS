@@ -632,7 +632,7 @@ void ParallelMCSimulation::specialInitializations()
         double diffusivity = std::max(params.diffusivity_extra, params.diffusivity_intra);
         double step_length = sqrt(6.0 * diffusivity * params.sim_duration / params.num_steps);
         NeuronDistribution neuron_dist(params.num_neurons, params.gamma_icvf
-                                      ,params.min_limits, params.max_limits, step_length);
+                                      ,params.min_limits, params.max_limits, params.sphere_overlap, step_length);
 
         auto start = high_resolution_clock::now();
         neuron_dist.createSubstrate();
@@ -652,10 +652,10 @@ void ParallelMCSimulation::specialInitializations()
             params.voxels_list[0].second = params.max_limits;
         }
 
-        string file = params.output_base_name + "_neurons_list.swc";
+        string file = params.output_base_name + "_neurons_list.txt";
         params.neurons_files.push_back(file);
         ofstream out(file);
-        neuron_dist.printSubstrate_swc(out);
+        neuron_dist.printSubstrate(out);
         out.close();
         SimErrno::info("Done.\n",cout);
     }
