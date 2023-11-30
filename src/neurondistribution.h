@@ -54,7 +54,7 @@ public:
     void printSubstrate(std::ostream &out) const;
     void printSubstrate_swc(std::ostream &out) const;
     void updateLUT(Eigen::Vector3d const& sphere_center, double const& sphere_radius);
-    void updateLUT(vector<Sphere> const& spheres_to_add, int const& nb_spheres_to_remove);
+    void updateLUT(vector<Sphere>& spheres_to_add, int const& nb_spheres_to_remove);
     Eigen::Vector3d generateNextDirection(double const& phi_to_target, double const& theta_to_target, double const& STD) const;
     /**
      * Check if a sphere characterized by its center sphere_center and 
@@ -107,7 +107,7 @@ private:
      * 
      * @param neuron Neuron.
     */
-    void growDendrites(Neuron& neuron, std::vector<Eigen::Vector3d> soma_centers, double const& soma_radius);
+    void growDendrites(Neuron& neuron, std::vector<Eigen::Vector3d> soma_centers, vector<double> const& soma_radii);
     /**
      * Generate the number of consecutive branching of a dendrite.
      *
@@ -145,13 +145,13 @@ private:
      */
     branching_pt growSubbranch(Dendrite& dendrite, branching_pt const& parent, double const& l_segment, double const& sphere_radius, 
                                std::vector<int> const& proximal_end, std::vector<int> const& distal_end, double const& min_distance_from_border, 
-                               bool& stop_growth, int const& branch_id);
+                               int const& branch_id);
 
     Eigen::Vector3d rotateDirection(Eigen::Vector3d const& direction, double const& angle) const;
     void print_tree(Neuron* const& neuron, std::vector<std::vector<int>> const& nodes) const;
     std::vector<int> find_tree_path(Neuron* const& neuron, int const& dendrite_id, int const& subbranch_id) const;
     std::vector<std::vector<int>> find_tree_paths(Neuron* const& neuron, int const& dendrite_id) const;
-    bool avoid_somas(double const& min_distance, std::vector<Eigen::Vector3d> soma_centers, double const& soma_radius, Eigen::Vector3d const& soma_to_ignore, Eigen::Vector3d const &step_dir, Eigen::Vector3d const &traj_origin) const;
+    bool avoid_somas(double const& min_distance, std::vector<Eigen::Vector3d> soma_centers, vector<double> const& soma_radius, Eigen::Vector3d const& soma_to_ignore, Eigen::Vector3d const &step_dir, Eigen::Vector3d const &traj_origin) const;
 
 
 

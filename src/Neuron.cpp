@@ -24,7 +24,7 @@ Neuron::Neuron()
 
     uniform_int_distribution<mt19937::result_type> dist_dendrites(lb, ub);
     // Generate int number in [lb, ub]
-    nb_dendrites = 20; // dist_dendrites(rng);
+    nb_dendrites = 25; // dist_dendrites(rng);
 
     // // Create a random span radius and set its value to this
     // generateSpanRadius();
