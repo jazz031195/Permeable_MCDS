@@ -10,11 +10,11 @@ def create_job(exp_path, number_of_rep, exec_type, conf_path):
     Args:
         exp_path (pathlib.PosixPath) : path of the experience to be run (e.g. exp1/dendrites/n1)
         number_of_rep          (int) : number of times each simulation should be repeated
-        exec_type              (str) : type of the executable (either "soma", "dendrites", "soma_dendrites", "soma_dendrites_ex")
+        exec_type              (str) : type of the executable (either "soma", "dendrites", "soma_dendrites", "release")
                                        soma : walkers start and stay in soma only
                                        dendrites : walkers start and stay in dendrites only
                                        soma_dendrites : walkers start in soma and dendrites, but don't exchange compartments
-                                       soma_dendrites_ex : walkers start in soma and dendrites, and can exchange compartments
+                                       release : walkers start in soma and dendrites, and can exchange compartments
         conf_path (pathlib.PosixPath): path of the conf file (e.g. exp1/dendrites/n1/neurons.conf)
     """
 
@@ -136,11 +136,11 @@ f    = open(args.p)
 data = json.load(f)
 simu_to_launch = data.get("simu_to_launch") # List of str, simulations to launch, e.g. "exp1/dendrites/overlap4/n1"
 number_of_rep  = data.get("number_of_rep")  # int, number of repetitions per simulation
-simu_type      = data.get("simu_type")      # str, type of simulation ("soma", "dendrites", "soma_dendrites", "soma_dendrites_ex"):
+simu_type      = data.get("simu_type")      # str, type of simulation ("soma", "dendrites", "soma_dendrites", "release"):
                                             # soma : walkers start and stay in soma only
                                             # dendrites : walkers start and stay in dendrites only
                                             # soma_dendrites : walkers start in soma and dendrites, but don't exchange compartments
-                                            # soma_dendrites_ex : walkers start in soma and dendrites, and can exchange compartments
+                                            # release : walkers start in soma and dendrites, and can exchange compartments
 
 # For all simulations
 for simu in simu_to_launch:
