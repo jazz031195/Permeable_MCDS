@@ -61,6 +61,7 @@ def create_conf(exp_path):
     Number_processes  = data.get("Number_processes")  # Int, number of parallel processes
     Path_to_scheme    = data.get("Path_to_scheme")    # Str, relative path to scheme file
     Path_to_neurons   = data.get("Path_to_neurons")   # Str, relative path to neurons_list.swc or neurons_list.txt
+    Path_to_conf      = data.get("Path_to_conf")      # Str, relative path to neurons.conf
     permeability      = data.get("permeability")      # Float, permability value
     sphere_overlap    = data.get("sphere_overlap")    # the spheres are radius/sphere_overlap appart
     voxel_lb          = data.get("voxel_lb")          # [x, y, z], list of floats, lower bound of the voxel
@@ -70,7 +71,7 @@ def create_conf(exp_path):
 
     # TODO [ines] : add ini_walkers_file
 
-    with open (exp_path / 'neurons_from_file.conf', 'w') as file:  
+    with open (exp_path / Path_to_conf, 'w') as file:  
         file.write(f'N {N}\n')
         file.write(f'T {T}\n')
         file.write(f'duration {duration}\n')
@@ -145,9 +146,9 @@ simu_type      = data.get("simu_type")      # str, type of simulation ("soma", "
 # For all simulations
 for simu in simu_to_launch:
     # Create the conf file
-    create_conf(Path(simu), number_of_rep, simu_type, Path(simu) / "neurons.conf")
+    create_conf(Path(simu))
     # Create the job.sh to be launched
-    create_job(Path(simu))
+    create_job(Path(simu), number_of_rep, simu_type, Path(simu) / "neurons.conf")
 
     # Launch the job.sh on the cluster
-    os.system(f"Sbatch {simu}/job.sh")
+    os.system(f"sbatch {simu}/job.sh")
