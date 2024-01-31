@@ -1,20 +1,27 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from matplotlib.animation import FuncAnimation
+import matplotlib.animation as animation
+import pandas as pd
 
 plot_3d    = True
-plot_traj  = False
+plot_traj  = True
 projection = False
 max_lim = 0.3
 min_lim = 0.5
 neuron = "n1"
-neuron_file = 'instructions/neurons/neurons_list_o4.txt'
+neuron_file = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/neurons/_rep_00_0_neurons_list.txt'
+traj_file   = ['/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/neurons/_rep_00_0.traj.txt',
+               '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/neurons/_rep_03_0.traj.txt',
+               '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/neurons/_rep_05_0.traj.txt']
 min_ = np.ones(3)
 max_ = np.zeros(3)
+i = 0
 with open(neuron_file) as f:
     lines = f.readlines()
     if plot_3d:
-        fig = plt.figure()
+        fig = plt.figure(figsize=(20, 20))
         ax = fig.add_subplot(111, projection='3d')
         # ax.set_xlabel('X [mm]')
         # ax.set_ylabel('Y [mm]')
@@ -23,12 +30,12 @@ with open(neuron_file) as f:
         ax.xaxis.set_ticklabels([])
         ax.yaxis.set_ticklabels([])
         ax.zaxis.set_ticklabels([])
-        ax.w_xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-        ax.w_yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-        ax.w_zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
-        ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-        ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
-        ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        ax.xaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+        ax.yaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+        ax.zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
+        ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_zticks([])
@@ -45,19 +52,19 @@ with open(neuron_file) as f:
         # If it is the soma, plot it in any case
         if "Soma" in coords[0]:
             coords = lines[i-1].split(' ')
-            # coords = [float(coord) for coord in coords]
-            # # draw sphere
-            # u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
-            # x = np.cos(u)*np.sin(v)*float(coords[3]) + float(coords[0])
-            # y = np.sin(u)*np.sin(v)*float(coords[3]) + float(coords[1])
-            # z = np.cos(v)*float(coords[3]) + float(coords[2])
-            # r = float(coords[3])
-            # if plot_3d:
-            #     ax.plot_surface(x, y, z, color="cornflowerblue", alpha=0.1)
-            # elif projection:
-            #     axs[0].plot(x, y, color="cornflowerblue")
-            #     axs[1].plot(x, z, color="cornflowerblue")
-            #     axs[2].plot(z, y, color="cornflowerblue")
+            coords = [float(coord) for coord in coords]
+            # draw sphere
+            u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
+            x = np.cos(u)*np.sin(v)*float(coords[3]) + float(coords[0])
+            y = np.sin(u)*np.sin(v)*float(coords[3]) + float(coords[1])
+            z = np.cos(v)*float(coords[3]) + float(coords[2])
+            r = float(coords[3])
+            if plot_3d:
+                ax.plot_surface(x, y, z, color="cornflowerblue", alpha=0.1)
+            elif projection:
+                axs[0].plot(x, y, color="cornflowerblue")
+                axs[1].plot(x, z, color="cornflowerblue")
+                axs[2].plot(z, y, color="cornflowerblue")
         elif len(coords) > 2 and len(coords) < 6:
             coords = [float(coord) for coord in coords]
             if coords[0] < min_[0]:
@@ -73,8 +80,7 @@ with open(neuron_file) as f:
             if coords[2] > max_[2]:
                 max_[2] = coords[2]
 
-            if (coords[0] < 0.56) and (coords[1] < 0.44) and (coords[2] < 0.53) and \
-                (coords[0] > 0.54) and (coords[1] > 0.42) and (coords[2] > 0.51):
+            if i % 8 == 0:
                 # draw sphere
                 u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:10j]
                 x = np.cos(u)*np.sin(v)*float(coords[3]) + float(coords[0])
@@ -82,14 +88,17 @@ with open(neuron_file) as f:
                 z = np.cos(v)*float(coords[3]) + float(coords[2])
                 r = float(coords[3])
 
-                # if i % 16 == 0:
-                    
-                if plot_3d:
-                    ax.plot_surface(x, y, z, color="cornflowerblue", alpha=0.1)
-                elif projection:
-                    axs[0].plot(x, y, color="cornflowerblue")
-                    axs[1].plot(x, z, color="cornflowerblue")
-                    axs[2].plot(z, y, color="cornflowerblue")
+                if ((coords[0] < 0.54 and coords[0] > 0.48) and
+                    (coords[1] < 0.54 and coords[1] > 0.48) and
+                    (coords[2] < 0.54 and coords[2] > 0.48)):
+                    if plot_3d:
+                        ax.plot_surface(x, y, z, color="cornflowerblue", alpha=0.1)
+                    elif projection:
+                        axs[0].plot(x, y, color="cornflowerblue")
+                        axs[1].plot(x, z, color="cornflowerblue")
+                        axs[2].plot(z, y, color="cornflowerblue")
+            i += 1
+            
 
         elif len(coords) == 6:
             coords = [float(coord) for coord in coords]
@@ -114,18 +123,22 @@ with open(neuron_file) as f:
     if not plot_3d:
         distance_from_borders = 0.0007
     if plot_traj:
-        with open(traj_file) as f:
+        with open(traj_file[2]) as f:
             lines = f.readlines()
             xp = []
             yp = []
             zp = []
             for i in range(int(len(lines))):
-                if i%3 == 0:
+                if i%4 == 0:
                     xp.append(float(lines[i]))
-                elif i%3 == 1:
+                elif i%4 == 1:
                     yp.append(float(lines[i]))
-                elif i%3 == 2:
+                elif i%4 == 2:
                     zp.append(float(lines[i]))
+            xp = np.array(xp)
+            yp = np.array(yp)
+            zp = np.array(zp)
+            print(np.min(xp), np.max(xp), np.min(yp), np.max(yp), np.min(zp), np.max(zp))
             if not plot_3d:
                 axs[0].plot(xp, yp, 'b.', markersize=1)
                 axs[1].plot(xp, zp, 'b.', markersize=1)
@@ -155,7 +168,30 @@ with open(neuron_file) as f:
                 axs[2].axhline(distance_from_borders, xmin=0, xmax=1)
                 axs[2].axhline(y=0.1-distance_from_borders, xmin=0, xmax=1)
             else:
-                ax.scatter(xp, yp, zp, color="cornflowerblue")
+                # ax.scatter(xp, yp, zp, color="cornflowerblue", s=1)
+
+
+                df = pd.DataFrame({"time": list(range(xp.shape[0])) ,"x" : xp, "y" : yp, "z" : zp})
+
+                def update_graph(num):
+                    data=df[df['time']==num]
+                    graph.set_data(data.x, data.y)
+                    graph.set_3d_properties(data.z)
+                    title.set_text('3D Test, time={}'.format(num))
+                    return title, graph, 
+
+                title = ax.set_title('3D Test')
+
+                data=df[df['time']==0]
+                graph, = ax.plot(data.x, data.y, data.z, linestyle="", marker="o")
+
+                ani = FuncAnimation(fig, update_graph, 1000, 
+                                            interval=2, blit=True)
+
+                plt.show()
+
+
+
     # if plot_3d:
     #     ax.set_xlim([min_lim, max_lim])
     #     ax.set_ylim([min_lim, max_lim])

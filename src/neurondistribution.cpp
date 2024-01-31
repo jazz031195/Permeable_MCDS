@@ -291,7 +291,7 @@ void NeuronDistribution::createSubstrate()
                     }  
                 }
             } // end for neurons
-            for(int i = 0 ; i < 60; i++)
+            for(int i = 0 ; i < 200; i++)
             {
                 soma_radius = 0.6e-3;
                 unsigned stuck = 0;
@@ -536,7 +536,10 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                 while (number_dir > 0)
                 {
                     next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
-                    center         = next_direction * spheres_to_add[spheres_to_add.size() - 1].radius / 2.0 + last_sphere_center; 
+                    if(spheres_to_add.size() > 0)
+                        center = next_direction * spheres_to_add[spheres_to_add.size() - 1].radius / 2.0 + last_sphere_center; 
+                    else
+                        center = next_direction * last_radius / 2.0 + last_sphere_center;
 
                     if(isInVoxel(center, min_distance_from_border) && (!isSphereColliding(center, sphere_radius, center_to_test, last_radius)))
                     {
@@ -578,25 +581,32 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                     return {};
                 }
                 // Discard branch
-                Sphere origin(0, 0, parent.origin, parent.radius);
-                spheres_to_add.insert(spheres_to_add.begin(), origin);
-                updateLUT(spheres_to_add, spheres_to_add.size() - 1);
-                return {};
+                else if(!achieved && (length_branch < 15e-3))
+                {
+                    Sphere origin(0, 0, parent.origin, parent.radius);
+                    spheres_to_add.insert(spheres_to_add.begin(), origin);
+                    updateLUT(spheres_to_add, spheres_to_add.size() - 1);
+                    return {};
+                }
             } // isColliding
         }
         // Outside of the voxel. If long enough, keep the branch
         else
         {
-            double length_branch = (spheres_to_add[0].center - spheres_to_add[spheres_to_add.size() - 1].center).norm();
-            if(length_branch > 30e-3)
+            if(spheres_to_add.size() > 1)
             {
-                subbranch.set_spheres(spheres_to_add);
-                dendrite.add_subbranch(subbranch);
+                double length_branch = (spheres_to_add[0].center - spheres_to_add[spheres_to_add.size() - 1].center).norm();
+                if(length_branch > 30e-3)
+                {
+                    subbranch.set_spheres(spheres_to_add);
+                    dendrite.add_subbranch(subbranch);
+                }
+                // Discard branch
+                Sphere origin(0, 0, parent.origin, parent.radius);
+                spheres_to_add.insert(spheres_to_add.begin(), origin);
+                updateLUT(spheres_to_add, spheres_to_add.size() - 1);
+                return {};
             }
-            // Discard branch
-            Sphere origin(0, 0, parent.origin, parent.radius);
-            spheres_to_add.insert(spheres_to_add.begin(), origin);
-            updateLUT(spheres_to_add, spheres_to_add.size() - 1);
             return {};
         } 
     }
