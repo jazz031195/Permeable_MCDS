@@ -1,5 +1,5 @@
 # How to:
-# cd /Users/ideriedm/Documents/MCDS/MCDS-dFMRI
+# cd /Users/ideriedm/Documents/MCDS_perm/Permeable_MCDS
 # To build the image (needed only once): (replace "aarch64" with "x86_64" on desktop)
 #   docker build -f Dockerfile.glibc_2.28 . --tag=glibc_2.28 --build-arg ARCH=aarch64
 # To execute compilation:
