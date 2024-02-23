@@ -500,6 +500,14 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
         iniPos >> x; iniPos >> y; iniPos >> z;
         walker.setInitialPosition(x,y,z);
 
+        Vector3d pos_temp = {x, y, z};
+        bool isIntra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+
+        if(isIntra)
+            walker.initial_location = walker.location = Walker::intra;
+        else
+            walker.initial_location = walker.location = Walker::extra;
+            
         if(++ini_pos_file_ini_index >= params.ini_walkers_file_count ){
             iniPos.clear();
             iniPos.seekg(0);
@@ -764,8 +772,9 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
             intra_pos = getAnIntraCellularPosition_dendrite(random_pos);
         
         // std::ofstream out;
-        // out.open("ini_pos_file.txt", std::ios::app);
-        // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
+        // out.open("instructions/ISMRM24/ini_pos_file_n5.txt", std::ios::app);
+        // // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
+        // out << intra_pos[0] << " " << intra_pos[1] << " " << intra_pos[2] << endl;
     }
 }
 
@@ -866,7 +875,15 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             int sphere_id    = sphere_dist(gen);
 
             Vector3d center   = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].center;
-            Vector3d pos_temp = center;
+            
+            double probaRadius  = double(udist(gen));
+            double sphereRadius = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].radius;
+            double theta = 2 * M_PI * udist(gen);
+            double phi = acos(1 - 2 * udist(gen));
+            double x = sin(phi) * cos(theta) * probaRadius * 0.99 * sphereRadius + center[0];
+            double y = sin(phi) * sin(theta) * probaRadius * 0.99 * sphereRadius + center[1];
+            double z = cos(phi) * probaRadius * 0.99 * sphereRadius + center[2];
+            Vector3d pos_temp = {x, y, z};
 
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
@@ -891,7 +908,16 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             std::uniform_int_distribution<int> sphere_dist(0, spheres.size() - 1);
             int sphere_id = sphere_dist(gen);
             Vector3d center = spheres[sphere_id].center;
-            Vector3d pos_temp = center;
+            
+            double probaRadius  = double(udist(gen));
+            double sphereRadius = spheres[sphere_id].radius;
+            double theta = 2 * M_PI * udist(gen);
+            double phi = acos(1 - 2 * udist(gen));
+            double x = sin(phi) * cos(theta) * probaRadius * 0.99 * sphereRadius + center[0];
+            double y = sin(phi) * sin(theta) * probaRadius * 0.99 * sphereRadius + center[1];
+            double z = cos(phi) * probaRadius * 0.99 * sphereRadius + center[2];
+            Vector3d pos_temp = {x, y, z};
+
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
             if (checkIfPosInsideVoxel(pos_temp) && (isintra))
             {
@@ -1089,10 +1115,14 @@ bool DynamicsSimulation::isInsideNeurons(Vector3d &position, int &neuron_id, int
     for (unsigned i = 0; i < neurons_list.size(); i++)
     {
         bool isinside;
-        if(walker.location == Walker::intra)
+        // To test the first location
+        if(walker.pos_r.size() == 3)
+            isinside = neurons_list.at(i).isPosInsideNeuron(position, 0, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+        else if(walker.location == Walker::intra)
             isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
         else
             isinside = neurons_list.at(i).isPosInsideNeuron(position, -barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+
 
         if (isinside)
         {

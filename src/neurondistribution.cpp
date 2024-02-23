@@ -108,7 +108,7 @@ void NeuronDistribution::createSubstrate()
 
             double icvf, somaFraction, dendritesFraction;
             tie(icvf, somaFraction, dendritesFraction) = computeICVF(0);
-            cout << icvf << somaFraction << dendritesFraction << endl;
+            cout << "ICVF : " << icvf << "soma fraction : " << somaFraction << "dendrites fraction : " << dendritesFraction << endl;
             achieved = true;
 
             // if(this->icvf - best_icvf  < 0.0005){
@@ -202,7 +202,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                     {
                         for(size_t p=0; p < branching_points.size(); p++)
                         {
-                                                        // The branching point is split into 2 children
+                            // The branching point is split into 2 children
                             for(int c=0; c < static_cast<int>(branching_points[p].children_direction.size()); c++)
                             {
                                 proximal_branch = {branching_points[p].subbranch_id, branch_id + 1 - 2*c};
