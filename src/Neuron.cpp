@@ -638,8 +638,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     // If in the soma, check Collision with soma
     if(walker.in_soma_index == 0)
     {
-        Sphere* sphere(new Sphere(soma));
-        isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+        isColliding = checkCollision_branching(walker, &soma, step_dir, step_lenght, colision);
     }
     // If in dendrite, check collision with the correct sphere
     else if(walker.in_dendrite_index >= 0)
@@ -650,8 +649,11 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
             // TODO [ines] : there is problem here sometimes, why ??
             assert(0);
 
-        Sphere* sphere(new Sphere(dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph]));
-        isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+        isColliding = checkCollision_branching(walker, 
+                                               &dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph], 
+                                               step_dir,
+                                               step_lenght, 
+                                               colision);
     }
     // Extra water
     else
@@ -687,13 +689,15 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         double dist_soma = (soma.center - next_pos).norm();
         if (dist_soma <= dist_min)
         {
-            Sphere* sphere(new Sphere(soma));
-            isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+            isColliding = checkCollision_branching(walker, &soma, step_dir, step_lenght, colision);
         }
         else if ((dist_dendrites <= dist_min) && (coll_dendrite >= 0) && (coll_subbranch >= 0) && (coll_sphere >= 0) )
         {
-            Sphere* sphere(new Sphere(dendrites[coll_dendrite].subbranches[coll_subbranch].spheres[coll_sphere]));
-            isColliding = checkCollision_branching(walker, sphere, step_dir, step_lenght, colision);
+            isColliding = checkCollision_branching(walker, 
+                                                   &dendrites[coll_dendrite].subbranches[coll_subbranch].spheres[coll_sphere], 
+                                                   step_dir, 
+                                                   step_lenght, 
+                                                   colision);
         }
     }
 
