@@ -36,7 +36,8 @@ set(EIGEN_INCLUDE_DIR ${SOURCE_DIR})
 
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g3 -fsanitize=address -fsanitize=undefined")
+# set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g3 -fsanitize=address -fsanitize=undefined")
+set(CMAKE_CXX_FLAGS_DEBUG   "-O0 -g3 -gdwarf-4")
 
 set(SRC_DIR       src)
 set(MAIN_TARGET   MC-DC_Simulator)
@@ -97,3 +98,4 @@ target_compile_options(tests PUBLIC ${COMPILER_OPTIONS})
 target_include_directories(tests PUBLIC ${SRC_DIR} ${DOCTEST_INCLUDE_DIR} ${EIGEN_INCLUDE_DIR})
 target_link_libraries(tests Threads::Threads)
 add_dependencies(tests eigen doctest)
+
