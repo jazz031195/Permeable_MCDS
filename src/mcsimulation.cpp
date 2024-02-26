@@ -544,7 +544,6 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
     double diff_e = params.diffusivity_extra;
 
     in.open(params.neurons_files[neurons_files_id]);
-    cout << params.neurons_files[neurons_files_id] << endl;
     double l, x, y, z, r, p;
     double scale;
     double volume_inc_perc, dyn_perc, icvf;
@@ -827,7 +826,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
     double diff_e;
 
     in.open(params.neurons_files[neurons_files_id]);
-    cout << params.neurons_files[neurons_files_id] << endl;
+    // cout << params.neurons_files[neurons_files_id] << endl;
     double x,y,z,r;
     double scale;
     double volume_inc_perc, dyn_perc, icvf;
@@ -872,11 +871,7 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 subbranches_[0].spheres[0].add_neighbor(new Sphere(sphere_));
                 
             }
-            else if (spheres_.size() == 0)
-            {
-                soma.add_neighbor(new Sphere(sphere_));
-                sphere_.add_neighbor(new Sphere(soma));
-            }
+
             cout << "adding sphere, radius :" << sphere_.radius  << endl;
         
         }
