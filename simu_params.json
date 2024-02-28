@@ -1,0 +1,10 @@
+{
+    "simu_to_launch": ["instructions/ISMRM24/Benchmark/overlap4/n2",
+                       "instructions/ISMRM24/Benchmark/overlap4/n3",
+                       "instructions/ISMRM24/Benchmark/overlap4/n4",
+                       "instructions/ISMRM24/Benchmark/overlap4/n5"],
+    "number_of_rep": 5,
+    "simu_type": "release",
+    "N": [5000, 10000, 25000, 50000],
+    "T": [5000, 10000, 15000]
+}
