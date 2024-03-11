@@ -709,12 +709,14 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     else if(walker.in_dendrite_index >= 0)
     {
         if(walker.in_sph_index.size() > 0)
+        {
             in_sph = walker.in_sph_index[0];
             isColliding = checkCollision_branching(walker, 
                                                &dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph], 
                                                step_dir,
                                                step_lenght, 
-                                               colision);   
+                                               colision); 
+        }            
     }
     // Extra water
     else
