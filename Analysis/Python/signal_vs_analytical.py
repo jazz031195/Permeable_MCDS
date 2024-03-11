@@ -123,17 +123,16 @@ DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/resul
 
 # df_all_data.to_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch/data.csv")
 df_all_data = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch/data.csv")
-print(df_all_data[df_all_data["case"] == "soma"])
 b_labels    = df_all_data["b [ms/um²]"].unique()
 
 df_all_data = df_all_data[~df_all_data["case"].str.contains("mesh")]
 means       = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 
 fig, ax = plt.subplots(1, 1, figsize=(15,15))
-g = sns.scatterplot(data=df_all_data, x='b [ms/um²]', y='Sb/So', hue='case', hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex'], ax=ax, style='case', s=200, palette=['b', 'orange', 'g', 'g'])
+g = sns.scatterplot(data=means, x='b [ms/um²]', y='Sb/So', hue='case', hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex'], ax=ax, style='case', s=200, palette=['b', 'orange', 'g', 'g'])
 # ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
 handles, labels = ax.get_legend_handles_labels()
-# ax.legend(handles, ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)'], loc='upper right', title='Intra signal', markerscale=2.5)
+ax.legend(handles, ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)'], loc='upper right', title='Intra signal', markerscale=2.5)
 
 # replace labels
 # new_labels = [['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)']]
