@@ -37,60 +37,61 @@ def create_df_all(DWI_folder, scheme_file_path):
     df_all_data  = pd.DataFrame()
     df_crossings = pd.DataFrame()
     for overlap in os.listdir(DWI_folder):
-        for subcase in os.listdir(DWI_folder / overlap):
-            # Iterate through the files in the folder
-            for neuron in os.listdir(DWI_folder / overlap / subcase):
-                for subdir in os.listdir(DWI_folder / overlap / subcase / neuron):
-                    if os.path.isdir(DWI_folder / overlap / subcase / neuron / subdir):
-                        for filename in os.listdir(DWI_folder / overlap / subcase / neuron / subdir):
+        if os.path.isdir(DWI_folder / overlap):
+            for subcase in os.listdir(DWI_folder / overlap):
+                # Iterate through the files in the folder
+                for neuron in os.listdir(DWI_folder / overlap / subcase):
+                    for subdir in os.listdir(DWI_folder / overlap / subcase / neuron):
+                        if os.path.isdir(DWI_folder / overlap / subcase / neuron / subdir):
+                            for filename in os.listdir(DWI_folder / overlap / subcase / neuron / subdir):
 
-                            # Read the simulation_info.txt to have crossings information
-                            if "simu" in filename:
-                                N = int(subdir.split('_')[1])
-                                T = int(subdir.split('_')[3])
-                                with open(DWI_folder / overlap / subcase /neuron / subdir /filename, 'r') as file:
-                                    # Read the file line by line
-                                    for line in file:
-                                        # Check if the line contains the relevant information
-                                        if 'Number of particles eliminated due crossings' in line:
-                                            # Split the line to get the number of particles as the last element
-                                            num_particles_crossings = int(line.split()[-1])
-                                            # Break the loop, as we have found the information we need
-                                            break
-                                    d = {'nb_crossings': [num_particles_crossings], 'N': [N], 'T': [T]}
-                                    df_avg_crossings = pd.DataFrame(d)
-                                    df_crossings     = pd.concat([df_crossings, df_avg_crossings])
-                            
-                            # Check if the filename contains "_rep_" and "DWI"
-                            if "DWI_img" in filename:
-                                # Name of the experience
-                                name         = ('_').join(filename.split('_')[:-1])
-                                # Number of walkers
-                                N            = int(subdir.split('_')[1])
-                                # Number of timesteps
-                                T            = int(subdir.split('_')[3])
-                                extension    = filename.split('_')[-1].split('.')[-1]
-                                SNR          = np.inf
-                                data_one_exp = create_data(DWI_folder / overlap / subcase / neuron / subdir, SNR, name, extension, scheme_file_path)
-                                # For each b, iterate over all directions, store the data, and average them (powder-average)
-                                nb_b   = len(data_one_exp["b [ms/um²]"].unique())
-                                nb_dir = int(len(data_one_exp["x"].values) / nb_b)
-                                for i in range(nb_b):
-                                    sb_so = []
-                                    adc   = []
-                                    for j in range(nb_dir):
-                                        sb_so.append(data_one_exp.iloc[nb_b * j + i, :]["Sb/So"])
-                                        adc.append(data_one_exp.iloc[nb_b * j + i, :]["adc [ms/um²]"])
-                                        bval = data_one_exp.iloc[nb_b * j + i, :]["b [ms/um²]"]
-                                    
-                                    # Powder-average signal
-                                    mean     = np.mean(sb_so)
-                                    # Powder-average ADC
-                                    mean_adc = np.mean(adc)
-                                    d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, 
-                                        'b [ms/um²]': bval, 'neuron': neuron, 'case': subcase}
-                                    df_avg_data = pd.DataFrame(d, index=[i])
-                                    df_all_data = pd.concat([df_all_data, df_avg_data])
+                                # Read the simulation_info.txt to have crossings information
+                                if "simu" in filename:
+                                    N = int(subdir.split('_')[1])
+                                    T = int(subdir.split('_')[3])
+                                    with open(DWI_folder / overlap / subcase /neuron / subdir /filename, 'r') as file:
+                                        # Read the file line by line
+                                        for line in file:
+                                            # Check if the line contains the relevant information
+                                            if 'Number of particles eliminated due crossings' in line:
+                                                # Split the line to get the number of particles as the last element
+                                                num_particles_crossings = int(line.split()[-1])
+                                                # Break the loop, as we have found the information we need
+                                                break
+                                        d = {'nb_crossings': [num_particles_crossings], 'N': [N], 'T': [T]}
+                                        df_avg_crossings = pd.DataFrame(d)
+                                        df_crossings     = pd.concat([df_crossings, df_avg_crossings])
+                                
+                                # Check if the filename contains "_rep_" and "DWI"
+                                if "DWI_img" in filename:
+                                    # Name of the experience
+                                    name         = ('_').join(filename.split('_')[:-1])
+                                    # Number of walkers
+                                    N            = int(subdir.split('_')[1])
+                                    # Number of timesteps
+                                    T            = int(subdir.split('_')[3])
+                                    extension    = filename.split('_')[-1].split('.')[-1]
+                                    SNR          = np.inf
+                                    data_one_exp = create_data(DWI_folder / overlap / subcase / neuron / subdir, SNR, name, extension, scheme_file_path)
+                                    # For each b, iterate over all directions, store the data, and average them (powder-average)
+                                    nb_b   = len(data_one_exp["b [ms/um²]"].unique())
+                                    nb_dir = int(len(data_one_exp["x"].values) / nb_b)
+                                    for i in range(nb_b):
+                                        sb_so = []
+                                        adc   = []
+                                        for j in range(nb_dir):
+                                            sb_so.append(data_one_exp.iloc[nb_b * j + i, :]["Sb/So"])
+                                            adc.append(data_one_exp.iloc[nb_b * j + i, :]["adc [ms/um²]"])
+                                            bval = data_one_exp.iloc[nb_b * j + i, :]["b [ms/um²]"]
+                                        
+                                        # Powder-average signal
+                                        mean     = np.mean(sb_so)
+                                        # Powder-average ADC
+                                        mean_adc = np.mean(adc)
+                                        d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, 
+                                            'b [ms/um²]': bval, 'neuron': neuron, 'case': subcase}
+                                        df_avg_data = pd.DataFrame(d, index=[i])
+                                        df_all_data = pd.concat([df_all_data, df_avg_data])
 
     return df_all_data, df_crossings
 
