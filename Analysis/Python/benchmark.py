@@ -37,58 +37,61 @@ def create_df_all(DWI_folder, scheme_file_path):
     df_all_data  = pd.DataFrame()
     df_crossings = pd.DataFrame()
     for neuron in os.listdir(DWI_folder):
-        # Iterate through the files in the folder
-        for subdir in os.listdir(DWI_folder / neuron):
-            if os.path.isdir(DWI_folder / neuron / subdir):
-                for filename in os.listdir(DWI_folder / neuron / subdir):
-                
-                    # Read the simulation_info.txt to have crossings information
-                    if "simu" in filename:
-                        N = int(subdir.split('_')[1])
-                        T = int(subdir.split('_')[3])
-                        with open(DWI_folder / neuron / subdir / filename, 'r') as file:
-                            # Read the file line by line
-                            for line in file:
-                                # Check if the line contains the relevant information
-                                if 'Number of particles eliminated due crossings' in line:
-                                    # Split the line to get the number of particles as the last element
-                                    num_particles_crossings = int(line.split()[-1])
-                                    # Break the loop, as we have found the information we need
-                                    break
-                            d = {'nb_crossings': [num_particles_crossings], 'N': [N], 'T': [T]}
-                            df_avg_crossings = pd.DataFrame(d)
-                            df_crossings     = pd.concat([df_crossings, df_avg_crossings])
+        if os.path.isdir(DWI_folder / neuron):
+            # Iterate through the files in the folder
+            for subdir in os.listdir(DWI_folder / neuron):
+                if os.path.isdir(DWI_folder / neuron / subdir):
+                    for filename in os.listdir(DWI_folder / neuron / subdir):
                     
-                    # Check if the filename contains "_rep_" and "DWI"
-                    if "DWI_img" in filename:
-                        # Name of the experience
-                        name         = ('_').join(filename.split('_')[:-1])
-                        # Number of walkers
-                        N            = int(subdir.split('_')[1])
-                        # Number of timesteps
-                        T            = int(subdir.split('_')[3])
-                        extension    = filename.split('_')[-1].split('.')[-1]
-                        SNR          = np.inf
-                        data_one_exp = create_data(DWI_folder / neuron / subdir, SNR, name, extension, scheme_file_path)
-                        # For each b, iterate over all directions, store the data, and average them (powder-average)
-                        nb_b   = len(data_one_exp["b [ms/um²]"].unique())
-                        nb_dir = int(len(data_one_exp["x"].values) / nb_b)
-                        for i in range(nb_b):
-                            sb_so = []
-                            adc   = []
-                            for j in range(nb_dir):
-                                sb_so.append(data_one_exp.iloc[nb_b * j + i, :]["Sb/So"])
-                                adc.append(data_one_exp.iloc[nb_b * j + i, :]["adc [ms/um²]"])
-                                bval = data_one_exp.iloc[nb_b * j + i, :]["b [ms/um²]"]
-                            
-                            # Powder-average signal
-                            mean     = np.mean(sb_so)
-                            # Powder-average ADC
-                            mean_adc = np.mean(adc)
-                            d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, 
-                                'b [ms/um²]': bval, 'neuron': neuron, 'case': "soma-dendrites"}
-                            df_avg_data = pd.DataFrame(d, index=[i])
-                            df_all_data = pd.concat([df_all_data, df_avg_data])
+                        # Read the simulation_info.txt to have crossings information
+                        if "simu" in filename:
+                            N = int(subdir.split('_')[1])
+                            T = int(subdir.split('_')[3])
+                            with open(DWI_folder / neuron / subdir / filename, 'r') as file:
+                                # Read the file line by line
+                                for line in file:
+                                    if 'Particle dynamics duration' in line:
+                                        D0 = float(line.split()[-2])
+                                    # Check if the line contains the relevant information
+                                    if 'Number of particles eliminated due crossings' in line:
+                                        # Split the line to get the number of particles as the last element
+                                        num_particles_crossings = int(line.split()[-1])
+                                        # Break the loop, as we have found the information we need
+                                        break
+                                d = {'nb_crossings': [num_particles_crossings], 'N': [N], 'T': [T]}
+                                df_avg_crossings = pd.DataFrame(d)
+                                df_crossings     = pd.concat([df_crossings, df_avg_crossings])
+                        
+                        # Check if the filename contains "_rep_" and "DWI"
+                        if "DWI_img" in filename:
+                            # Name of the experience
+                            name         = ('_').join(filename.split('_')[:-1])
+                            # Number of walkers
+                            N            = int(subdir.split('_')[1])
+                            # Number of timesteps
+                            T            = int(subdir.split('_')[3])
+                            extension    = filename.split('_')[-1].split('.')[-1]
+                            SNR          = np.inf
+                            data_one_exp = create_data(DWI_folder / neuron / subdir, SNR, name, extension, scheme_file_path)
+                            # For each b, iterate over all directions, store the data, and average them (powder-average)
+                            nb_b   = len(data_one_exp["b [ms/um²]"].unique())
+                            nb_dir = int(len(data_one_exp["x"].values) / nb_b)
+                            for i in range(nb_b):
+                                sb_so = []
+                                adc   = []
+                                for j in range(nb_dir):
+                                    sb_so.append(data_one_exp.iloc[nb_b * j + i, :]["Sb/So"])
+                                    adc.append(data_one_exp.iloc[nb_b * j + i, :]["adc [ms/um²]"])
+                                    bval = data_one_exp.iloc[nb_b * j + i, :]["b [ms/um²]"]
+                                
+                                # Powder-average signal
+                                mean     = np.mean(sb_so)
+                                # Powder-average ADC
+                                mean_adc = np.mean(adc)
+                                d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, 
+                                    'b [ms/um²]': bval, 'neuron': neuron, 'case': "soma-dendrites"}
+                                df_avg_data = pd.DataFrame(d, index=[i])
+                                df_all_data = pd.concat([df_all_data, df_avg_data])
 
     return df_all_data, df_crossings
 
@@ -193,68 +196,121 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/ISMRM24/Benchmark/overlap4")
+DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/Benchmark/overlap4")
 # df_all_data, df_crossings = create_df_all(DWI_folder, scheme_file)
 
-# df_all_data.to_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/ISMRM24/Benchmark/overlap4/data.csv")
-df_all_data = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/ISMRM24/Benchmark/overlap4/data.csv")
+# df_all_data.to_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/Benchmark/overlap4/data.csv")
+df_all_data = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/Benchmark/overlap4/data.csv")
 
 b_labels    = df_all_data["b [ms/um²]"].unique()
 
 df_all_data = df_all_data[(df_all_data['b [ms/um²]'] > 0)]
 means       = df_all_data[(df_all_data['b [ms/um²]'] > 0) & (df_all_data["T"] == 15000) & ((df_all_data['b [ms/um²]'] > 0) & (df_all_data["T"] == 15000))].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 
-fig, ax = plt.subplots(1, 1, figsize=(15,15))
-g = sns.boxplot(data=df_all_data, x='b [ms/um²]', y='Sb/So', ax=ax)
-ax.set_xticklabels([f'{float(blab):.2f}' for blab in b_labels[1:]])
-
-
-experience_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/exch")
-df_all_data, df_crossings = create_df_all_mesh(experience_folder, scheme_file)
-
-b_labels  = df_all_data["b [ms/um²]"].unique()
-means     = df_all_data[((df_all_data['b [ms/um²]'] > 0) & (df_all_data["T"] == 15000))].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
-
-sns.scatterplot(data=means[means["case"] == 'mesh_005'], 
-                        x='b [ms/um²]', 
-                        y='Sb/So', 
-                        ax=ax, 
-                        s=200, 
-                        )
-
-# Analytical solutions
-Delta     = np.array([0.05])  # in [s]
-delta     = np.array([0.0165])# in [s]
-D0        = 2.5e-9 # [m²/s]
-bvals     = np.linspace(0.2, 10, 100) * 1e9 # in [s/m²]
-
 r_soma           = 15e-6 # [m]
 volume_neurites  = 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
 volume_soma      = 4/3 * np.pi * r_soma**3 # in [m³]
 volume_soma      = volume_soma * 1e18 # in [um³]
-print(volume_soma)
 volume_neuron    = volume_neurites + volume_soma
-neurite_fraction = volume_neurites / volume_neuron
-soma_fraction    = volume_soma / volume_neuron
-print("soma volume {:e}".format((volume_soma*1e18)))
-print("neurites volume {:e}".format((volume_neurites*1e18)))
-print("neuron {:e}".format((volume_neuron*1e18)))
-print("soma fraction {:e}".format(soma_fraction))
 
-soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
+fig, ax = plt.subplots(2, 5, figsize=(15,15))
+ax = ax.ravel()
+for i, b in enumerate(b_labels[1:-1]):
+    sns.boxplot(data=df_all_data[df_all_data['b [ms/um²]'] == b], x='N', y='Sb/So', ax=ax[i], hue="T", dodge=True)
+    # Get current x-axis tick labels and values
+    xticks_labels = ax[i].get_xticklabels()
 
-ax2 = ax.twinx()
-b_plot = (bvals*1e-9).round(2)
-print(b_plot)
-ax2.plot(b_plot, soma_signal, label=f"Soma", color='b', linestyle="dotted")
-ax2.plot(b_plot, neurites_signal, label=f"Dendrites", color='orange', linestyle="dotted")
-ax2.plot(b_plot, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
-if log:
-    ax2.plot(b_plot, -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
+    # Modify the tick labels by dividing their values by 1000
+    # new_xticks_labels = [int(float(label.get_text()) / 1000) for label in xticks_labels]
+    new_xticks_labels = [float(float(label.get_text()) / volume_neuron) for label in xticks_labels]
+    new_xticks_labels = [f"{lab:.2f}" for lab in new_xticks_labels]
+    ax[i].set_title(f'b = {b:.1f} ms/um²')
+    ax[i].legend().set_visible(False)
 
-ax2.legend(title='Analytical solution', loc=3)
-ax2.set_yticklabels([])
-ax2.set_ylim([y_lim_min, y_lim_max])
-ax.set_ylim([y_lim_min, y_lim_max])
+    if i not in [0, 5]:
+        ax[i].set_ylabel("")
+    if i < 5:
+        ax[i].set_xticklabels("")
+        ax[i].set_xlabel("")
+    else:
+        ax[i].set_xticklabels(new_xticks_labels)
+        ax[i].set_xlabel("Density [Walkers / um³]")
+
+handles, labels = ax[0].get_legend_handles_labels()
+ph = [plt.plot([],marker="", ls="")[0]] # Canvas
+handles = ph + handles
+
+
+import re
+with open('/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/Benchmark/overlap4/n1/N_5000_T_5000/_simulation_info.txt', 'r') as file:
+    # Read the file line by line
+    for line in file:
+        if 'Particle dynamics duration' in line:
+            TE = float(line.split()[-2]) / 1000 # s
+        if 'Intra Diffusivity' in line:
+            pattern = r'-?\d*\.?\d+(?:e[-+]?\d+)?'
+
+            # Search for the pattern in the line
+            match = re.search(pattern, line)
+
+            if match:
+                D0 = abs(float(match.group())) # m²/s
+
+# step_length = np.sqrt(6 * D0 * TE / T)
+print(labels)
+labels = [np.sqrt(6 * D0 * TE / float(lab))*1e6 for lab in labels]
+labels = [f"{lab:.2f}" for lab in labels]
+plt.legend(handles, ["Step length [um] : "] + labels, bbox_to_anchor=(-2.2, 2.3), loc="lower center", borderaxespad=0., ncol=4, frameon=False)
+
+
+
+
+# experience_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/exch")
+# df_all_data, df_crossings = create_df_all_mesh(experience_folder, scheme_file)
+
+# b_labels  = df_all_data["b [ms/um²]"].unique()
+# means     = df_all_data[((df_all_data['b [ms/um²]'] > 0) & (df_all_data["T"] == 15000))].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
+
+# sns.scatterplot(data=means[means["case"] == 'mesh_005'], 
+#                         x='b [ms/um²]', 
+#                         y='Sb/So', 
+#                         ax=ax, 
+#                         s=200, 
+#                         )
+
+# # Analytical solutions
+# Delta     = np.array([0.05])  # in [s]
+# delta     = np.array([0.0165])# in [s]
+# D0        = 2.5e-9 # [m²/s]
+# bvals     = np.linspace(0.2, 10, 100) * 1e9 # in [s/m²]
+
+# r_soma           = 15e-6 # [m]
+# volume_neurites  = 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
+# volume_soma      = 4/3 * np.pi * r_soma**3 # in [m³]
+# volume_soma      = volume_soma * 1e18 # in [um³]
+# print(volume_soma)
+# volume_neuron    = volume_neurites + volume_soma
+# neurite_fraction = volume_neurites / volume_neuron
+# soma_fraction    = volume_soma / volume_neuron
+# print("soma volume {:e}".format((volume_soma*1e18)))
+# print("neurites volume {:e}".format((volume_neurites*1e18)))
+# print("neuron {:e}".format((volume_neuron*1e18)))
+# print("soma fraction {:e}".format(soma_fraction))
+
+# soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
+
+# ax2 = ax.twinx()
+# b_plot = (bvals*1e-9).round(2)
+# print(b_plot)
+# ax2.plot(b_plot, soma_signal, label=f"Soma", color='b', linestyle="dotted")
+# ax2.plot(b_plot, neurites_signal, label=f"Dendrites", color='orange', linestyle="dotted")
+# ax2.plot(b_plot, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
+# if log:
+#     ax2.plot(b_plot, -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
+
+# ax2.legend(title='Analytical solution', loc=3)
+# ax2.set_yticklabels([])
+# ax2.set_ylim([y_lim_min, y_lim_max])
+# ax.set_ylim([y_lim_min, y_lim_max])
 
 plt.show()

@@ -121,7 +121,7 @@ def create_conf(exp_path, N, T):
 
         file.write('\n')
 
-        file.write(f'seed {seed}\n')
+        # file.write(f'seed {seed}\n')
         file.write(f'num_process {Number_processes}\n')
 
         file.write('\n')
