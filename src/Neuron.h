@@ -73,6 +73,8 @@ public:
      */
     bool isPosInsideNeuron(Eigen::Vector3d const& position,  double const& barrier_thickness, int& in_soma_index, 
                            int& in_dendrite_index, int& in_subbranch_index, std::vector<int>& in_sph_index);
+    bool isPosInsideNeuron_ini(Eigen::Vector3d const& position,  double const& barrier_thickness, int& in_soma_index, 
+                           int& in_dendrite_index, int& in_subbranch_index, std::vector<int>& in_sph_index);
     /**
      * Minimal distance between a position pos and this.
      *

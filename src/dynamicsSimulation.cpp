@@ -1128,7 +1128,7 @@ bool DynamicsSimulation::isInsideNeurons(Vector3d &position, int &neuron_id, int
         bool isinside;
         // To test the first location
         if(walker.pos_r.size() == 3)
-            isinside = neurons_list.at(i).isPosInsideNeuron(position, 0, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+            isinside = neurons_list.at(i).isPosInsideNeuron_ini(position, 0, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
         else if(walker.location == Walker::intra)
             isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
         else
