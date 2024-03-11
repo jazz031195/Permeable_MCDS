@@ -703,7 +703,7 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
     });
 
     Eigen::Vector3d parent, child, begin;
-    double radius, funnel_radius, target_radius;
+    double radius, target_radius;
     Eigen::Vector3d dir;
     vector<Sphere> spheres_to_add;
     // Display the sorted 2D vector

@@ -495,13 +495,30 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
     
     //If the number of positions is less than the walkers, it restarts.
     if(iniPos.is_open()){
-        double x,y,z;
-
-        iniPos >> x; iniPos >> y; iniPos >> z;
-        walker.setInitialPosition(x,y,z);
-
-
-        Vector3d pos_temp = {x, y, z};
+        
+        Vector3d pos_temp;
+        // No walker backtracking 
+        // => initial_position re-assigned to [-1, -1, -1]
+        if(initial_position[0] == -1)
+        {
+            double x,y,z;
+            iniPos >> x; iniPos >> y; iniPos >> z;
+            walker.setInitialPosition(x,y,z);
+            pos_temp = {x, y, z};
+        }
+        else
+        {
+            Vector3d intra_pos;
+            bool random_pos = false;
+            isInIntra(initial_position, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+            if(walker.in_soma_index >= 0)
+                intra_pos = getAnIntraCellularPosition_soma(random_pos);
+            else if (walker.in_dendrite_index >= 0)
+                intra_pos = getAnIntraCellularPosition_dendrite(random_pos);
+            walker.setInitialPosition(intra_pos);
+            pos_temp = intra_pos;
+        }
+        
         bool isIntra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
 
         if(isIntra)
@@ -525,7 +542,7 @@ void DynamicsSimulation::iniWalkerPosition(Vector3d& initial_position)
         walker.location = Walker::intra;
 
         Vector3d intra_pos;
-        // If walker was not discarded 
+        // No walker backtracking 
         // => initial_position re-assigned to [-1, -1, -1]
         if(initial_position[0] == -1)
         {
@@ -766,7 +783,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
         double proba = double(udist(gen));
         bool random_pos = true;
         // In soma
-        if (proba < 0)//volume_soma_dendrite[0]/VolumeNeuron)
+        if (proba < volume_soma_dendrite[0]/VolumeNeuron)
             intra_pos = getAnIntraCellularPosition_soma(random_pos);
         // In dendrite
         else
@@ -1126,13 +1143,9 @@ bool DynamicsSimulation::isInsideNeurons(Vector3d &position, int &neuron_id, int
     for (unsigned i = 0; i < neurons_list.size(); i++)
     {
         bool isinside;
-        // To test the first location
-        if(walker.pos_r.size() == 3)
-            isinside = neurons_list.at(i).isPosInsideNeuron_ini(position, 0, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
-        else if(walker.location == Walker::intra)
-            isinside = neurons_list.at(i).isPosInsideNeuron(position, barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
-        else
-            isinside = neurons_list.at(i).isPosInsideNeuron(position, -barrier_thickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+
+        isinside = neurons_list.at(i).isPosInsideNeuron_ini(position, 0, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index);
+
 
         if (isinside)
         {

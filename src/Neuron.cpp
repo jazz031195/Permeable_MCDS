@@ -291,7 +291,7 @@ TEST_CASE("isPosInsideNeuron")
 bool Neuron::isPosInsideNeuron(Eigen::Vector3d const &position, double const &distance_to_be_inside, int &in_soma_index, int &in_dendrite_index, int &in_subbranch_index, vector<int> &in_sph_index)
 {
     // Temporary variables to store the index before knowing if the walker is in the soma or in a dendrite
-    int in_dendrite_index_tmp = -1, in_subbranch_index_tmp = -1, in_soma_index_tmp = -1;
+    int in_dendrite_index_tmp = -1, in_subbranch_index_tmp = -1;
     vector<int> in_sph_index_tmp, in_sph_index_tmp_tmp = {-1};
     in_sph_index.clear();
     
@@ -680,7 +680,6 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     bool isColliding = false;
     int in_soma      = walker.in_soma_index;
     int in_dendrite  = walker.in_dendrite_index;
-    int in_sub       = walker.in_subbranch_index;
     int in_sph       = 0;
 
      if ((walker.location == Walker::intra) && 
@@ -711,15 +710,11 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     {
         if(walker.in_sph_index.size() > 0)
             in_sph = walker.in_sph_index[0];
-        else
-            // TODO [ines] : there is problem here sometimes, why ??
-            assert(0);
-
-        isColliding = checkCollision_branching(walker, 
+            isColliding = checkCollision_branching(walker, 
                                                &dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph], 
                                                step_dir,
                                                step_lenght, 
-                                               colision);
+                                               colision);   
     }
     // Extra water
     else
