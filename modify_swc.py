@@ -20,7 +20,8 @@ def read_swc(input_name, output_name):
     segments = []
     num_total_segments = 0
     num_segs_limit = 0
-    soma = []
+    soma  = []
+    count = 1
     for l in lines:
         l_ = l.strip()
         if len(l_) > 5:
@@ -35,11 +36,12 @@ def read_swc(input_name, output_name):
                     fields = [str(f) for f in fields]
                     point_dict[fields[0]] = fields
                     out_.write(' '.join(fields) + '\n')
+                    count = count + 1
         else:
             out_.write(l)
     point_keys = point_dict.keys()
     # Next create the list of segments - one for each child that has a parent
-    for k in point_keys:
+    for i, k in enumerate(point_keys):
         child_fields = point_dict[k]
         # The child_fields[6] is the idx to which the point is linked
         if child_fields[6] in point_keys:
@@ -50,10 +52,11 @@ def read_swc(input_name, output_name):
                 child = soma + dir * 14.5e-3
                 point_dict[k][2:5] = child.astype('str')
                 point_dict[k][5]   = str(0.57e-3)
-                out_.write(' '.join(point_dict[k]) + '\n')
+                out_.write(f'{count} '+ ' '.join(point_dict[k][1:-1]) + ' 1 \n')
+                count = count + 1
             # Don't take into account the segment that are connected to soma
             # Indeed, there is a intermediate point at the soma surface, for esthetic reasons
-            elif not (int(child_fields[-1])==1 or int(child_fields[-1])==-1):
+            elif int(point_dict[str(i)][-1]) == 1:
                 parent_fields = point_dict[child_fields[6]]
                 # Parent point x,y,z and r=radius
                 px = float(parent_fields[2]) 
@@ -69,16 +72,17 @@ def read_swc(input_name, output_name):
                 cr = 0.57e-3 
 
                 dir = (child - parent) / np.linalg.norm(child - parent)
-                child = parent + dir * 79.8e-3
+                child = parent + dir * 79.8e-3 * 3
                 cx    = child[0]
                 cy    = child[1]
                 cz    = child[2]
                 point_dict[k][2:5] = child.astype('str')
                 point_dict[k][5]   = str(0.57e-3)
-                out_.write(' '.join(point_dict[k]) + '\n')
+                out_.write(f'{count} '+ ' '.join(point_dict[k][1:-1]) + f' {count-1} \n')
+                count = count + 1
 
 
 
-input_name  = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/ISMRM24/n5.swc'
-output_name = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/ISMRM24/n5_mod.swc'
+input_name  = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/n1.swc'
+output_name = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/n1_mod_no_branching.swc'
 read_swc(input_name, output_name)
