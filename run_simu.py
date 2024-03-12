@@ -58,8 +58,8 @@ def create_conf(exp_path, N, T):
     write_full_c_file = data.get("write_full_c_file") # Boolean, store full c file TODO [ines] : what is that ?
     # ini_pos           = data.get("ini_pos")         # Str, either "intra" or "extra", for intracellular and extracellular, respectively
     ini_pos_file      = data.get("ini_pos_file")      # Str, either "intra" or "extra", for intracellular and extracellular, respectively
-    # Number_processes  = data.get("Number_processes")  # Int, number of parallel processes
-    Number_processes  = 24  # Int, number of parallel processes
+    Number_processes  = data.get("Number_processes")  # Int, number of parallel processes
+    # Number_processes  = 24  # Int, number of parallel processes
     Path_to_scheme    = data.get("Path_to_scheme")    # Str, relative path to scheme file
     Path_to_neurons   = data.get("Path_to_neurons")   # Str, relative path to neurons_list.swc or neurons_list.txt
     Path_to_conf      = data.get("Path_to_conf")      # Str, relative path to neurons.conf
@@ -98,7 +98,7 @@ def create_conf(exp_path, N, T):
 
         file.write('\n')
 
-        if "swc" in Path_to_neurons:
+        if ("swc" in Path_to_neurons) or ("txt" in Path_to_neurons):
             file.write('<obstacle>\n')
             file.write('<neurons_list>\n')
             file.write(f'{exp_path.parent}/{Path_to_neurons}\n')
