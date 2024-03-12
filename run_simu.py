@@ -98,14 +98,23 @@ def create_conf(exp_path, N, T):
 
         file.write('\n')
 
-        file.write('<obstacle>\n')
-        file.write('<neurons_list>\n')
-        file.write(f'{exp_path.parent}/{Path_to_neurons}\n')
-        file.write(f'permeability global {permeability}\n')
-        file.write(f'sphere_overlap {sphere_overlap}\n')
-        file.write(f'funnel {funnel}\n')
-        file.write('</neurons_list>\n')
-        file.write('</obstacle>\n')
+        if "swc" in Path_to_neurons:
+            file.write('<obstacle>\n')
+            file.write('<neurons_list>\n')
+            file.write(f'{exp_path.parent}/{Path_to_neurons}\n')
+            file.write(f'permeability global {permeability}\n')
+            file.write(f'sphere_overlap {sphere_overlap}\n')
+            file.write(f'funnel {funnel}\n')
+            file.write('</neurons_list>\n')
+            file.write('</obstacle>\n')
+        else:
+            file.write('<obstacle>\n')
+            file.write('<ply>\n')
+            file.write(f'{exp_path.parent}/{Path_to_neurons}\n')
+            file.write(f'permeability {permeability}\n')
+            file.write('ply_scale 0.001\n')
+            file.write('</ply>\n')
+            file.write('</obstacle>\n')
 
         file.write('\n')
 
@@ -163,8 +172,7 @@ for simu in simu_to_launch:
             # os.system(f"sbatch {simu}/N_{N}_T_{T}/job.sh")
 
             os.system("chmod u+x ./build/MC-DC_Simulator_release")
-            for i in range(number_of_rep):
-                os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
+            # os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
 
     # "N": [5000, 10000, 25000, 50000, 75000, 100000, 125000, 150000],
     # "T": [5000, 10000, 15000, 20000]
