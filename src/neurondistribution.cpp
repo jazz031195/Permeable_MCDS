@@ -184,12 +184,16 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                     if(b == 0)
                     {
                         proximal_branch = {-1};
-                        distal_branch = {largest_node + 1, largest_node + 2};
+                        if (nb_branching > 1)
+                            distal_branch = {largest_node + 1, largest_node + 2};
+                        else
+                            distal_branch = {-1};
                         largest_node  = largest_node + 2;
                         bool stop_growth = false;
                         cout << "P id " << branching_points[0].subbranch_id << endl;
                         cout << "C id " << branch_id << endl;
-                        cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
+                        if (nb_branching > 1)
+                            cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
                         branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[0], l_segment, sphere_radius, proximal_branch, distal_branch, 
                                                                       min_distance_from_border, stop_growth, branch_id, &neuron.soma);
                         branch_id++;
@@ -590,8 +594,7 @@ void NeuronDistribution::printSubstrate(ostream &out) const
                 if(neurons[i].dendrites[j].subbranches[k].distal_branching.size() == 2)
                     out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[1]) << endl;
                 else
-                    out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) << endl;
-                
+                    out << " distal -1" << endl;
             }
             out << "Dendrite " + to_string(j) << endl;
         }
