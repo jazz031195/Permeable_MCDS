@@ -629,6 +629,10 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
     dynamicsEngine->neurons_list.push_back(neuron);
     dynamicsEngine->area = dynamicsEngine->area + neuron.get_Area();
 
+    vector<double> volumeNeuron = neuron.get_Volume();
+    cout << "Volume soma : " << volumeNeuron[0] << " Volume dendrites : " << volumeNeuron[1] << endl;
+
+
     // string file = params.output_base_name + "_neurons_list.txt";
     // ofstream out(file);
     // printSubstrate(out); 

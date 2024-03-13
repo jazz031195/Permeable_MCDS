@@ -28,6 +28,7 @@ def create_job(exp_path, number_of_rep, exec_type, conf_path):
         file.write('#SBATCH --cpus-per-task=48\n')
         file.write('#SBATCH -o OUTPUTS/out/%j.%a.%N.%x.out\n')
         file.write('#SBATCH -e OUTPUTS/err/%j.%a.%N.%x.err\n')
+        file.write('#SBATCH --array=1-5\n')
 
         file.write('\n')
 
@@ -42,12 +43,10 @@ def create_job(exp_path, number_of_rep, exec_type, conf_path):
 
     
 
-def create_conf(exp_path):
+def create_conf(exp_path, N, T):
     # Read useful parameters from file
     f    = open(exp_path / "params.json")
     data = json.load(f)
-    N                 = data.get("N")                 # Number of Walkers / water particles
-    T                 = data.get("T")                 # Number of timesteps
     duration          = data.get("duration")          # Simulation duration in s
     diff_intra        = data.get("diffusivity_intra") # Simulation diffusivity in m²/s (around 3e-9 m²/s = 3 um²/ms for water, at room temperature)
     diff_extra        = data.get("diffusivity_extra") # Simulation diffusivity in m²/s (around 3e-9 m²/s = 3 um²/ms for water, at room temperature)
@@ -57,8 +56,10 @@ def create_conf(exp_path):
     write_traj_file   = data.get("write_traj_file")   # Boolean, store walkers' trajectories
     write_hit_file    = data.get("write_hit_file")    # Boolean, store walkers' hit TODO [ines] : what is that ?
     write_full_c_file = data.get("write_full_c_file") # Boolean, store full c file TODO [ines] : what is that ?
-    ini_pos           = data.get("ini_pos")           # Str, either "intra" or "extra", for intracellular and extracellular, respectively
+    # ini_pos           = data.get("ini_pos")         # Str, either "intra" or "extra", for intracellular and extracellular, respectively
+    ini_pos_file      = data.get("ini_pos_file")      # Str, either "intra" or "extra", for intracellular and extracellular, respectively
     Number_processes  = data.get("Number_processes")  # Int, number of parallel processes
+    # Number_processes  = 24  # Int, number of parallel processes
     Path_to_scheme    = data.get("Path_to_scheme")    # Str, relative path to scheme file
     Path_to_neurons   = data.get("Path_to_neurons")   # Str, relative path to neurons_list.swc or neurons_list.txt
     Path_to_conf      = data.get("Path_to_conf")      # Str, relative path to neurons.conf
@@ -80,7 +81,7 @@ def create_conf(exp_path):
         
         file.write('\n')
 
-        file.write(f'exp_prefix {exp_path}/N_{N}_T_{T}\n')
+        file.write(f'exp_prefix {exp_path}/\n')
 
         file.write('\n')
 
@@ -97,14 +98,23 @@ def create_conf(exp_path):
 
         file.write('\n')
 
-        file.write('<obstacle>\n')
-        file.write('<neurons_list>\n')
-        file.write(f'{exp_path}/{Path_to_neurons}\n')
-        file.write(f'permeability global {permeability}\n')
-        file.write(f'sphere_overlap {sphere_overlap}\n')
-        file.write(f'funnel {funnel}\n')
-        file.write('</neurons_list>\n')
-        file.write('</obstacle>\n')
+        if ("swc" in Path_to_neurons) or ("txt" in Path_to_neurons):
+            file.write('<obstacle>\n')
+            file.write('<neurons_list>\n')
+            file.write(f'{exp_path.parent}/{Path_to_neurons}\n')
+            file.write(f'permeability global {permeability}\n')
+            file.write(f'sphere_overlap {sphere_overlap}\n')
+            file.write(f'funnel {funnel}\n')
+            file.write('</neurons_list>\n')
+            file.write('</obstacle>\n')
+        else:
+            file.write('<obstacle>\n')
+            file.write('<ply>\n')
+            file.write(f'{exp_path.parent}/{Path_to_neurons}\n')
+            file.write(f'permeability {permeability}\n')
+            file.write('ply_scale 0.001\n')
+            file.write('</ply>\n')
+            file.write('</obstacle>\n')
 
         file.write('\n')
 
@@ -115,11 +125,12 @@ def create_conf(exp_path):
 
         file.write('\n')
 
-        file.write(f'ini_walkers_pos {ini_pos}\n')
+        # file.write(f'ini_walkers_pos {ini_pos}\n')
+        file.write(f'ini_walkers_file {exp_path.parent}/{ini_pos_file}.txt\n')
 
         file.write('\n')
 
-        file.write(f'seed {seed}\n')
+        # file.write(f'seed {seed}\n')
         file.write(f'num_process {Number_processes}\n')
 
         file.write('\n')
@@ -142,13 +153,26 @@ simu_type      = data.get("simu_type")      # str, type of simulation ("soma", "
                                             # dendrites : walkers start and stay in dendrites only
                                             # soma_dendrites : walkers start in soma and dendrites, but don't exchange compartments
                                             # release : walkers start in soma and dendrites, and can exchange compartments
+Ns             = data.get("N")
+Ts             = data.get("T")
 
 # For all simulations
 for simu in simu_to_launch:
-    # Create the conf file
-    create_conf(Path(simu))
-    # Create the job.sh to be launched
-    create_job(Path(simu), number_of_rep, simu_type, Path(simu) / "neurons.conf")
+    for N in Ns:
+        for T in Ts:
+            os.system(f"mkdir {simu}/N_{N}_T_{T}")
+            os.system(f"cp {simu}/params.json {simu}/N_{N}_T_{T}")
+            os.system(f"cp {simu}/PGSE_21_dir_12_b.scheme {simu}/N_{N}_T_{T}")
+            # Create the conf file
+            create_conf(Path(f"{simu}/N_{N}_T_{T}"), N, T)
+            # Create the job.sh to be launched
+            create_job(Path(f"{simu}/N_{N}_T_{T}"), number_of_rep, simu_type, Path(f"{simu}/N_{N}_T_{T}") / "neurons.conf")
 
-    # Launch the job.sh on the cluster
-    os.system(f"sbatch {simu}/job.sh")
+            # Launch the job.sh on the cluster
+            # os.system(f"sbatch {simu}/N_{N}_T_{T}/job.sh")
+
+            os.system("chmod u+x ./build/MC-DC_Simulator_release")
+            # os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
+
+    # "N": [5000, 10000, 25000, 50000, 75000, 100000, 125000, 150000],
+    # "T": [5000, 10000, 15000, 20000]

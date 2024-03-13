@@ -325,7 +325,7 @@ void NeuronDistribution::createSubstrate()
 
             double icvf, somaFraction, dendritesFraction;
             tie(icvf, somaFraction, dendritesFraction) = computeICVF(0);
-            cout << "icvf " << icvf << " soma " << somaFraction << " dendrites " << dendritesFraction << endl;
+            cout << "ICVF : " << icvf << "soma fraction : " << somaFraction << "dendrites fraction : " << dendritesFraction << endl;
             achieved = true;
         }
     }
@@ -389,8 +389,16 @@ void NeuronDistribution::growDendrites(Neuron& neuron, vector<Vector3d> soma_cen
                     if(b == 0)
                     {
                         proximal_branch = {-1};
-                        distal_branch = {largest_node + 1, largest_node + 2};
+                        if (nb_branching > 1)
+                            distal_branch = {largest_node + 1, largest_node + 2};
+                        else
+                            distal_branch = {-1};
                         largest_node  = largest_node + 2;
+                        bool stop_growth = false;
+                        cout << "P id " << branching_points[0].subbranch_id << endl;
+                        cout << "C id " << branch_id << endl;
+                        if (nb_branching > 1)
+                            cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
                         branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[0], l_segment, sphere_radius, proximal_branch, distal_branch, 
                                                                       min_distance_from_border, branch_id);
                         branch_id++;
@@ -403,6 +411,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron, vector<Vector3d> soma_cen
 
                         for(size_t p=0; p < branching_points.size(); p++)
                         {
+                            // The branching point is split into 2 children
                             // The branching point is split into 2 children
                             for(int c=0; c < static_cast<int>(branching_points[p].children_direction.size()); c++)
                             {
@@ -951,8 +960,7 @@ void NeuronDistribution::printSubstrate(ostream &out) const
                 if(neurons[i].dendrites[j].subbranches[k].distal_branching.size() == 2)
                     out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[1]) << endl;
                 else
-                    out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) << endl;
-                
+                    out << " distal -1" << endl;
             }
             out << "Dendrite " + to_string(j) << endl;
         }
