@@ -395,10 +395,10 @@ void NeuronDistribution::growDendrites(Neuron& neuron, vector<Vector3d> soma_cen
                             distal_branch = {-1};
                         largest_node  = largest_node + 2;
                         bool stop_growth = false;
-                        cout << "P id " << branching_points[0].subbranch_id << endl;
-                        cout << "C id " << branch_id << endl;
-                        if (nb_branching > 1)
-                            cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
+                        // cout << "P id " << branching_points[0].subbranch_id << endl;
+                        // cout << "C id " << branch_id << endl;
+                        // if (nb_branching > 1)
+                        //     cout << "dist " << distal_branch[0] << distal_branch[1] << endl;
                         branching_pt branching_pt_new = growSubbranch(dendrite, branching_points[0], l_segment, sphere_radius, proximal_branch, distal_branch, 
                                                                       min_distance_from_border, branch_id);
                         branch_id++;
@@ -500,7 +500,7 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
     Vector3d last_sphere_center = parent.origin + parent.radius * parent.direction;
     // size_t nb_spheres_to_interpolate = sphere_overlap / 2 - 1;
     int nb_trials = 0;
-    while(((last_sphere_center - end).norm() > 1e-6) || (nb_trials > 100))
+    while((nb_trials < 100) & ((last_sphere_center - end).norm() > 1e-6))
     {
         Vector3d next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
         // 1st sphere of 1st subbranch
@@ -509,15 +509,17 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
             center         = last_sphere_center;
             center_to_test = parent.origin;
             last_radius    = 10e-3;
+
         }
         else
         {
-            center         = next_direction * sphere_radius / 2.0 + last_sphere_center;
+            center = next_direction * sphere_radius / 2.0 + last_sphere_center;
             if(sphere_id == 0)
                 center_to_test = parent.origin;
             else
                 center_to_test = last_sphere_center;
-            last_radius    = sphere_radius;
+
+            last_radius = sphere_radius;
         }
 
         if(isInVoxel(center, min_distance_from_border))
@@ -525,9 +527,26 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
             if (!isSphereColliding(center, sphere_radius, center_to_test, last_radius))
             {
                 Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
+                if(spheres_to_add.size() > 1)
+                    if((sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() > 0.0004)
+                    {
+                        cout << "norm " << (sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+                        cout << (center_to_test - center).norm() << endl;
+                        cout << "center " << center << endl;
+                        cout << "CTT " << center_to_test << endl;
+                        // cout << "last " << last_sphere_center << endl;
+                        cout << "s -1 " << spheres_to_add[spheres_to_add.size() - 1].center << endl;
+                        cout << "s " << sphere_to_add.center << endl;
+                    }
+                // cout << "p 2 " << sphere_to_add.center << endl;
                 spheres_to_add.push_back(sphere_to_add);
+                // cout << "p 2 " << spheres_to_add.back().center << endl;
+                // if(spheres_to_add.size() > 1)
+                //     cout << "p 2 " << (spheres_to_add[spheres_to_add.size() - 2].center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+
+
                 sphere_id++; 
-                last_sphere_center = center;
+                last_sphere_center = spheres_to_add.back().center;
                 updateLUT(center, sphere_radius);
             }
             // Try other directions
@@ -540,6 +559,10 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                 else if(spheres_to_add.size() >= 2)
                     updateLUT(spheres_to_add, spheres_to_add.size() - 1);
 
+                if(spheres_to_add.size() > 1)
+                    last_sphere_center = spheres_to_add.back().center;
+                else
+                    last_sphere_center = parent.origin + parent.radius * parent.direction;
                 bool achieved = false;
                 int number_dir = 10;
                 while (number_dir > 0)
@@ -553,33 +576,72 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                     if(isInVoxel(center, min_distance_from_border) && (!isSphereColliding(center, sphere_radius, center_to_test, last_radius)))
                     {
                         Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
+
+                        if((sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() > 0.0004)
+                        {
+                            cout << "norm " << (sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+                            cout << (center_to_test - center).norm() << endl;
+                            cout << "CTT " << center_to_test << endl;
+                            cout << "last " << last_sphere_center << endl;
+                            cout << "s -2 " << spheres_to_add[spheres_to_add.size() - 2].center << endl;
+                            cout << "s -1 " << spheres_to_add.back().center << endl;
+                            cout << "s " << sphere_to_add.center << endl;
+                        }
+                        
+                        // cout << "p 1 " << sphere_to_add.center << endl;
                         spheres_to_add.push_back(sphere_to_add);
+                        // cout << "p 1 " << spheres_to_add.back().center << endl;
+                        // if(spheres_to_add.size() > 1)
+                        //     cout << "p 1 " << (spheres_to_add[spheres_to_add.size() - 2].center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+
+
+
                         sphere_id++;
                         achieved = true;
-                        last_sphere_center = center;
+                        last_sphere_center = spheres_to_add.back().center;
                         updateLUT(center, sphere_radius);
                         break;
                     }
                     number_dir--;
                 }
-
-                double sphere_radius_shrink = sphere_radius;
-                while (sphere_radius_shrink > 0.15e-3)
+                
+                if(!achieved)
                 {
-                    sphere_radius_shrink -= 0.1 * sphere_radius;
-                    next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
-                    center         = next_direction * spheres_to_add[spheres_to_add.size() - 1].radius / 2.0 + last_sphere_center; 
-                    if(isInVoxel(center, min_distance_from_border) && (!isSphereColliding(center, sphere_radius_shrink, center_to_test, last_radius)))
+                    double sphere_radius_shrink = sphere_radius;
+                    while (sphere_radius_shrink > 0.15e-3)
                     {
-                        Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius_shrink);
-                        spheres_to_add.push_back(sphere_to_add);
-                        sphere_id++;
-                        achieved = true;
-                        last_sphere_center = center;
-                        updateLUT(center, sphere_radius_shrink);
-                        break;
+                        sphere_radius_shrink -= 0.1 * sphere_radius;
+                        next_direction = generateNextDirection(phi_to_target, theta_to_target, 0.03);
+                        center         = next_direction * spheres_to_add[spheres_to_add.size() - 1].radius / 2.0 + last_sphere_center; 
+                        if(isInVoxel(center, min_distance_from_border) && (!isSphereColliding(center, sphere_radius_shrink, center_to_test, last_radius)))
+                        {
+                            Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius_shrink);
+                            if((sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() > 0.0004)
+                            {
+                                cout << "norm " << (sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+                                cout << (center_to_test - center).norm() << endl;
+                                cout << "CTT " << center_to_test << endl;
+                                cout << "last " << last_sphere_center << endl;
+                                cout << "s -2 " << spheres_to_add[spheres_to_add.size() - 2].center << endl;
+                                cout << "s -1 " << spheres_to_add[spheres_to_add.size() - 1].center << endl;
+                                cout << "s " << sphere_to_add.center << endl;
+                            }
+
+                            // cout << "p 3 " << sphere_to_add.center << endl;
+                            spheres_to_add.push_back(sphere_to_add);
+                            // cout << "p 3 " << spheres_to_add.back().center << endl;
+                            // if(spheres_to_add.size() > 1)
+                            //     cout << "p 3 " << (spheres_to_add[spheres_to_add.size() - 2].center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+
+                            sphere_id++;
+                            achieved = true;
+                            last_sphere_center = spheres_to_add.back().center;
+                            updateLUT(center, sphere_radius_shrink);
+                            break;
+                        }
                     }
                 }
+                
                 
                 // If we didn't manage to continue the branch but it's long enough
                 double length_branch = (spheres_to_add[0].center - spheres_to_add[spheres_to_add.size() - 1].center).norm();
