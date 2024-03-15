@@ -629,11 +629,27 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     int in_soma      = walker.in_soma_index;
     int in_dendrite  = walker.in_dendrite_index;
     int in_sub       = walker.in_subbranch_index;
-    int in_sph       = 0;
+    int in_sph;
+    if(in_dendrite >= 0)
+        in_sph       = walker.in_sph_index[0];
+    else
+        in_sph = 0;
 
      if ((walker.location == Walker::intra) && 
         (!isPosInsideNeuron(walker.pos_v, barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
     {
+        // cout << in_soma << in_dendrite << in_sub << endl;
+
+        // if(in_soma >= 0)
+        // {
+        //     cout << (walker.pos_v - soma.center).norm() - soma.radius << endl;
+        //     cout << (walker.last_pos_v - soma.center).norm() - soma.radius << endl;
+        // }
+        // if(in_dendrite >= 0)
+        // {
+        //     cout << (walker.pos_v - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].center).norm() - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].radius << endl;
+        //     cout << (walker.last_pos_v - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].center).norm() - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].radius << endl;
+        // }
         walker.location = Walker::extra;
         // cout << "extra" << endl;
     }
@@ -641,6 +657,19 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         (isPosInsideNeuron(walker.pos_v, -barrier_tickness, walker.in_soma_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index)))
     {
         walker.location = Walker::intra;
+
+        // if(walker.in_dendrite_index >= 0)
+        // {
+        //     cout << "d " << endl;
+        //     cout << (walker.pos_v - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].center).norm() - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].radius << endl;
+        //     cout << (walker.last_pos_v - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].center).norm() - dendrites[in_dendrite].subbranches[in_sub].spheres[in_sph].radius << endl;
+        // }
+        // if(walker.in_soma_index >= 0)
+        // {
+        //     cout << "s " << endl;
+        //     cout << (walker.pos_v - soma.center).norm() - soma.radius << endl;
+        //     cout << (walker.last_pos_v - soma.center).norm() - soma.radius << endl;
+        // }
         // cout << "intra" << endl;
     }
 
@@ -684,6 +713,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         vector<double> distances;
         double dist_min    = 2 * step_lenght;
         int coll_dendrite, coll_subbranch, coll_sphere = -1;
+        double dist_dendrites = 0;
 
         for(size_t d=0; d < dendrite_ids.size(); d++)
         {
@@ -691,9 +721,10 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
             {
                 if(dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, -barrier_tickness, sph_ids, distances))
                 {
-                    if(distances[0] < dist_min)
+                    dist_dendrites = (dendrites[dendrite_ids[d]].subbranches[s].spheres[sph_ids[0]].center - next_pos).norm() - dendrites[dendrite_ids[d]].subbranches[s].spheres[sph_ids[0]].radius;
+                    if(dist_dendrites < dist_min)
                     {
-                        dist_min       = distances[0];
+                        dist_min       = dist_dendrites;
                         coll_dendrite  = dendrite_ids[d];
                         coll_subbranch = s;
                         coll_sphere    = sph_ids[0];
@@ -702,9 +733,11 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
             }
         }
 
+        dist_dendrites = dist_min;
         // check soma as well
-        double dist_dendrites = dist_min;
-        double dist_soma = (soma.center - next_pos).norm();
+        double dist_soma = (soma.center - next_pos).norm() - soma.radius;
+        // cout << "d d " << dist_dendrites << " d s " << dist_soma << endl;
+        // cout << "step " << step_lenght << endl;
         if (dist_soma <= dist_min)
         {
             // Sphere* sphere(new Sphere(soma));
