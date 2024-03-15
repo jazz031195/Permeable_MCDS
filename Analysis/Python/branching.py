@@ -127,10 +127,10 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)   # fontsize of the figure title
 
-experience_folder = Path("results/branching/")
-df_all_data, df_crossings = create_df_all(experience_folder, scheme_file)
+experience_folder = Path("results/ISMRM24/branching/")
+# df_all_data, df_crossings = create_df_all(experience_folder, scheme_file)
 
-df_all_data.to_csv(experience_folder / "data.csv")
+# df_all_data.to_csv(experience_folder / "data.csv")
 df_all_data = pd.read_csv(experience_folder / "data.csv")
 
 b_labels  = df_all_data["b [ms/um²]"].unique()
@@ -139,7 +139,7 @@ means     = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]'
 
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 if not log:
-    g = sns.scatterplot(data=df_all_data[(df_all_data['b [ms/um²]'] > 0)], 
+    g = sns.violinplot(data=df_all_data[(df_all_data['b [ms/um²]'] > 0)], 
                         x='b [ms/um²]', 
                         y='Sb/So', 
                         hue='case', 
@@ -148,9 +148,9 @@ if not log:
                         s=200)
 
     
-# handles, labels = ax.get_legend_handles_labels()
-# ax.legend(handles, ['branching', 'non-branching'], loc='upper right', title='Intra signal')
-
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles, ['branching', 'non-branching'], loc='upper right')
+ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
 
 # Analytical solutions
 Delta     = np.array([0.05])  # in [s]
