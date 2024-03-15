@@ -18,6 +18,8 @@ warnings.filterwarnings("ignore")
 
 if sys.platform == "linux":
     sys.path.insert(1, '/home/localadmin/Documents/analytical_formula/')
+else:
+    sys.path.insert(1, '/Users/ideriedm/Documents/analytical_formula/')
 
 from my_murdaycotts import my_murdaycotts
 import statannot
