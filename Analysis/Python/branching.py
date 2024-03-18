@@ -134,7 +134,7 @@ experience_folder = Path("results/ISMRM24/branching/")
 df_all_data = pd.read_csv(experience_folder / "data.csv")
 
 b_labels  = df_all_data["b [ms/um²]"].unique()
-
+print(df_all_data[df_all_data['case'] == "nonbranching_560"])
 means     = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -149,7 +149,7 @@ if not log:
 
     
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles, ['branching', 'non-branching'], loc='upper right')
+# ax.legend(handles, ['branching', 'non-branching'], loc='upper right')
 ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
 
 # Analytical solutions
