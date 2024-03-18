@@ -954,6 +954,8 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                 dendrites_.clear();
                 // TODO : why nb_dendrites not printed ? [ines]
                 // cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
+                vector<double> volumeNeuron = neuron.get_Volume();
+                cout << "Volume soma : " << volumeNeuron[0] << " Volume dendrites : " << volumeNeuron[1] << endl;
             }
         }
         if(jkr.size() > 4)
