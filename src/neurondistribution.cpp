@@ -335,7 +335,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron, vector<Vector3d> soma_cen
 {
     // Store all the starting points of dendrites, on the soma of the neuron
     std::vector<Eigen::Vector3d> start_dendrites;
-    int max_tries = 100;
+    int max_tries = 1000;
 
     for(uint8_t i = 0; i < neuron.nb_dendrites; ++i)
     {   
@@ -438,11 +438,13 @@ void NeuronDistribution::growDendrites(Neuron& neuron, vector<Vector3d> soma_cen
             }
             if(dendrite.subbranches.size() == 0)
                 tries++;
-            else
+            else if(dendrite.subbranches[0].spheres.size() > 50)
             {
                 neuron.add_dendrite(dendrite);
                 break;
             }
+            else
+                tries++;
             
         }
     } 
@@ -577,16 +579,16 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
                     {
                         Sphere sphere_to_add(sphere_id, branch_id, center, sphere_radius);
 
-                        if((sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() > 0.0004)
-                        {
-                            cout << "norm " << (sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
-                            cout << (center_to_test - center).norm() << endl;
-                            cout << "CTT " << center_to_test << endl;
-                            cout << "last " << last_sphere_center << endl;
-                            cout << "s -2 " << spheres_to_add[spheres_to_add.size() - 2].center << endl;
-                            cout << "s -1 " << spheres_to_add.back().center << endl;
-                            cout << "s " << sphere_to_add.center << endl;
-                        }
+                        // if((sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() > 0.0004)
+                        // {
+                        //     cout << "norm " << (sphere_to_add.center - spheres_to_add[spheres_to_add.size() - 1].center).norm() << endl;
+                        //     cout << (center_to_test - center).norm() << endl;
+                        //     cout << "CTT " << center_to_test << endl;
+                        //     cout << "last " << last_sphere_center << endl;
+                        //     cout << "s -2 " << spheres_to_add[spheres_to_add.size() - 2].center << endl;
+                        //     cout << "s -1 " << spheres_to_add.back().center << endl;
+                        //     cout << "s " << sphere_to_add.center << endl;
+                        // }
                         
                         // cout << "p 1 " << sphere_to_add.center << endl;
                         spheres_to_add.push_back(sphere_to_add);
