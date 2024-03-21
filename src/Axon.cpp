@@ -8,7 +8,7 @@ using namespace Eigen;
 using namespace std;
 
 
-Axon::Axon(const Axon &ax)
+Axon::Axon(Axon const& ax)
 {
     id      = ax.id;
     spheres = ax.spheres;
@@ -23,27 +23,28 @@ Axon::Axon(const Axon &ax)
 
 
 
-void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
+void Axon::set_spheres(std::vector<Sphere> const& spheres_to_add){
 
     // value of center of sphere at x that has the highest x center value
     double sph_highest_x_val = spheres_to_add[0].center[0] + spheres_to_add[0].radius;
     // value of center of sphere at y that has the highest y center value
-    double sph_highest_y_val= spheres_to_add[0].center[1] +spheres_to_add[0].radius;
+    double sph_highest_y_val = spheres_to_add[0].center[1] +spheres_to_add[0].radius;
     // value of center of sphere at z that has the highest z center value
-    double sph_highest_z_val= spheres_to_add[0].center[2] +spheres_to_add[0].radius;
+    double sph_highest_z_val = spheres_to_add[0].center[2] +spheres_to_add[0].radius;
     // value of center of sphere at x that has the lowest x center value
-    double sph_lowest_x_val= spheres_to_add[0].center[0]- spheres_to_add[0].radius;
+    double sph_lowest_x_val  = spheres_to_add[0].center[0]- spheres_to_add[0].radius;
     // value of center of sphere at y has the lowest y center value
-    double sph_lowest_y_val= spheres_to_add[0].center[1]- spheres_to_add[0].radius;
+    double sph_lowest_y_val  = spheres_to_add[0].center[1]- spheres_to_add[0].radius;
     // value of center of sphere at z has the lowest z center value
-    double sph_lowest_z_val= spheres_to_add[0].center[2]- spheres_to_add[0].radius;
+    double sph_lowest_z_val  = spheres_to_add[0].center[2]- spheres_to_add[0].radius;
 
 
 
     // set axon_id of spheres to the id of axon
     for (size_t i=0; i < spheres_to_add.size(); ++i){
-        spheres_to_add[i].ax_id = id;
-        spheres_to_add[i].id = i;
+        // spheres_to_add[i].ax_id = id;
+        // spheres_to_add[i].id = i;
+        this->spheres.push_back(spheres_to_add[i]);
 
         // highest y value
         if (spheres_to_add[i].center[1]+spheres_to_add[i].radius > sph_highest_y_val){
@@ -79,8 +80,6 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
     if (spheres_to_add.size() != 0){
 
         this->begin = spheres_to_add[0].center;
-
-        this->spheres = spheres_to_add;
 
         this->end = spheres_to_add[spheres_to_add.size()-1].center;
 

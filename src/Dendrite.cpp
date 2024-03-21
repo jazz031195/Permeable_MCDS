@@ -66,10 +66,9 @@ double Dendrite::minDistance(Walker const& walker) const
     assert(0);
 }
 
-void Dendrite::add_subbranch(Axon& subbranch)
+void Dendrite::add_subbranch(Axon const& subbranch)
 {
     subbranches.push_back(subbranch);
-    subbranch.id = subbranches.size() - 1;
 }
 
 void Dendrite::set_dendrite(vector<Axon> const& subbranches_)

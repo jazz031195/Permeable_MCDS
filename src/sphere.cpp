@@ -12,7 +12,7 @@ Sphere::Sphere()
 Sphere::~Sphere()
 {}
 
-Sphere::Sphere(const Sphere &sph)
+Sphere::Sphere(Sphere const& sph)
 {
 
     center          = sph.center;
@@ -174,7 +174,7 @@ inline bool Sphere::handleCollition(Walker& walker, Collision &colision, Vector3
 
 }
 
-void Sphere::add_neighbor(Sphere* const neighbor)
+void Sphere::add_neighbor(Sphere* neighbor)
 {
     neighboring_spheres.push_back(neighbor);
 }

@@ -26,7 +26,7 @@ public:
     Axon(){};
 
     ~Axon(){
-        spheres.clear();
+        // spheres.clear();
         //projections.clear_projections();
     };
 
@@ -36,12 +36,12 @@ public:
         id = id_;
         begin = begin_;
         end = end_;
-        spheres.clear();
+        // spheres.clear();
         //projections.clear_projections();
         radius = radius_;
 
-        proximal_branching.clear();
-        distal_branching.clear();
+        // proximal_branching.clear();
+        // distal_branching.clear();
     }
 
     Axon(int const& id_, double const& radius_,  Eigen::Vector3d const& begin_, Eigen::Vector3d const& end_, 
@@ -52,14 +52,14 @@ public:
         distal_branching   = distal_branching_;
     }
 
-    Axon(Axon const &ax);
+    Axon(Axon const& ax);
 
     bool checkCollision(Walker &walker, Eigen::Vector3d const& step, double const& step_lenght, Collision &colision);
     std::vector<int> checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis);
     bool isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside,std::vector<int> &sph_ids);
     //bool isPosInsideAxon(Eigen::Vector3d &position,  double distance_to_be_inside, double max_radius, std::vector<int> &sph_ids);
     bool intersection_sphere_vector(double &t1, double &t2, Sphere &s, Eigen::Vector3d const& step, double const& step_length, Eigen::Vector3d &pos, double &c, double &a);
-    void set_spheres(std::vector<Sphere> spheres_to_add);
+    void set_spheres(std::vector<Sphere> const& spheres_to_add);
     bool isNearAxon(Eigen::Vector3d position, double distance_to_be_inside);
     bool isNearAxon(Walker walker, double distance_to_be_inside);
     //void add_projection(Sphere sphere_to_add);
