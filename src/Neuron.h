@@ -131,6 +131,7 @@ public:
     bool isNearNeuron(Eigen::Vector3d const &position, double const &distance_to_be_inside) const;
 
     void add_projection();
+    void set_soma(Sphere const& soma_);
 
 private:
 

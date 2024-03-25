@@ -158,21 +158,23 @@ Ts             = data.get("T")
 
 # For all simulations
 for simu in simu_to_launch:
-    for N in Ns:
-        for T in Ts:
-            os.system(f"mkdir {simu}/N_{N}_T_{T}")
-            os.system(f"cp {simu}/params.json {simu}/N_{N}_T_{T}")
-            os.system(f"cp {simu}/PGSE_21_dir_12_b.scheme {simu}/N_{N}_T_{T}")
-            # Create the conf file
-            create_conf(Path(f"{simu}/N_{N}_T_{T}"), N, T)
-            # Create the job.sh to be launched
-            create_job(Path(f"{simu}/N_{N}_T_{T}"), number_of_rep, simu_type, Path(f"{simu}/N_{N}_T_{T}") / "neurons.conf")
+    for i in range(number_of_rep):
+        for N in Ns:
+            for T in Ts:
+                # os.system(f"mkdir {simu}/N_{N}_T_{T}")
+                # os.system(f"cp {simu}/params.json {simu}/N_{N}_T_{T}")
+                # os.system(f"cp {simu}/PGSE_21_dir_12_b.scheme {simu}/N_{N}_T_{T}")
+                # # Create the conf file
+                # create_conf(Path(f"{simu}/N_{N}_T_{T}"), N, T)
+                # # Create the job.sh to be launched
+                # create_job(Path(f"{simu}/N_{N}_T_{T}"), number_of_rep, simu_type, Path(f"{simu}/N_{N}_T_{T}") / "neurons.conf")
 
-            # Launch the job.sh on the cluster
-            # os.system(f"sbatch {simu}/N_{N}_T_{T}/job.sh")
+                # Launch the job.sh on the cluster
+                # os.system(f"sbatch {simu}/N_{N}_T_{T}/job.sh")
 
-            os.system("chmod u+x ./build/MC-DC_Simulator_release")
-            # os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
+                os.system("chmod u+x ./build/MC-DC_Simulator_release")
+                # print(f"{simu}/N_{N}_T_{T}/neurons.conf")
+                os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
 
     # "N": [5000, 10000, 25000, 50000, 75000, 100000, 125000, 150000],
     # "T": [5000, 10000, 15000, 20000]

@@ -74,7 +74,7 @@ double minDistance(Walker const& walker) const;
  *
  * @param subbranch Axon.
  */
-void add_subbranch(Axon& subbranch);
+void add_subbranch(Axon const& subbranch);
 /**
  * Get the number of subbranches of a dendrite 
  */

@@ -52,7 +52,7 @@ public:
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-   Sphere(Sphere const &sph);
+   Sphere(Sphere const& sph);
 
     /*! \fn  checkCollision
      *  \param walker, Walker instance in the simulation.
@@ -80,7 +80,7 @@ public:
     double minDistance(Eigen::Vector3d O);
     bool isInside(Eigen::Vector3d pos, double distance_to_be_inside) const;
 
-    void add_neighbor(Sphere* const neighbor);
+    void add_neighbor(Sphere* neighbor);
 
 private:
 

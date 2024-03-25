@@ -995,17 +995,20 @@ void NeuronDistribution::printSubstrate(ostream &out) const
 
     for (unsigned i = 0; i < neurons.size(); i++)
     {
+        out << "Neuron " + to_string(i) << endl;
+        out << "Soma " + to_string(i) << endl;
         // Print for soma : x y z r bool_active
         out << neurons[i].soma.center[0] << " " 
         << neurons[i].soma.center[1] << " "
         << neurons[i].soma.center[2] << " "
         << neurons[i].soma.radius    << endl; 
-        out << "Soma " + to_string(i) << endl;
 
         for (size_t j = 0; j < neurons[i].dendrites.size(); j++)
         {
+            out << "Dendrite " + to_string(j) << endl;
             for (size_t k = 0; k < neurons[i].dendrites[j].subbranches.size(); k++)
             {
+                out << "Segment " + to_string(k) << endl;
                 for (size_t l = 0; l < neurons[i].dendrites[j].subbranches[k].spheres.size(); l++)
                 {
                     // Print for each dendrite, each sphere
@@ -1015,20 +1018,19 @@ void NeuronDistribution::printSubstrate(ostream &out) const
                     << neurons[i].dendrites[j].subbranches[k].spheres[l].radius << endl; 
                         
                 }
-                 out << "Segment " + to_string(k);
+                 
                 if(neurons[i].dendrites[j].subbranches[k].proximal_branching.size() == 2)
-                    out << " proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[1]);
+                    out << "proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[1]);
                 else
-                    out << " proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]);
+                    out << "proximal " + to_string(neurons[i].dendrites[j].subbranches[k].proximal_branching[0]);
 
                 if(neurons[i].dendrites[j].subbranches[k].distal_branching.size() == 2)
                     out << " distal " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[0]) + " " + to_string(neurons[i].dendrites[j].subbranches[k].distal_branching[1]) << endl;
                 else
                     out << " distal -1" << endl;
             }
-            out << "Dendrite " + to_string(j) << endl;
         }
-        out << "Neuron " + to_string(i) << endl;
+        out << "end" << endl;
     }
 }
 

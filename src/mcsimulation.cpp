@@ -653,7 +653,7 @@ vector<int> find_proximal(vector<vector<double>> const& segments, int const& seg
     if(segments[segment_id][0] == 0)
         return {-1};
 
-    for (int i=0; i < segments.size(); ++i) 
+    for (size_t i=0; i < segments.size(); ++i) 
     {
         if((segments[i][1] == segments[segment_id][0]) && (i != segment_id))
             ids.push_back(i);
@@ -671,7 +671,7 @@ vector<int> find_distal(std::vector<vector<double>> const& segments, int const& 
 {
     vector<int> ids;
 
-    for (int i=0; i < segments.size(); ++i) 
+    for (size_t i=0; i < segments.size(); ++i) 
     {
         if(segments[i][0] == segments[segment_id][1])
             ids.push_back(i);
@@ -712,7 +712,7 @@ Dendrite MCSimulation::createDendrites(vector<vector<double>> const& lines, doub
     });
 
     Eigen::Vector3d parent, child, begin;
-    double radius, funnel_radius, target_radius;
+    double radius, target_radius;
     Eigen::Vector3d dir;
     vector<Sphere> spheres_to_add;
     // Display the sorted 2D vector
@@ -848,168 +848,173 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
     in >> min_limits;
     in >> max_limits;
 
-    std::vector<Sphere> spheres_ ;
-    std::vector<Axon> subbranches_ ;
-    std::vector<Dendrite> dendrites_ ;
-    Sphere sphere_;
-    Sphere soma;
     string part;
-    int id;
+    std::string line;
 
-    for( std::string line; getline( in, line ); ){
-                
-        std::vector<std::string> jkr = split(line,' ');
-        int ax_id = 0;
-        if(jkr.size() == 4){
-            x = stod(jkr[0]);
-            y = stod(jkr[1]);
-            z = stod(jkr[2]);
-            r = stod(jkr[3]);
-            sphere_ = Sphere(id, ax_id, Eigen::Vector3d(x,y,z), r, scale);
-            if(spheres_.size() > 0)
-            {
-                sphere_.add_neighbor(new Sphere(spheres_[spheres_.size() - 1]));
-                spheres_[spheres_.size() - 1].add_neighbor(new Sphere(sphere_));
-            }
-            
-            spheres_.push_back(sphere_);
-    
-            // cout << "adding sphere, radius :" << sphere_.radius  << endl;
-        
-        }
-        if(jkr.size() == 2){
-            part = jkr[0];
-            id = stod(jkr[1]);
+    while (getline( in, line )) {
+        string type;
+        int neuron_id;
+  
+        if(line.size() > 0)
+        {
+            vector<string> jkr = split(line,' ');
+            // Local permeability - Different for each obstacle
+            if(in_perm)
+                in_perm >> perm_;
+            // Global permeability - Same for all obstacle
+            else
+                perm_ = params.obstacle_permeability; 
 
-            // If flag "soma", create a soma
-            if( part.find("Soma") != std::string::npos && spheres_.size() == 1)
+            // Process neuron
+            if (jkr[0] == "Neuron") 
             {
-                soma = spheres_[0];
+                Neuron neuron;
+                neuron.setPercolation(perm_);
+                neuron.setDiffusion(diff_i, diff_e);
+                dynamicsEngine->neurons_list.push_back(neuron);
+            } 
+            // end neuron
+            if (jkr[0] == "end") 
+            {
+                int neuron_id = dynamicsEngine->neurons_list.size() - 1;
+
+                if(neuron_id > 0)
+                {
+                    dynamicsEngine->area = dynamicsEngine->area + dynamicsEngine->neurons_list[neuron_id].get_Area();
+                    // TODO : why nb_dendrites not printed ? [ines]
+                    vector<double> volumeNeuron = dynamicsEngine->neurons_list[neuron_id].get_Volume();
+                    cout << "Volume soma : " << volumeNeuron[0] << " Volume dendrites : " << volumeNeuron[1] << endl;
+                }
+            } // end neuron
+            // Process dendrite
+            else if (jkr[0] == "Soma") 
+            {
+                getline( in, line );
+
+                vector<string> jkr = split(line,' ');
+                x = stod(jkr[0]);
+                y = stod(jkr[1]);
+                z = stod(jkr[2]);
+                r = stod(jkr[3]);
+                neuron_id = dynamicsEngine->neurons_list.size() - 1;
+                Sphere soma(neuron_id, neuron_id, Eigen::Vector3d(x,y,z), r, scale);
                 soma.setPercolation(perm_);
                 // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
                 diff_i = params.diffusivity_intra; 
                 diff_e = params.diffusivity_extra;
                 soma.setDiffusion(diff_i, diff_e);
-                spheres_.clear();
-            }
-            // If dendrite, create it from spheres_ and store it into axons_
-            else if( part.find("Dendrite") != std::string::npos && subbranches_.size() > 0)
+                dynamicsEngine->neurons_list[neuron_id].set_soma(soma);
+            } // end soma
+            // Process dendrite
+            else if (jkr[0] == "Dendrite") 
             {
                 Dendrite dendrite;
-
-                for(size_t i=0; i < subbranches_.size(); ++i)
-                {
-                    vector<int> prox_id = subbranches_[i].proximal_branching;
-                    if(prox_id.size() == 2)
-                    {
-                        subbranches_[i].spheres[0].add_neighbor(new Sphere(subbranches_[prox_id[0]].spheres[subbranches_[prox_id[0]].spheres.size() - 1]));
-                        subbranches_[i].spheres[0].add_neighbor(new Sphere(subbranches_[prox_id[1]].spheres[subbranches_[prox_id[1]].spheres.size() - 1]));
-                    }
-
-                    vector<int> dist_id = subbranches_[i].distal_branching;
-                    if(dist_id.size() == 2)
-                    {
-                        subbranches_[i].spheres[subbranches_[i].spheres.size() - 1].add_neighbor(new Sphere(subbranches_[dist_id[0]].spheres[0]));
-                        subbranches_[i].spheres[subbranches_[i].spheres.size() - 1].add_neighbor(new Sphere(subbranches_[dist_id[1]].spheres[0]));
-                    }
-                }
-
-                dendrite.set_dendrite(subbranches_);               
-                dendrites_.push_back(dendrite);
-                subbranches_.clear();
-                // cout << "adding dendrite : "  << id << endl;
-            }
-            // If neuron, create it from soma and axons
-            else if( part.find("Neuron") != std::string::npos)
+                int neuron_id = dynamicsEngine->neurons_list.size() - 1;
+                dynamicsEngine->neurons_list[neuron_id].dendrites.push_back(dendrite);
+                    
+            } // end dendrite
+            // Process segment
+            else if (jkr[0] == "Segment") 
             {
-                // Local permeability - Different for each obstacle
-                if(in_perm){
-                    in_perm >> perm_;
-                }
-                // Global permeability - Same for all obstacle
-                else{
-                    perm_ = params.obstacle_permeability;
-                } 
-                Neuron neuron(dendrites_, soma);
-
-                for(size_t d=0; d < neuron.dendrites.size(); ++d)
+                std::vector<Sphere> spheres_ ;
+                int neuron_id    = dynamicsEngine->neurons_list.size() - 1;
+                int dendrite_id  = dynamicsEngine->neurons_list[neuron_id].dendrites.size() - 1;
+                int subbranch_id = dynamicsEngine->neurons_list[neuron_id].dendrites[dendrite_id].subbranches.size();
+                getline( in, line );
+                vector<string> jkr = split(line,' ');
+                while(jkr[0].find("proximal") == std::string::npos)
                 {
-                    for(size_t s=0; s < neuron.dendrites[d].subbranches.size(); ++s)
-                    {
-                        for(size_t sph=0; sph < neuron.dendrites[d].subbranches[s].spheres.size(); ++sph)
-                        {
-                            neuron.dendrites[d].subbranches[s].spheres[sph].setPercolation(perm_);
-                            // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                            diff_i = params.diffusivity_intra; 
-                            diff_e = params.diffusivity_extra;
-                            neuron.dendrites[d].subbranches[s].spheres[sph].setDiffusion(diff_i, diff_e);
-                        }
-                    }
-                }
-                neuron.add_projection();
-                neuron.setPercolation(perm_);
-                neuron.setDiffusion(diff_i, diff_e);
-                dynamicsEngine->neurons_list.push_back(neuron);
-                dynamicsEngine->area = dynamicsEngine->area + neuron.get_Area();
-                dendrites_.clear();
-                // TODO : why nb_dendrites not printed ? [ines]
-                // cout << "adding neuron: "  << id << ", nb_dendrites: " << neuron.nb_dendrites << endl;
-            }
-        }
-        if(jkr.size() > 4)
-        {
-            part = jkr[0];
-            id   = stod(jkr[1]);
-            auto it = std::find_if( std::begin( jkr ), std::end( jkr ),
-                            [&]( const string s ){ return s == "distal"; } );
-        
-            const int pos = std::distance( jkr.begin(), it );
+                    x = stod(jkr[0]);
+                    y = stod(jkr[1]);
+                    z = stod(jkr[2]);
+                    r = stod(jkr[3]);
 
-            vector<int> prox_id = {int(stod(jkr[3]))};
-            if((pos - 3) == 2)
-                prox_id.push_back(int(stod(jkr[4])));
-            
-            vector<int> dist_id = {int(stod(jkr[pos + 1]))};
-            if((pos + 1) != (jkr.size() - 1)) // TODO [ines] : check if parentheses needed
-                dist_id.push_back(int(stod(jkr[pos + 2])));
-
-            // If Segment, create it from spheres_ and store it into axons_
-            if( part.find("Segment") != std::string::npos && spheres_.size() > 0)
-            {
-                if(id == 0)
-                {
-                    soma.add_neighbor(new Sphere(spheres_[0]));
-                    spheres_[0].add_neighbor(new Sphere(soma));
-                }
-
-                Eigen::Vector3d begin = {min_limits, min_limits, min_limits};
-                Eigen::Vector3d end   = {max_limits, max_limits, max_limits};
-                Axon subbranch(id, r, begin, end, prox_id, dist_id);
-                subbranch.set_spheres(spheres_);
-
-                for (unsigned i = 0; i < spheres_.size(); i++){
-                    spheres_[i].setPercolation(perm_);
+                    Sphere sphere_(spheres_.size(), subbranch_id, Eigen::Vector3d(x,y,z), r, scale);
+                    sphere_.setPercolation(perm_);
                     // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
                     diff_i = params.diffusivity_intra; 
                     diff_e = params.diffusivity_extra;
-                    spheres_[i].setDiffusion(diff_i, diff_e);
+                    sphere_.setDiffusion(diff_i, diff_e);
+                    spheres_.push_back(sphere_);
+
+                    getline( in, line );
+                    jkr = split(line,' ');
+                       
+                }//end subbranch
+                part = jkr[0];
+                auto it = std::find_if( std::begin( jkr ), std::end( jkr ),
+                                [&]( const string s ){ return s == "distal"; } );
+            
+                const size_t pos = std::distance( jkr.begin(), it );
+
+                vector<int> prox_id;
+                prox_id.push_back(int(stod(jkr[1])));
+                if(pos == 3)
+                    prox_id.push_back(int(stod(jkr[2])));
+                
+                vector<int> dist_id = {int(stod(jkr[pos + 1]))};
+                if((pos + 1) != (jkr.size() - 1)) // TODO [ines] : check if parentheses needed
+                    dist_id.push_back(int(stod(jkr[pos + 2])));
+
+                Eigen::Vector3d begin = {min_limits, min_limits, min_limits};
+                Eigen::Vector3d end   = {max_limits, max_limits, max_limits};
+
+                auto& dendrite = dynamicsEngine->neurons_list[neuron_id].dendrites[dendrite_id];
+                Axon subbranch(dendrite.subbranches.size(), r, begin, end, prox_id, dist_id);
+                dendrite.add_subbranch(subbranch); 
+                dendrite.subbranches[subbranch_id].set_spheres(spheres_);         
+            } // end subbranch     
+        } // if( line.size() > 0)
+    
+    }//while( getline(in, line) )
+        
+
+    for(size_t neuron_id=0; neuron_id < dynamicsEngine->neurons_list.size(); ++neuron_id)
+    {
+        for(size_t dendrite_id=0; dendrite_id < dynamicsEngine->neurons_list[neuron_id].dendrites.size(); ++dendrite_id)
+        {
+            auto& dendrite = dynamicsEngine->neurons_list[neuron_id].dendrites[dendrite_id];
+            dendrite.add_projection();
+
+            for(size_t subbranch_id=0; subbranch_id < dendrite.subbranches.size(); ++subbranch_id)
+            {
+                vector<int> dist_id = dendrite.subbranches[subbranch_id].distal_branching;
+                if(dist_id.size() == 2)
+                {
+                    if((dist_id[0] <= dendrite.subbranches.size() - 1) && (dist_id[1] <= dendrite.subbranches.size() - 1))
+                    {
+                        dendrite.subbranches[subbranch_id].spheres[dendrite.subbranches[subbranch_id].spheres.size() - 1].add_neighbor(&dendrite.subbranches[dist_id[0]].spheres[0]);
+                        dendrite.subbranches[dist_id[0]].spheres[0].add_neighbor(&dendrite.subbranches[subbranch_id].spheres[dendrite.subbranches[subbranch_id].spheres.size() - 1]);
+                        dendrite.subbranches[subbranch_id].spheres[dendrite.subbranches[subbranch_id].spheres.size() - 1].add_neighbor(&dendrite.subbranches[dist_id[1]].spheres[0]);
+                        dendrite.subbranches[dist_id[0]].spheres[0].add_neighbor(&dendrite.subbranches[dist_id[1]].spheres[0]);
+                        dendrite.subbranches[dist_id[1]].spheres[0].add_neighbor(&dendrite.subbranches[dist_id[0]].spheres[0]);
+                    }
                 }
 
-                spheres_.clear();
-                subbranches_.push_back(subbranch);
-                // cout << "adding segment "  << endl;
-                //TODO [ines] : add proximal & distal branching reading
+                for(size_t sph_id=0; sph_id < dendrite.subbranches[subbranch_id].spheres.size(); ++sph_id)
+                {
+                    if(sph_id > 0)
+                    {
+                        dendrite.subbranches[subbranch_id].spheres[sph_id].add_neighbor(&(dendrite.subbranches[subbranch_id].spheres[sph_id - 1]));
+                        dendrite.subbranches[subbranch_id].spheres[sph_id - 1].add_neighbor(&(dendrite.subbranches[subbranch_id].spheres[sph_id]));
+                    }
+                    if ((sph_id == 0) && (subbranch_id == 0))
+                    {
+                        dynamicsEngine->neurons_list[neuron_id].soma.add_neighbor(&(dendrite.subbranches[subbranch_id].spheres[sph_id]));
+                        dendrite.subbranches[subbranch_id].spheres[sph_id].add_neighbor(&dynamicsEngine->neurons_list[neuron_id].soma);
+                    }
+                }
             }
         }
+        dynamicsEngine->neurons_list[neuron_id].add_projection();
     }
-
     params.max_limits = Eigen::Vector3d(max_limits, max_limits, max_limits);
     params.min_limits = Eigen::Vector3d(min_limits, min_limits, min_limits);
     params.gamma_icvf = icvf;
 
     in.close();
 
-    double volume          = (params.max_limits[0] - params.min_limits[0]) * (params.max_limits[1] - params.min_limits[1]) * (params.max_limits[2] - params.min_limits[2]);
+    double volume     = (params.max_limits[0] - params.min_limits[0]) * (params.max_limits[1] - params.min_limits[1]) * (params.max_limits[2] - params.min_limits[2]);
     // double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
 
     if (params.concentration != 0){

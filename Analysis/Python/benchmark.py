@@ -207,8 +207,8 @@ b_labels    = df_all_data["b [ms/um²]"].unique()
 df_all_data = df_all_data[(df_all_data['b [ms/um²]'] > 0)]
 means       = df_all_data[(df_all_data['b [ms/um²]'] > 0) & (df_all_data["T"] == 15000) & ((df_all_data['b [ms/um²]'] > 0) & (df_all_data["T"] == 15000))].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 
-r_soma           = 15e-6 # [m]
-volume_neurites  = 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
+r_soma           = 10e-6 # [m]
+volume_neurites  = 8784.68 # 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
 volume_soma      = 4/3 * np.pi * r_soma**3 # in [m³]
 volume_soma      = volume_soma * 1e18 # in [um³]
 volume_neuron    = volume_neurites + volume_soma
@@ -257,7 +257,6 @@ with open('/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM
                 D0 = abs(float(match.group())) # m²/s
 
 # step_length = np.sqrt(6 * D0 * TE / T)
-print(labels)
 labels = [np.sqrt(6 * D0 * TE / float(lab))*1e6 for lab in labels]
 labels = [f"{lab:.2f}" for lab in labels]
 plt.legend(handles, ["Step length [um] : "] + labels, bbox_to_anchor=(-2.2, 2.3), loc="lower center", borderaxespad=0., ncol=4, frameon=False)

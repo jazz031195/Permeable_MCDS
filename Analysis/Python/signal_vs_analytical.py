@@ -147,8 +147,8 @@ delta     = np.array([0.0165])# in [s]
 D0        = 2.5e-9 # [m²/s]
 bvals     = np.linspace(0.2, 10, 100) * 1e9 # in [s/m²]
 
-r_soma           = 14.5e-6 # [m]
-volume_neurites  = 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
+r_soma           = 10e-6 # [m]
+volume_neurites  = 8784.68 # 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
 volume_soma      = 4/3 * np.pi * r_soma**3 # in [m³]
 volume_soma      = volume_soma * 1e18 # in [um³]
 volume_neuron    = volume_neurites + volume_soma

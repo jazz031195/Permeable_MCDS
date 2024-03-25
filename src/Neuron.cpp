@@ -16,11 +16,11 @@ Neuron::Neuron()
 {
     id = nb_neurons++;
 
-    random_device dev;
-    mt19937 rng(dev());
+    // random_device dev;
+    // mt19937 rng(dev());
 
-    constexpr uint8_t ub = 25; // upper bound for nb_dendrites
-    constexpr uint8_t lb = 15; // lower bound for nb_dendrites
+    // constexpr uint8_t ub = 25; // upper bound for nb_dendrites
+    // constexpr uint8_t lb = 15; // lower bound for nb_dendrites
 
     uniform_int_distribution<mt19937::result_type> dist_dendrites(lb, ub);
     // Generate int number in [lb, ub]
@@ -29,7 +29,7 @@ Neuron::Neuron()
     // // Create a random span radius and set its value to this
     // generateSpanRadius();
 
-    dendrites.clear();
+    // dendrites.clear();
 }
 
 Neuron::~Neuron()
@@ -65,6 +65,11 @@ Neuron::Neuron(Neuron const &neuron) : nb_dendrites(neuron.nb_dendrites), span_r
     diffusivity_i  = neuron.diffusivity_i;
     prob_cross_e_i = neuron.prob_cross_e_i;
     prob_cross_i_e = neuron.prob_cross_i_e;   
+}
+
+void Neuron::set_soma(Sphere const& soma_)
+{
+    soma = soma_;
 }
 
 double Neuron::minDistance(Walker const &walker) const
@@ -681,10 +686,7 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
     // If in the soma, check Collision with soma
     if(walker.in_soma_index == 0)
     {
-        // Sphere* sphere(new Sphere(soma));
         isColliding = checkCollision_branching(walker, &soma, step_dir, step_lenght, colision);
-        // sphere = NULL;
-        // delete sphere;
     }
     // If in dendrite, check collision with the correct sphere
     else if(walker.in_dendrite_index >= 0)
@@ -692,15 +694,12 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         if(walker.in_sph_index.size() > 0)
         {
             in_sph = walker.in_sph_index[0];
-            // Sphere* sphere(new Sphere(dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph]));
             isColliding = checkCollision_branching(walker, 
                                                 &dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres[in_sph], 
                                                 step_dir, 
                                                 step_lenght, 
                                                 colision);
         }
-        // sphere = NULL;
-        // delete sphere;
     }
     // Extra water
     else

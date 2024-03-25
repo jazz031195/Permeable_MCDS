@@ -295,3 +295,99 @@ draw_neurons([0, 1, 2, 3, 4, 5])
 #     #         axs[k].set_xlim([min_lim, max_lim])
 #     #         axs[k].set_ylim([min_lim, max_lim])
 #     plt.show()
+#             if plot_3d:
+#                 ax.plot(xmin, ymin, zmin, color="cornflowerblue")
+#                 ax.plot(xmax, ymax, zmax, color="cornflowerblue")
+#             elif projection:
+#                 axs[0].plot(xmin, ymin, color="cornflowerblue")
+#                 axs[0].plot(xmax, ymax, color="cornflowerblue")
+#                 axs[1].plot(xmin, zmin, color="cornflowerblue")
+#                 axs[1].plot(xmax, zmax, color="cornflowerblue")
+#                 axs[2].plot(zmin, ymin, color="cornflowerblue")
+#                 axs[2].plot(zmax, ymax, color="cornflowerblue")
+#     print(min_ - max_)
+#     if not plot_3d:
+#         distance_from_borders = 0.0007
+#     if plot_traj:
+#         with open(traj_file[2]) as f:
+#             lines = f.readlines()
+#             xp = []
+#             yp = []
+#             zp = []
+#             for i in range(int(len(lines))):
+#                 if i%4 == 0:
+#                     xp.append(float(lines[i]))
+#                 elif i%4 == 1:
+#                     yp.append(float(lines[i]))
+#                 elif i%4 == 2:
+#                     zp.append(float(lines[i]))
+#             xp = np.array(xp)
+#             yp = np.array(yp)
+#             zp = np.array(zp)
+#             print(np.min(xp), np.max(xp), np.min(yp), np.max(yp), np.min(zp), np.max(zp))
+#             if not plot_3d:
+#                 axs[0].plot(xp, yp, 'b.', markersize=1)
+#                 axs[1].plot(xp, zp, 'b.', markersize=1)
+#                 axs[2].plot(zp, yp, 'b.', markersize=1)
+#                 axs[0].set_xlim([0, 0.1])
+#                 axs[0].set_ylim([0, 0.1])
+#                 axs[0].set_xlabel("X [mm]")
+#                 axs[0].set_ylabel("Y [mm]")
+#                 axs[0].axvline(distance_from_borders, 0, 1)
+#                 axs[0].axvline(0.1-distance_from_borders, ymin=0, ymax=1)
+#                 axs[0].axhline(distance_from_borders, xmin=0, xmax=1)
+#                 axs[0].axhline(y=0.1-distance_from_borders, xmin=0, xmax=1)
+#                 axs[1].set_xlim([0, 0.1])
+#                 axs[1].set_ylim([0, 0.1])
+#                 axs[1].set_xlabel("X [mm]")
+#                 axs[1].set_ylabel("Z [mm]")
+#                 axs[1].axvline(distance_from_borders, 0, 1)
+#                 axs[1].axvline(0.1-distance_from_borders, ymin=0, ymax=1)
+#                 axs[1].axhline(distance_from_borders, xmin=0, xmax=1)
+#                 axs[1].axhline(y=0.1-distance_from_borders, xmin=0, xmax=1)
+#                 axs[2].set_xlim([0, 0.1])
+#                 axs[2].set_ylim([0, 0.1])
+#                 axs[2].set_xlabel("Z [mm]")
+#                 axs[2].set_ylabel("Y [mm]")
+#                 axs[2].axvline(distance_from_borders, 0, 1)
+#                 axs[2].axvline(0.1-distance_from_borders, ymin=0, ymax=1)
+#                 axs[2].axhline(distance_from_borders, xmin=0, xmax=1)
+#                 axs[2].axhline(y=0.1-distance_from_borders, xmin=0, xmax=1)
+#             else:
+#                 # ax.scatter(xp, yp, zp, color="cornflowerblue", s=1)
+
+
+#                 df = pd.DataFrame({"time": list(range(xp.shape[0])) ,"x" : xp, "y" : yp, "z" : zp})
+
+#                 def update_graph(num):
+#                     data=df[df['time']==num]
+#                     graph.set_data(data.x, data.y)
+#                     graph.set_3d_properties(data.z)
+#                     title.set_text('3D Test, time={}'.format(num))
+#                     return title, graph, 
+
+#                 title = ax.set_title('3D Test')
+
+#                 data=df[df['time']==0]
+#                 graph, = ax.plot(data.x, data.y, data.z, linestyle="", marker="o")
+
+#                 ani = FuncAnimation(fig, update_graph, 1000, 
+#                                             interval=2, blit=True)
+
+#                 plt.show()
+
+
+
+#     # if plot_3d:
+#     #     ax.set_xlim([min_lim, max_lim])
+#     #     ax.set_ylim([min_lim, max_lim])
+#     #     ax.set_zlim([min_lim, max_lim])
+#     # elif projection:
+#     #     for k in range(3):
+#     #         axs[k].set_xlim([min_lim, max_lim])
+#     #         axs[k].set_ylim([min_lim, max_lim])
+#     # else:
+#     #     for k in range(len(z_slice)):
+#     #         axs[k].set_xlim([min_lim, max_lim])
+#     #         axs[k].set_ylim([min_lim, max_lim])
+#     plt.show()

@@ -882,32 +882,49 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
                 assert(0);
             }
             
-            std::uniform_int_distribution<int> neuron_dist(0, neurons_list.size() - 1);
-            int neuron_id    = neuron_dist(gen);
-            std::uniform_int_distribution<int> dendrite_dist(0, neurons_list[neuron_id].dendrites.size() - 1);
-            int dendrite_id  = dendrite_dist(gen);
-            std::uniform_int_distribution<int> subbranch_dist(0, neurons_list[neuron_id].dendrites[dendrite_id].subbranches.size() - 1);
-            int subbranch_id = subbranch_dist(gen);
-            std::uniform_int_distribution<int> sphere_dist(0, neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres.size() - 1);
-            int sphere_id    = sphere_dist(gen);
-
-            Vector3d center   = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].center;
-            
-            double probaRadius  = double(udist(gen)) * 0.99;
-            double sphereRadius = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].radius;
-            double theta = 2 * M_PI * udist(gen);
-            double phi = acos(1 - 2 * udist(gen));
-            double x = sin(phi) * cos(theta) * probaRadius * sphereRadius + center[0];
-            double y = sin(phi) * sin(theta) * probaRadius * sphereRadius + center[1];
-            double z = cos(phi) * probaRadius * sphereRadius + center[2];
-            Vector3d pos_temp = {x, y, z};
-
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
-            if (checkIfPosInsideVoxel(pos_temp) && (isintra))
+            if(neurons_list.size() > 0)
             {
-                // cout << "starts in dendrite" << endl;
-                return pos_temp;
+                std::uniform_int_distribution<int> neuron_dist(0, neurons_list.size() - 1);
+                int neuron_id    = neuron_dist(gen);
+                if(neurons_list[neuron_id].dendrites.size() > 0)
+                {
+                    std::uniform_int_distribution<int> dendrite_dist(0, neurons_list[neuron_id].dendrites.size() - 1);
+                    int dendrite_id  = dendrite_dist(gen);
+                    if(neurons_list[neuron_id].dendrites[dendrite_id].subbranches.size() > 0)
+                    {
+                        std::uniform_int_distribution<int> subbranch_dist(0, neurons_list[neuron_id].dendrites[dendrite_id].subbranches.size() - 1);
+                        int subbranch_id = subbranch_dist(gen);
+                        if(neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres.size() > 0)
+                        {
+                            std::uniform_int_distribution<int> sphere_dist(0, neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres.size() - 1);
+                            int sphere_id    = sphere_dist(gen);
+
+                            Vector3d center   = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].center;
+                            
+                            double probaRadius  = double(udist(gen)) * 0.99;
+                            double sphereRadius = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].radius;
+                            double theta = 2 * M_PI * udist(gen);
+                            double phi = acos(1 - 2 * udist(gen));
+                            double x = sin(phi) * cos(theta) * probaRadius * sphereRadius + center[0];
+                            double y = sin(phi) * sin(theta) * probaRadius * sphereRadius + center[1];
+                            double z = cos(phi) * probaRadius * sphereRadius + center[2];
+                            Vector3d pos_temp = {x, y, z};
+
+                            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
+                            if (checkIfPosInsideVoxel(pos_temp) && (isintra))
+                            {
+                                // cout << "starts in dendrite" << endl;
+                                return pos_temp;
+                            }
+                        }
+                        
+                    }
+                    
+                }
+
+                
             }
+            
             count++;
         }
     }
@@ -1372,6 +1389,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
             continue;
         }
+
+        
+        // std::ofstream out;
+        // out.open("instructions/ISMRM24/end_pos_file_n2_mesh.txt", std::ios::app);
+        // out << walker.pos_v[0] << " " << walker.pos_v[1] << " " << walker.pos_v[2] << endl;
 
         // If no backtracking, delete the initial position
         walker.ini_pos = Vector3d(-1, -1, -1);

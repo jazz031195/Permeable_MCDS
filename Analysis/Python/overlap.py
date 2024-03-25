@@ -18,6 +18,8 @@ warnings.filterwarnings("ignore")
 
 if sys.platform == "linux":
     sys.path.insert(1, '/home/localadmin/Documents/analytical_formula/')
+else:
+    sys.path.insert(1, '/Users/ideriedm/Documents/analytical_formula/')
 
 from my_murdaycotts import my_murdaycotts
 import statannot
@@ -142,34 +144,35 @@ df_data_all = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MC
 
 b_labels = df_data_all["b [ms/um²]"].unique()
 
-fig, ax = plt.subplots(1, 1, figsize=(15, 10))
-sns.violinplot(data=df_data_all[(df_data_all['b [ms/um²]'] > 4)], 
+fig, _ = plt.subplots(1, 1, figsize=(15, 10))
+ax2 = sns.violinplot(data=df_data_all[(df_data_all['b [ms/um²]'] > 4)], 
                x='b [ms/um²]', 
                y='Sb/So',
                hue='overlap', 
-               ax=ax,
+               dodge=True,
                palette="Blues")
 
 sns.stripplot(data=df_data_all[(df_data_all['b [ms/um²]'] > 4)], 
               x='b [ms/um²]', 
               y='Sb/So',
               hue='overlap',
-              color=(0.1350634371395617, 0.35630911188004605, 0.5703575547866206, 1),
-              dodge=True) 
+              palette=[(0, 0, 0)],
+              dodge=True,
+              size=3) 
 
-ax.legend().set_visible(False)
+ax2.legend().set_visible(False)
 
-for collection in ax.collections:
+for collection in ax2.collections:
     if isinstance(collection, matplotlib.collections.PolyCollection):
         collection.set_edgecolor(collection.get_facecolor())
         collection.set_facecolor(collection.get_facecolor())
         collection.set_alpha(0.5)
 
 # Change b-values so that they have only 1 decimals
-ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[6:]])
-handles, labels = ax.get_legend_handles_labels()
+ax2.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[6:]])
+handles, labels = ax2.get_legend_handles_labels()
 labels          = ['R/' + item for item in labels]
-plt.legend(handles, labels, loc='upper right', frameon=False, title="Overlap")
+plt.legend(handles[:int(len(labels)/2)], labels[:int(len(labels)/2)], loc='upper right', frameon=False, title="Overlap")
 
 # couples = []
 # couples_end = []
