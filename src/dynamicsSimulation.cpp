@@ -1522,6 +1522,7 @@ bool DynamicsSimulation::elasticBounceAgainstVoxel(const Eigen::Vector3d& previo
             
         }
     }
+    normal = {abs(normal[0]),abs(normal[1]),abs(normal[2])};
     if (smallest_distance < EPS_VAL){
         double rn = ray.dot(normal);
         step = -ray + 2.0*normal*rn;
@@ -1594,14 +1595,16 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
         if (walker.normals.size() == 0){
             walker.normals.push_back(normal);
         }
-        // if the normal to add is equal to - the last, they cancel each other
-        else if (walker.normals[walker.normals.size()-1] == -normal || walker.normals[walker.normals.size()-1] == normal){
-            walker.normals.pop_back();
-        }
-        else{
+        // Find the iterator pointing to the element to delete
+        auto it = std::find(walker.normals.begin(), walker.normals.end(), normal);
+
+        // Check if the element was found
+        if (it != walker.normals.end()) {
+            // Delete the element using the erase function
+            walker.normals.erase(it);
+        } else {
             walker.normals.push_back(normal);
         }
-        //cout << "walker.normals.size() :" << walker.normals.size() << endl;
         initWalkerObstacleIndexes();
     } 
 
