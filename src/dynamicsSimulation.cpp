@@ -1390,6 +1390,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             continue;
         }
 
+        
+        // std::ofstream out;
+        // out.open("instructions/ISMRM24/end_pos_file_n2_mesh.txt", std::ios::app);
+        // out << walker.pos_v[0] << " " << walker.pos_v[1] << " " << walker.pos_v[2] << endl;
+
         // If no backtracking, delete the initial position
         walker.ini_pos = Vector3d(-1, -1, -1);
 

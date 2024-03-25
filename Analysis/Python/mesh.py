@@ -133,41 +133,48 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)   # fontsize of the figure title
 
-experience_folder = Path("/Users/ideriedm/Documents/MCDS_perm/Permeable_MCDS/results/exch/")
+experience_folder = Path("results/ISMRM24/exch/")
 # df_all_data, df_crossings = create_df_all(experience_folder, scheme_file)
 
 # df_all_data.to_csv(experience_folder / "data.csv")
 df_all_data = pd.read_csv(experience_folder / "data.csv")
 b_labels  = df_all_data["b [ms/um²]"].unique()
 means     = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
-
+# df_all_data = df_all_data[(df_all_data.case == "mesh_005") | (df_all_data.case == "mesh_005_soma")]
+means = means[(means.case != "mesh_005_soma") & (means.case != "mesh_005") & (means.case != "mesh_002550") & (means.case != "mesh_001325") & (means.case != "mesh_001")]
+df_all_data = df_all_data[(df_all_data.case != "mesh_005_soma")]
+print(df_all_data.case.unique())
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
 if not log:
-    g = sns.scatterplot(data=df_all_data[(df_all_data['b [ms/um²]'] > 0)], 
+    g = sns.scatterplot(data=means, 
                         x='b [ms/um²]', 
                         y='Sb/So', 
                         hue='case', 
-                        hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005', 'mesh_003775', 'mesh_00255', 'mesh_001325', 'mesh_001'], 
+                        # hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005', 'mesh_003775', 'mesh_00255', 'mesh_001325', 'mesh_001'], 
+                        hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_003775'], 
                         ax=ax, 
                         style='case',
-                        s=200, 
-                        palette=['b', 'orange', 'g', 'g', 'k', 'k', 'k', 'k', 'k', 'k'])
-else:
-    means_log = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['log_Sb/So'].mean().reset_index()
-    g = sns.scatterplot(data=means_log, 
-                    x='b [ms/um²]', 
-                    y='log_Sb/So', 
-                    hue='case', 
-                    hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005', 'mesh_010', 'mesh_025', 'mesh_050', 'mesh_075', 'mesh_100'], 
-                    ax=ax, 
-                    style='case',
-                    s=200, 
-                    palette=['b', 'orange', 'g', 'g', 'k', 'k', 'k', 'k', 'k', 'k'])
-    g.set_ylabel('log(Sb/So)')
+                        s=150, 
+                        palette=['b', 'orange', 'g', 'g', 'k']
+                        )
+# else:
+#     means_log = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['log_Sb/So'].mean().reset_index()
+#     g = sns.scatterplot(data=means_log, 
+#                     x='b [ms/um²]', 
+#                     y='log_Sb/So', 
+#                     hue='case', 
+#                     hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005', 'mesh_010', 'mesh_025', 'mesh_050', 'mesh_075', 'mesh_100'], 
+#                     ax=ax, 
+#                     style='case',
+#                     s=200, 
+#                     palette=['b', 'orange', 'g', 'g', 'k', 'k', 'k', 'k', 'k', 'k'])
+#     g.set_ylabel('log(Sb/So)')
     
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles, ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)', 
-                    'Mesh 5%', 'Mesh 3.775%', 'Mesh 2.55%', 'Mesh 1.325%', 'Mesh 1%'], loc='upper right', title='Intra signal')
+ax.legend(handles, 
+          ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)', 'Mesh 3.775%'], 
+          loc='upper right', 
+          title='Intra signal')
 
 
 # Analytical solutions
@@ -176,8 +183,8 @@ delta     = np.array([0.0165])# in [s]
 D0        = 2.5e-9 # [m²/s]
 bvals     = np.linspace(0.2, 10, 100) * 1e9 # in [s/m²]
 
-r_soma           = 14.5e-6 # [m]
-volume_neurites  = 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
+r_soma           = 10e-6   # 14.5e-6 # [m]
+volume_neurites  = 8784.68 # 11368.4 scaled neuron # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
 volume_soma      = 4/3 * np.pi * r_soma**3 # in [m³]
 volume_soma      = volume_soma * 1e18 # in [um³]
 volume_neuron    = volume_neurites + volume_soma
@@ -210,13 +217,13 @@ g = sns.boxplot(data=df,
                 x='case', 
                 y='MD', 
                 palette="Blues", 
-                order=['mesh_005', 'mesh_003775', 'mesh_00255', 'mesh_001325', 'mesh_001'],
+                order=['mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001'],
                 ax=ax)
 sns.stripplot(data=df, 
               x='case', 
               y='MD', 
               color=(0.1350634371395617, 0.35630911188004605, 0.5703575547866206, 1),
-              order=['mesh_005', 'mesh_003775', 'mesh_00255', 'mesh_001325', 'mesh_001'])
+              order=['mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001'])
 
 from matplotlib.patches import PathPatch
 

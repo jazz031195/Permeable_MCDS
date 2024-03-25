@@ -138,8 +138,8 @@ D0        = 2.5e-9             # [m²/s]
 bvals     = df_all_data['b [ms/um²]'].values * 1e9 # in [s/m²]
 
 # Calculate soma and neurite fraction
-r_soma           = 14.5e-6 # [m]
-volume_neurites  = 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
+r_soma           = 10e-6 # [m]
+volume_neurites  = 8784.68 # 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
 volume_soma      = 4/3 * np.pi * r_soma**3 # in [m³]
 volume_soma      = volume_soma * 1e18 # in [um³]
 volume_neuron    = volume_neurites + volume_soma
