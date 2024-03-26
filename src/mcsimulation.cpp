@@ -8,6 +8,9 @@
 
 int MCSimulation::count =0;
 
+using namespace Eigen;
+using namespace std;
+
 MCSimulation::MCSimulation()
 {
     dynamicsEngine = NULL;
@@ -928,18 +931,44 @@ void MCSimulation::readNeurons_fromList(int const& neurons_files_id)
                     y = stod(jkr[1]);
                     z = stod(jkr[2]);
                     r = stod(jkr[3]);
-
-                    Sphere sphere_(spheres_.size(), subbranch_id, Eigen::Vector3d(x,y,z), r, scale);
-                    sphere_.setPercolation(perm_);
-                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                    diff_i = params.diffusivity_intra; 
-                    diff_e = params.diffusivity_extra;
-                    sphere_.setDiffusion(diff_i, diff_e);
-                    spheres_.push_back(sphere_);
-
-                    getline( in, line );
-                    jkr = split(line,' ');
-                       
+                    // interpolate with spheres to decrease the distance from R/2 to R/params.sphere_overlap
+                    if((spheres_.size() > 0) && ((spheres_.back().center - Vector3d(x,y,z)).norm() > spheres_.back().radius/params.sphere_overlap))
+                    {
+                        Vector3d direction = (Vector3d(x,y,z) - spheres_.back().center).normalized();
+                        Vector3d center;
+                        while(((spheres_.back().center - center).norm() > spheres_.back().radius/params.sphere_overlap))
+                        {
+                            center = spheres_.back().center + direction * spheres_.back().radius/params.sphere_overlap;
+                            Sphere sphere_(spheres_.size(), subbranch_id, Vector3d(x,y,z), r, scale);
+                            sphere_.setPercolation(perm_);
+                            // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                            diff_i = params.diffusivity_intra;
+                            diff_e = params.diffusivity_extra;
+                            sphere_.setDiffusion(diff_i, diff_e);
+                            spheres_.push_back(sphere_);
+                        }
+                        Sphere sphere_(spheres_.size(), subbranch_id, Vector3d(x,y,z), r, scale);
+                        sphere_.setPercolation(perm_);
+                        // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                        diff_i = params.diffusivity_intra;
+                        diff_e = params.diffusivity_extra;
+                        sphere_.setDiffusion(diff_i, diff_e);
+                        spheres_.push_back(sphere_);
+                        getline( in, line );
+                        jkr = split(line,' ');
+                    }
+                    else
+                    {
+                        Sphere sphere_(spheres_.size(), subbranch_id, Vector3d(x,y,z), r, scale);
+                        sphere_.setPercolation(perm_);
+                        // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                        diff_i = params.diffusivity_intra;
+                        diff_e = params.diffusivity_extra;
+                        sphere_.setDiffusion(diff_i, diff_e);
+                        spheres_.push_back(sphere_);
+                        getline( in, line );
+                        jkr = split(line,' ');
+                    }
                 }//end subbranch
                 part = jkr[0];
                 auto it = std::find_if( std::begin( jkr ), std::end( jkr ),

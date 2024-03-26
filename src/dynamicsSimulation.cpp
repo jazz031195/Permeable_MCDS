@@ -23,6 +23,8 @@
 #include "collisionsphere.h"
 #include "simerrno.h"
 #include "simulablesequence.h"
+#include <vector>
+
 
 using namespace Eigen;
 using namespace std;
@@ -1910,25 +1912,25 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
     
 }
 
-void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &colision)
-{
+// void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &colision)
+// {
 
-    walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
-    Eigen::Vector3d position;
-    // cout << "mapped " << endl;
-    if (walker.location == Walker::extra){
-        getAnExtraCellularPosition(position);
-    }
-    else{
-        int ax_id, neuron_id, dendrite_id, subbranch_id;
-        vector<int> sph_id;
-        getAnIntraCellularPosition(position, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id);
-        walker.in_ax_index = ax_id;
-    }
-    walker.setVoxelPosition(position);
+//     walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+//     Eigen::Vector3d position;
+//     // cout << "mapped " << endl;
+//     if (walker.location == Walker::extra){
+//         getAnExtraCellularPosition(position);
+//     }
+//     else{
+//         int ax_id, neuron_id, dendrite_id, subbranch_id;
+//         vector<int> sph_id;
+//         getAnIntraCellularPosition(position, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id);
+//         walker.in_ax_index = ax_id;
+//     }
+//     walker.setVoxelPosition(position);
     
 
-}
+// }
 
 void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double &l, SimulableSequence* dataSynth, unsigned t, double time_step)
 {
@@ -2151,6 +2153,121 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
 }
 
 
+bool DynamicsSimulation::elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, const double& t, Eigen::Vector3d &step){
+    
+
+    Eigen::Vector3d ray =  (-t*step).normalized();
+
+    double smallest_distance = EPS_VAL;
+    Eigen::Vector3d point_voxelplane;
+ 
+    //normal ={0,0,0};
+
+    for(int i = 0 ; i < 3; i++)
+    {
+   
+
+        if ( fabs(current_pos[i] -  voxels_list[0].min_limits[i]) <= smallest_distance){
+
+            point_voxelplane = previous_pos;
+            point_voxelplane[i] = voxels_list[0].min_limits[i]; 
+            normal += (previous_pos- point_voxelplane).normalized();
+            smallest_distance = fabs(current_pos[i] -  voxels_list[0].min_limits[i]);
+            
+        }
+        if ( fabs(current_pos[i] - voxels_list[0].max_limits[i]) <= smallest_distance){
+            point_voxelplane = previous_pos;
+            point_voxelplane[i] = voxels_list[0].max_limits[i]; 
+            normal += (previous_pos- point_voxelplane).normalized();
+            smallest_distance = fabs(current_pos[i] -  voxels_list[0].max_limits[i]);
+            
+        }
+    }
+    normal = {abs(normal[0]),abs(normal[1]),abs(normal[2])};
+    if (smallest_distance < EPS_VAL){
+        double rn = ray.dot(normal);
+        step = -ray + 2.0*normal*rn;
+        return true;
+    } 
+    else{
+        return false;
+    } 
+    //cout << "point_voxelplane :" << point_voxelplane << endl;
+    //cout << "walker_pos_v :" << walker_pos_v << endl;
+    
+} 
+
+// Function to mirror a vector with respect to a plane
+Eigen::Vector3d DynamicsSimulation::mirrorVector(const Eigen::Vector3d& vector, const Eigen::Vector3d& planeNormal) {
+
+
+    if (planeNormal == Eigen::Vector3d {0,0,0})
+        return vector;
+    
+    // Ensure the vectors are C++ vectors
+    Eigen::Vector3d mirroredVector(vector.size());
+    std::vector<double> normalizedPlaneNormal = {planeNormal.normalized()[0], planeNormal.normalized()[1], planeNormal.normalized()[2]};
+    std::vector<double> vector_vect = {vector[0], vector[1], vector[2]};
+
+    // Calculate the reflected vector
+    for (size_t i = 0; i < vector.size(); ++i) 
+        mirroredVector[i] = vector[i] - 2 * (std::inner_product(vector_vect.begin(), vector_vect.end(), normalizedPlaneNormal.begin(), 0.0)) * normalizedPlaneNormal[i];
+    
+
+    mirroredVector = mirroredVector.normalized();
+
+    return mirroredVector;
+}
+
+Eigen::Vector3d DynamicsSimulation::findMirrorStep(const Eigen::Vector3d& bounced_step, const std::vector<Eigen::Vector3d>& normals){
+
+    Eigen::Vector3d new_bounced_step = bounced_step;
+    for (int i = 0; i < normals.size(); ++i) 
+        new_bounced_step = mirrorVector(new_bounced_step, normals[i]);
+    
+
+    return new_bounced_step;
+}
+
+
+void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision)
+{
+    Eigen::Vector3d previous_v_pos = walker.pos_v;
+
+    walker.setVoxelPosition(walker.pos_v + colision.t*bounced_step); 
+    if (walker.normals.size() == 0)
+        walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+    else
+    {
+        Eigen::Vector3d adapted_step =  findMirrorStep(bounced_step, walker.normals);
+        walker.setRealPosition(walker.pos_r + colision.t*adapted_step);
+    } 
+    
+
+    Eigen::Vector3d temp_step = bounced_step;
+    Eigen::Vector3d normal = {0,0,0} ;
+    bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, colision.t,temp_step);
+
+    if (mapped){ 
+        colision.bounced_direction = temp_step.normalized();
+        if (walker.normals.size() == 0)
+            walker.normals.push_back(normal);
+        
+        // Find the iterator pointing to the element to delete
+        auto it = std::find(walker.normals.begin(), walker.normals.end(), normal);
+
+        // Check if the element was found
+        if (it != walker.normals.end()) 
+            // Delete the element using the erase function
+            walker.normals.erase(it);
+        else 
+            walker.normals.push_back(normal);
+        
+        initWalkerObstacleIndexes();
+    } 
+
+
+} 
 
 void DynamicsSimulation::setDuration(const double &duration)
 {

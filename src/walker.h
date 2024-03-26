@@ -56,7 +56,7 @@ public:
 
     AxonCollisionSphere collision_sphere_axons;                     /*!< Collision sphere for collition against axons                      */
     
-    NeuronCollisionSphere collision_sphere_neurons;                     /*!< Collision sphere for collition against neurons                      */
+    NeuronCollisionSphere collision_sphere_neurons;                 /*!< Collision sphere for collition against neurons                      */
 
     PLYCollisionSphere collision_sphere_ply;                        /*!< Collision sphere for collition against PLY meshes                      */
 
@@ -70,13 +70,13 @@ public:
 
     RelativeLocation initial_location, location;                    /*!< location on the substrate (if known)                                   */
 
-    Eigen::VectorXi colision_in_log, colision_ext_log;                                   /*!< Vector of colision for logging                                         */
+    Eigen::VectorXi colision_in_log, colision_ext_log;              /*!< Vector of colision for logging                                         */
 
-    Eigen::VectorXi crossing_in_log, crossing_ext_log;                                   /*!< Vector of crossing for logging                                         */
+    Eigen::VectorXi crossing_in_log, crossing_ext_log;              /*!< Vector of crossing for logging                                         */
 
-    unsigned colision_in, colision_ext;                                              /*!< Retains the number of hit per step                                      */ 
+    unsigned colision_in, colision_ext;                             /*!< Retains the number of hit per step                                      */ 
 
-    unsigned crossing_in, crossing_ext;                                              /*!< Retains the number of crossing per step                                */
+    unsigned crossing_in, crossing_ext;                             /*!< Retains the number of crossing per step                                */
 
     int intra_extra_consensus;                                      /*!< intra o extra position by face collision consensus w/r the normal*/
 
@@ -96,19 +96,22 @@ public:
     
     int in_dendrite_index;                                          /*!< Index of dendrites in which walker is inside (-1 if is in extracellular space)*/
     
-    int in_subbranch_index;                                          /*!< Index of subbranch in which walker is inside (-1 if is in extracellular space)*/
+    int in_subbranch_index;                                         /*!< Index of subbranch in which walker is inside (-1 if is in extracellular space)*/
     
-    int in_soma_index;                                          /*!< Index of subbranch in which walker is inside (-1 if is in extracellular space)*/
+    int in_soma_index;                                              /*!< Index of subbranch in which walker is inside (-1 if is in extracellular space)*/
 
-    std::vector<int> in_sph_index;                                       /*!< Index of spheres in which walker is inside (-1 if is in extracellular space)*/
+    std::vector<int> in_sph_index;                                  /*!< Index of spheres in which walker is inside (-1 if is in extracellular space)*/
     
-    static int cross_soma_dendrites;                                          /*!< Auxiliar index to save in which subbranch of the dendrite of the Neuron the walker is    */
+    static int cross_soma_dendrites;                                /*!< Auxiliar index to save in which subbranch of the dendrite of the Neuron the walker is    */
     
-    static int cross_dendrites_soma;                                          /*!< Auxiliar index to save in which subbranch of the dendrite of the Neuron the walker is    */
+    static int cross_dendrites_soma;                                /*!< Auxiliar index to save in which subbranch of the dendrite of the Neuron the walker is    */
     
     bool is_allowed_to_cross;                                       /*!< Is allowed to cross membrane, not illegal crossing */
+    
+    std::vector<Eigen::Vector3d> normals;                           /*!< Normal vector for the collisions against */
+    
     //! Default constructor.
-    /*! Set all variables to cero.*/
+    /* Set all variables to cero.*/
     Walker();
 
     //! Default destructor.
