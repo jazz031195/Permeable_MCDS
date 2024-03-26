@@ -159,8 +159,7 @@ public:
 
     bool elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, const double& t, Eigen::Vector3d &step);
 
-    Eigen::Vector3d mirrorVector(const Eigen::Vector3d& vector, const Eigen::Vector3d& planeNormal);
-    Eigen::Vector3d findMirrorStep(const Eigen::Vector3d& bounced_step, const std::vector<Eigen::Vector3d>& normals);
+    Eigen::Vector3d findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal);
 private:    
     /*! \fn     generateStep
      *  \param  step stores the computed step.

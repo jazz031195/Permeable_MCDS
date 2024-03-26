@@ -18,7 +18,7 @@ Walker::Walker()
     intra_extra_consensus = intra_coll_count = extra_coll_count = rejection_count = steps_count = 0;
     steps_per_second = 0;
     colision_in = colision_ext = crossing_in = crossing_ext= 0;
-    normals.clear(); 
+    normal= {0,0,0}; 
     in_ax_index = in_sph_index = -1;
 }
 
@@ -44,7 +44,7 @@ Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, 
     intra_extra_consensus = intra_coll_count = extra_coll_count =0;
     steps_per_second = 0;
     colision_in = colision_ext = crossing_in = crossing_ext= 0;
-    normals.clear(); 
+    normal= {0,0,0}; 
 }
 
 void Walker::getRealPosition(double &x_, double &y_, double &z_) const
