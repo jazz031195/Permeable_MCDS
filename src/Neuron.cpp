@@ -729,16 +729,19 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         vector<double> distances;
         double dist_min    = 2 * step_lenght;
         int coll_dendrite, coll_subbranch, coll_sphere = -1;
+        double dist_dendrites = 0;
 
         for(size_t d=0; d < dendrite_ids.size(); d++)
         {
             for(size_t s=0; s < dendrites[dendrite_ids[d]].subbranches.size(); s++)
             {
-                if(dendrites[dendrite_ids[d]].subbranches[s].isPosInsideAxon_(next_pos, -barrier_tickness, sph_ids, distances))
+                auto& subbranch = dendrites[dendrite_ids[d]].subbranches[s];
+                if(subbranch.isPosInsideAxon_(next_pos, -barrier_tickness, sph_ids, distances))
                 {
-                    if(distances[0] < dist_min)
+                    dist_dendrites = (subbranch.spheres[sph_ids[0]].center - next_pos).norm() - subbranch.spheres[sph_ids[0]].radius;
+                    if(dist_dendrites < dist_min)
                     {
-                        dist_min       = distances[0];
+                        dist_min       = dist_dendrites;
                         coll_dendrite  = dendrite_ids[d];
                         coll_subbranch = s;
                         coll_sphere    = sph_ids[0];
@@ -748,20 +751,17 @@ bool Neuron::checkCollision(Walker &walker, Vector3d const &step_dir, double con
         }
 
         // check soma as well
-        double dist_dendrites = dist_min;
-        double dist_soma = (soma.center - next_pos).norm();
+        dist_dendrites = dist_min;
+        double dist_soma = (soma.center - next_pos).norm() - soma.radius;
         if (dist_soma <= dist_min)
-        {
             isColliding = checkCollision_branching(walker, &soma, step_dir, step_lenght, colision);
-        }
+    
         else if ((dist_dendrites <= dist_min) && (coll_dendrite >= 0) && (coll_subbranch >= 0) && (coll_sphere >= 0) )
-        {
             isColliding = checkCollision_branching(walker, 
                                                    &dendrites[coll_dendrite].subbranches[coll_subbranch].spheres[coll_sphere], 
                                                    step_dir, 
                                                    step_lenght, 
                                                    colision);
-        }
     }
 
     return isColliding;
