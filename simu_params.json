@@ -1,0 +1,11 @@
+{
+    "simu_to_launch": ["results/ISMRM24/exch/overlap8/soma/n1",
+                       "results/ISMRM24/exch/overlap8/soma/n2",
+                       "results/ISMRM24/exch/overlap8/soma/n3",
+                       "results/ISMRM24/exch/overlap8/soma/n4",
+                       "results/ISMRM24/exch/overlap8/soma/n5"],
+    "number_of_rep": 5,
+    "simu_type": "soma",
+    "N": [50000],
+    "T": [15000]
+}
