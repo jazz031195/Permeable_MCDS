@@ -1925,22 +1925,22 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
     
 }
 
-void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision)
-{
+// void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision)
+// {
 
-    walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
-    Eigen::Vector3d position;
-    // cout << "mapped " << endl;
-    if (walker.location == Walker::extra)
-        getAnExtraCellularPosition(position);
-    else
-    {
-        int ax_id, neuron_id, dendrite_id, subbranch_id;
-        vector<int> sph_id;
-        getAnIntraCellularPosition(position, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id);
-    }
-    walker.setVoxelPosition(position);
-}
+//     walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+//     Eigen::Vector3d position;
+//     // cout << "mapped " << endl;
+//     if (walker.location == Walker::extra)
+//         getAnExtraCellularPosition(position);
+//     else
+//     {
+//         int ax_id, neuron_id, dendrite_id, subbranch_id;
+//         vector<int> sph_id;
+//         getAnIntraCellularPosition(position, ax_id, neuron_id, dendrite_id, subbranch_id, sph_id);
+//     }
+//     walker.setVoxelPosition(position);
+// }
 
 void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double &l, SimulableSequence* dataSynth, unsigned t, double time_step)
 {
@@ -2247,32 +2247,32 @@ Eigen::Vector3d DynamicsSimulation::findMirrorStep(const Eigen::Vector3d& bounce
 }
 
 
-// void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision)
-// {
-//     Eigen::Vector3d previous_v_pos = walker.pos_v;
+void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision)
+{
+    Eigen::Vector3d previous_v_pos = walker.pos_v;
 
-//     walker.setVoxelPosition(walker.pos_v + colision.t*bounced_step); 
-//     if (walker.normal == Eigen::Vector3d {0,0,0})
-//         walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
-//     else
-//     {
-//         Eigen::Vector3d adapted_step =  findMirrorStep(bounced_step, walker.normal);
-//         walker.setRealPosition(walker.pos_r + colision.t*adapted_step);
-//     } 
+    walker.setVoxelPosition(walker.pos_v + colision.t*bounced_step); 
+    if (walker.normal == Eigen::Vector3d {0,0,0})
+        walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+    else
+    {
+        Eigen::Vector3d adapted_step =  findMirrorStep(bounced_step, walker.normal);
+        walker.setRealPosition(walker.pos_r + colision.t*adapted_step);
+    } 
     
 
-//     Eigen::Vector3d temp_step = bounced_step;
-//     Eigen::Vector3d normal = {0,0,0} ;
-//     bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, colision.t,temp_step);
+    Eigen::Vector3d temp_step = bounced_step;
+    Eigen::Vector3d normal = {0,0,0} ;
+    bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, colision.t,temp_step);
 
-//     if (mapped)
-//     { 
-//         colision.bounced_direction = temp_step.normalized();
-//         walker.normal -= normal;
-//         walker.normal = {abs(walker.normal[0]),abs(walker.normal[1]),abs(walker.normal[2])};
-//         initWalkerObstacleIndexes();
-//     } 
-// }
+    if (mapped)
+    { 
+        colision.bounced_direction = temp_step.normalized();
+        walker.normal -= normal;
+        walker.normal = {abs(walker.normal[0]),abs(walker.normal[1]),abs(walker.normal[2])};
+        initWalkerObstacleIndexes();
+    } 
+}
 
 void DynamicsSimulation::setDuration(const double &duration)
 {
