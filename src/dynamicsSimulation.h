@@ -231,7 +231,7 @@ protected:
      *  \brief  If a voxel is given, maps the walker position back into the voxel, assuming a crossing at
      *          the voxel limits.
      */
-    inline void mapWalkerIntoVoxel(Eigen::Vector3d &amended_step, Collision &colision, double barrier_thickness);
+    inline void mapWalkerIntoVoxel(Eigen::Vector3d &amended_step, Collision &colision);
 
 
     /*! \fn     mapWalkerIntoVoxel_tortuous
