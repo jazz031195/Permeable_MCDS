@@ -783,7 +783,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
         double proba = double(udist(gen));
         bool random_pos = true;
         // In soma
-        if (proba < volume_soma_dendrite[0]/VolumeNeuron)
+        if (proba < 1)//volume_soma_dendrite[0]/VolumeNeuron)
             intra_pos = getAnIntraCellularPosition_soma(random_pos);
         // In dendrite
         else
@@ -819,7 +819,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             walker.in_neuron_index = neuron_id;
             walker.in_soma_index   = 0;
             Vector3d somaCenter  = neurons_list[neuron_id].soma.center;
-            double probaRadius   = double(udist(gen));
+            double probaRadius   = double(udist(gen)) * 0.95; // to be sure not to start in a dendrite
             double somaRadius    = neurons_list[neuron_id].soma.radius;
             double theta = 2 * M_PI * udist(gen);
             double phi   = acos(1 - 2 * udist(gen));
@@ -848,7 +848,7 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_
             }
             Vector3d somaCenter  = neurons_list[walker.in_neuron_index].soma.center;
             walker.in_soma_index = 0;
-            double probaRadius = double(udist(gen));
+            double probaRadius = double(udist(gen)) * 0.95; // to be sure not to start in a dendrite
             double somaRadius = neurons_list[walker.in_neuron_index].soma.radius;
             double theta = 2 * M_PI * udist(gen);
             double phi = acos(1 - 2 * udist(gen));
@@ -902,13 +902,13 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
 
             Vector3d center   = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].center;
                          
-            double probaRadius  = double(udist(gen));
+            double probaRadius  = double(udist(gen)) * 0.99 ;
             double sphereRadius = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].radius;
             double theta = 2 * M_PI * udist(gen);
             double phi = acos(1 - 2 * udist(gen));
-            double x = sin(phi) * cos(theta) * probaRadius * 0.99 * sphereRadius + center[0];
-            double y = sin(phi) * sin(theta) * probaRadius * 0.99 * sphereRadius + center[1];
-            double z = cos(phi) * probaRadius * 0.99 * sphereRadius + center[2];
+            double x = sin(phi) * cos(theta) * probaRadius * sphereRadius + center[0];
+            double y = sin(phi) * sin(theta) * probaRadius * sphereRadius + center[1];
+            double z = cos(phi) * probaRadius * sphereRadius + center[2];
             Vector3d pos_temp = {x, y, z};
 
 
@@ -937,13 +937,13 @@ Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& ran
             Vector3d center = spheres[sphere_id].center;
             
                         
-            double probaRadius  = double(udist(gen));
+            double probaRadius  = double(udist(gen)) * 0.99 ;
             double sphereRadius = spheres[sphere_id].radius;
             double theta = 2 * M_PI * udist(gen);
             double phi = acos(1 - 2 * udist(gen));
-            double x = sin(phi) * cos(theta) * probaRadius * 0.99 * sphereRadius + center[0];
-            double y = sin(phi) * sin(theta) * probaRadius * 0.99 * sphereRadius + center[1];
-            double z = cos(phi) * probaRadius * 0.99 * sphereRadius + center[2];
+            double x = sin(phi) * cos(theta) * probaRadius * sphereRadius + center[0];
+            double y = sin(phi) * sin(theta) * probaRadius * sphereRadius + center[1];
+            double z = cos(phi) * probaRadius * sphereRadius + center[2];
             Vector3d pos_temp = {x, y, z};
 
             bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
