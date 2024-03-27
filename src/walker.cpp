@@ -29,6 +29,7 @@ Walker::Walker()
     in_sph_index.clear();
     is_allowed_to_cross   = false;
     ini_pos = Eigen::Vector3d(-1, -1, -1);
+    normal = {0, 0, 0};
 }
 
 Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
@@ -60,6 +61,7 @@ Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, 
     in_subbranch_index    = -1;
     in_sph_index.clear();
     is_allowed_to_cross   = false;
+    normal = {0, 0, 0};
 }
 
 void Walker::getRealPosition(double &x_, double &y_, double &z_) const

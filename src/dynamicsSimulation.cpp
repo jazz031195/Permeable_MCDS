@@ -1304,13 +1304,17 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         cout << "Walker :" << w << endl;
 
         walker.setIndex(w);
+        walker.normal = {0, 0, 0};
 
         // Initialize the walker initial position
         iniWalkerPosition(walker.ini_pos);
         if(walker.initial_location == Walker::intra)
             cout << "starts in intra" << endl;
         else
+        {
             cout << "starts in extra" << endl;
+            // cout << walker.ini_pos << endl;
+        }
         // Update step length based on the walker initial position in space
         updateStepLength(l);
 
@@ -1719,14 +1723,23 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         walker.initial_location = walker.location;
     }while(bounced);
 
-    if(tmax >= 0.0){
-
-         // Update the walker position after the bouncing (or not)
+    if(tmax >= 0.0)
+    {
+        // Update the walker position after the bouncing (or not)
         walker.getRealPosition(real_pos);
-        walker.setRealPosition(real_pos + tmax*bounced_step);
+        Eigen::Vector3d adapted_step;
+
+        if (walker.normal == Eigen::Vector3d {0,0,0})
+            walker.setRealPosition(real_pos  + tmax*bounced_step);
+        else{
+            adapted_step =  findMirrorStep(bounced_step, walker.normal);
+            walker.setRealPosition(real_pos  + tmax*adapted_step);
+        } 
+
 
         walker.getVoxelPosition(voxel_pos);
-        walker.setVoxelPosition(voxel_pos + tmax*bounced_step);
+        walker.setVoxelPosition(voxel_pos+ tmax*bounced_step);
+
     }
 
     return false;
@@ -1928,8 +1941,6 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
 //         walker.in_ax_index = ax_id;
 //     }
 //     walker.setVoxelPosition(position);
-    
-
 // }
 
 void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double &l, SimulableSequence* dataSynth, unsigned t, double time_step)
@@ -2091,9 +2102,15 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 bounced = false;
         }
 
-        
         //We update the position.
-        walker.setRealPosition (real_pos   + displ*bounced_step);
+        Eigen::Vector3d adapted_step;
+        if (walker.normal == Eigen::Vector3d {0,0,0})
+            walker.setRealPosition(real_pos + displ*bounced_step);
+        else
+        {
+            adapted_step =  findMirrorStep(bounced_step, walker.normal);
+            walker.setRealPosition(real_pos + displ*adapted_step);
+        } 
         walker.setVoxelPosition(voxel_pos  + displ*bounced_step);
 
         bounced_step = colision.bounced_direction;
@@ -2199,34 +2216,35 @@ bool DynamicsSimulation::elasticBounceAgainstVoxel(const Eigen::Vector3d& previo
 
 // Function to mirror a vector with respect to a plane
 Eigen::Vector3d DynamicsSimulation::mirrorVector(const Eigen::Vector3d& vector, const Eigen::Vector3d& planeNormal) {
-
-
-    if (planeNormal == Eigen::Vector3d {0,0,0})
+    Eigen::Vector3d mirroredVector = vector;
+    if (planeNormal == Eigen::Vector3d {0,0,0}){
         return vector;
-    
-    // Ensure the vectors are C++ vectors
-    Eigen::Vector3d mirroredVector(vector.size());
-    std::vector<double> normalizedPlaneNormal = {planeNormal.normalized()[0], planeNormal.normalized()[1], planeNormal.normalized()[2]};
-    std::vector<double> vector_vect = {vector[0], vector[1], vector[2]};
-
-    // Calculate the reflected vector
-    for (size_t i = 0; i < vector.size(); ++i) 
-        mirroredVector[i] = vector[i] - 2 * (std::inner_product(vector_vect.begin(), vector_vect.end(), normalizedPlaneNormal.begin(), 0.0)) * normalizedPlaneNormal[i];
-    
-
-    mirroredVector = mirroredVector.normalized();
-
+    }
+    else{
+        for (int i = 0; i < 3; ++i) {
+            if (planeNormal[i] != 0){
+                mirroredVector[i] = -vector[i];
+            }
+        }
+    }
     return mirroredVector;
 }
 
-Eigen::Vector3d DynamicsSimulation::findMirrorStep(const Eigen::Vector3d& bounced_step, const std::vector<Eigen::Vector3d>& normals){
+Eigen::Vector3d DynamicsSimulation::findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal){
 
-    Eigen::Vector3d new_bounced_step = bounced_step;
-    for (int i = 0; i < normals.size(); ++i) 
-        new_bounced_step = mirrorVector(new_bounced_step, normals[i]);
-    
+    Eigen::Vector3d mirroredVector = bounced_step;
+    if (normal == Eigen::Vector3d {0,0,0})
+        return bounced_step;
+    else
+    {
+        for (int i = 0; i < 3; ++i) 
+        {
+            if (normal[i] != 0)
+                mirroredVector[i] = -bounced_step[i]; 
+        }
+    }
 
-    return new_bounced_step;
+    return mirroredVector;
 }
 
 
@@ -2235,11 +2253,11 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
     Eigen::Vector3d previous_v_pos = walker.pos_v;
 
     walker.setVoxelPosition(walker.pos_v + colision.t*bounced_step); 
-    if (walker.normals.size() == 0)
+    if (walker.normal == Eigen::Vector3d {0,0,0})
         walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
     else
     {
-        Eigen::Vector3d adapted_step =  findMirrorStep(bounced_step, walker.normals);
+        Eigen::Vector3d adapted_step =  findMirrorStep(bounced_step, walker.normal);
         walker.setRealPosition(walker.pos_r + colision.t*adapted_step);
     } 
     
@@ -2248,26 +2266,14 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
     Eigen::Vector3d normal = {0,0,0} ;
     bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, colision.t,temp_step);
 
-    if (mapped){ 
+    if (mapped)
+    { 
         colision.bounced_direction = temp_step.normalized();
-        if (walker.normals.size() == 0)
-            walker.normals.push_back(normal);
-        
-        // Find the iterator pointing to the element to delete
-        auto it = std::find(walker.normals.begin(), walker.normals.end(), normal);
-
-        // Check if the element was found
-        if (it != walker.normals.end()) 
-            // Delete the element using the erase function
-            walker.normals.erase(it);
-        else 
-            walker.normals.push_back(normal);
-        
+        walker.normal -= normal;
+        walker.normal = {abs(walker.normal[0]),abs(walker.normal[1]),abs(walker.normal[2])};
         initWalkerObstacleIndexes();
     } 
-
-
-} 
+}
 
 void DynamicsSimulation::setDuration(const double &duration)
 {

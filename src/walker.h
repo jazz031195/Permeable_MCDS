@@ -108,7 +108,7 @@ public:
     
     bool is_allowed_to_cross;                                       /*!< Is allowed to cross membrane, not illegal crossing */
     
-    std::vector<Eigen::Vector3d> normals;                           /*!< Normal vector for the collisions against */
+    Eigen::Vector3d normal;                                         /*!< Normal vector for the collisions against */
     
     //! Default constructor.
     /* Set all variables to cero.*/
