@@ -47,7 +47,7 @@ def create_df_all(DWI_folder, scheme_file_path):
     df_all_data  = pd.DataFrame()
     df_crossings = pd.DataFrame()
     for overlap in os.listdir(DWI_folder):
-        if os.path.isdir(DWI_folder / overlap):
+        if os.path.isdir(DWI_folder / overlap) and "overlap" in overlap:
             for neuron in os.listdir(DWI_folder / overlap):
                 if os.path.isdir(DWI_folder / overlap / neuron):
                     # Iterate through the files in the folder
@@ -144,7 +144,7 @@ df_data_all = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MC
 
 b_labels = df_data_all["b [ms/um²]"].unique()
 
-fig, _ = plt.subplots(1, 1, figsize=(15, 10))
+fig, _ = plt.subplots(1, 1, figsize=(10, 7))
 ax2 = sns.violinplot(data=df_data_all[(df_data_all['b [ms/um²]'] > 4)], 
                x='b [ms/um²]', 
                y='Sb/So',

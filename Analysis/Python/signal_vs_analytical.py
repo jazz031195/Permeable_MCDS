@@ -119,11 +119,11 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch")
+DWI_folder = Path("results/ISMRM24/exch")
 # df_all_data, df_crossings = create_df_all(DWI_folder, scheme_file)
 
-# df_all_data.to_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch/data.csv")
-df_all_data = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch/data.csv")
+# df_all_data.to_csv(DWI_folder / "data.csv")
+df_all_data = pd.read_csv(DWI_folder / "data.csv")
 b_labels    = df_all_data["b [ms/um²]"].unique()
 
 df_all_data = df_all_data[~df_all_data["case"].str.contains("mesh")]

@@ -138,10 +138,10 @@ experience_folder = Path("results/ISMRM24/exch/")
 
 # df_all_data.to_csv(experience_folder / "data.csv")
 df_all_data = pd.read_csv(experience_folder / "data.csv")
-b_labels  = df_all_data["b [ms/um²]"].unique()
-means     = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
+b_labels    = df_all_data["b [ms/um²]"].unique()
+means       = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 # df_all_data = df_all_data[(df_all_data.case == "mesh_005") | (df_all_data.case == "mesh_005_soma")]
-means = means[(means.case != "mesh_005_soma") & (means.case != "mesh_005") & (means.case != "mesh_002550") & (means.case != "mesh_001325") & (means.case != "mesh_001")]
+means = means[(means.case != "mesh_005_soma") & (means.case != "mesh_003775") & (means.case != "mesh_002550") & (means.case != "mesh_001325") & (means.case != "mesh_001")]
 df_all_data = df_all_data[(df_all_data.case != "mesh_005_soma")]
 print(df_all_data.case.unique())
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -151,7 +151,7 @@ if not log:
                         y='Sb/So', 
                         hue='case', 
                         # hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005', 'mesh_003775', 'mesh_00255', 'mesh_001325', 'mesh_001'], 
-                        hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_003775'], 
+                        hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005'], 
                         ax=ax, 
                         style='case',
                         s=150, 

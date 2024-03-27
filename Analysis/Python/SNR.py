@@ -28,7 +28,7 @@ import scipy
 from utils import get_bvals, get_bvectors, calculate_DKI, get_dwi, get_psge, create_data, analytical_solutions
 
 cur_path    = os.getcwd()
-scheme_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/docs/scheme_files/PGSE_21_dir_12_b.scheme"
+scheme_file = "docs/scheme_files/PGSE_21_dir_12_b.scheme"
 
 def create_df_all(DWI_folder, scheme_file_path):
     """
@@ -120,11 +120,11 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-experience_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch")
+experience_folder = Path("results/ISMRM24/exch")
 # df_all_data, df_crossings = create_df_all(experience_folder, scheme_file)
 
-# df_all_data.to_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch/SNR.csv")
-df_all_data = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/ISMRM24/exch/SNR.csv")
+# df_all_data.to_csv(experience_folder / "SNR.csv")
+df_all_data = pd.read_csv(experience_folder / "SNR.csv")
 df_all_data = df_all_data[(df_all_data["case"] == "soma_dendrites_ex") | (df_all_data["case"] == "soma_dendrites")]
 
 df_all_data = df_all_data[df_all_data['b [ms/um²]'] > 0]

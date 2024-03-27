@@ -136,14 +136,15 @@ T        = df_all['T'].unique()[0]
 N        = df_all['N'].unique()[0]
 b_labels = df_all["b [ms/um²]"].unique()
 
-fig, ax = plt.subplots(1, 1, figsize=(14, 9))
+fig, ax = plt.subplots(1, 1, figsize=(10, 8))
 sns.violinplot(data=df_all[df_all['b [ms/um²]'] > 0], 
                x='b [ms/um²]', 
                y='Sb/So', 
                hue='funnel', 
                ax=ax)
 ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
-ax.legend(title='')
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles, ['no funnel', 'funnel'], loc='upper right', title='')
 if log:
     ax.set_ylabel("ln(S/S0)")
 else:
@@ -193,8 +194,6 @@ print("soma fraction {:e}".format(soma_fraction))
 soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
 
 ax2 = ax.twinx()
-ax2.plot(bvals*1e-9, soma_signal, label=f"Soma", color='b', linestyle="dotted")
-ax2.plot(bvals*1e-9, neurites_signal, label=f"Dendrites", color='orange', linestyle="dotted")
 ax2.plot(bvals*1e-9, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
 if log:
     sns.lineplot(bvals*1e-9, -bvals*D0, label="D = 2.5 [ms/um²]")
@@ -203,8 +202,5 @@ ax2.set_yticklabels([])
 ax2.set_yticks([])
 ax2.set_ylim([y_lim_min, y_lim_max])
 ax.set_ylim([y_lim_min, y_lim_max])
-step_length = np.sqrt(6 * D0 * TE / T)
-title = f"T = {T}, step length = {step_length*1e6:.3f} um"
-ax2.set_title(title)
 
 plt.show()

@@ -133,11 +133,11 @@ experience_folder = Path("results/ISMRM24/branching/")
 # df_all_data.to_csv(experience_folder / "data.csv")
 df_all_data = pd.read_csv(experience_folder / "data.csv")
 
-b_labels  = df_all_data["b [ms/um²]"].unique()
-print(df_all_data[df_all_data['case'] == "nonbranching_560"])
-means     = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
+b_labels    = df_all_data["b [ms/um²]"].unique()
+df_all_data = df_all_data[(df_all_data['case'] != "nonbranching240")]
+means       = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 
-fig, ax = plt.subplots(1, 1, figsize=(8, 5))
+fig, ax = plt.subplots(1, 1, figsize=(8.5, 6))
 if not log:
     g = sns.violinplot(data=df_all_data[(df_all_data['b [ms/um²]'] > 0)], 
                         x='b [ms/um²]', 
@@ -149,7 +149,7 @@ if not log:
 
     
 handles, labels = ax.get_legend_handles_labels()
-# ax.legend(handles, ['branching', 'non-branching'], loc='upper right')
+ax.legend(handles, ['branching', 'non-branching'], loc='upper right')
 ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
 
 # Analytical solutions
@@ -173,11 +173,10 @@ print("soma fraction {:e}".format(soma_fraction))
 soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
 
 ax2 = ax.twinx()
-ax2.plot(bvals*1e-9, soma_signal, label=f"Soma", color='b', linestyle="dotted")
-ax2.plot(bvals*1e-9, neurites_signal, label=f"Dendrites", color='orange', linestyle="dotted")
 ax2.plot(bvals*1e-9, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
 if log:
     ax2.plot(bvals*1e-9, -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
+ax2.legend(title='Analytical solution', loc=3)
 ax2.set_yticklabels([])
 ax2.set_yticks([])
 ax2.set_ylim([y_lim_min, y_lim_max])
