@@ -141,7 +141,7 @@ df_all_data = pd.read_csv(experience_folder / "data.csv")
 b_labels    = df_all_data["b [ms/um²]"].unique()
 means       = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 # df_all_data = df_all_data[(df_all_data.case == "mesh_005") | (df_all_data.case == "mesh_005_soma")]
-means = means[(means.case != "mesh_005_soma") & (means.case != "mesh_003775") & (means.case != "mesh_002550") & (means.case != "mesh_001325") & (means.case != "mesh_001")]
+means = means[(means.case == "mesh_005") | (means.case == "soma_dendrites") | (means.case == "soma_dendrites_ex") | (means.case == "soma") | (means.case == "dendrites")]
 df_all_data = df_all_data[(df_all_data.case != "mesh_005_soma")]
 print(df_all_data.case.unique())
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -172,7 +172,7 @@ if not log:
     
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles, 
-          ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)', 'Mesh 3.775%'], 
+          ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)', 'Mesh 5%'], 
           loc='upper right', 
           title='Intra signal')
 
@@ -217,13 +217,14 @@ g = sns.boxplot(data=df,
                 x='case', 
                 y='MD', 
                 palette="Blues", 
-                order=['mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001'],
+                order=['mesh_01', 'mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001', 'mesh_0005'],
                 ax=ax)
 sns.stripplot(data=df, 
               x='case', 
               y='MD', 
               color=(0.1350634371395617, 0.35630911188004605, 0.5703575547866206, 1),
-              order=['mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001'])
+              order=['mesh_01', 'mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001', 'mesh_0005']
+              )
 
 from matplotlib.patches import PathPatch
 
@@ -235,7 +236,7 @@ for patch in box_patches:
 
 # 5% decimation means that we keep only 5% of the faces
 # 100% decimation means no decimation (original mesh)
-labels = ['5%', '3.775%', '2.55%', '1.325%', '1%']
+labels = ['10%', '5%', '3.775%', '2.55%', '1.325%', '1%', '0.5%']
 ax.set_xticklabels(labels)
 ax.set_ylabel('Mean diffusivity')
 # ax.set_ylim([0.69, 0.74])

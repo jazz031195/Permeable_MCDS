@@ -1296,6 +1296,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     int32_t count_soma_end        = 0;
     int32_t count_dendrites_end   = 0;
 
+    // ofstream out("results/ISMRM24/exch/overlap8/mesh_0001/n5/_extra.txt", std::ofstream::app);
     for (w = 0 ; w < params.num_walkers; w++)
     {
         //flag in case there was any error with the particle.
@@ -1313,6 +1314,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         else
         {
             cout << "starts in extra" << endl;
+            // out << walker.ini_pos[0] << " " << walker.ini_pos[1] << " " << walker.ini_pos[2] << endl;
             // cout << walker.ini_pos << endl;
         }
         // Update step length based on the walker initial position in space
@@ -1440,7 +1442,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     cout << "s " <<  params.sim_duration * 1e-3 << " s" << endl;
     cout << "area " << area * 1e-6  << " m²" << endl;
     cout << "crossings " << (walker.crossing_in + walker.crossing_ext) << endl;
-
+    // out.close();
     // if(walker.in_soma_index >= 0 || walker.in_dendrite_index >= 0)
     // {
     //     ofstream out(params.output_base_name+"_count_walker.txt", std::ofstream::app);
