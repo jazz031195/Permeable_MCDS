@@ -141,7 +141,7 @@ df_all_data = pd.read_csv(experience_folder / "data.csv")
 b_labels    = df_all_data["b [ms/um²]"].unique()
 means       = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 # df_all_data = df_all_data[(df_all_data.case == "mesh_005") | (df_all_data.case == "mesh_005_soma")]
-means = means[(means.case == "mesh_005") | (means.case == "soma_dendrites") | (means.case == "soma_dendrites_ex") | (means.case == "soma") | (means.case == "dendrites")]
+means = means[(means.case == "mesh_005") | (means.case == "soma_dendrites") | (means.case == "soma_dendrites_ex")]
 df_all_data = df_all_data[(df_all_data.case != "mesh_005_soma")]
 print(df_all_data.case.unique())
 fig, ax = plt.subplots(1, 1, figsize=(8, 5))
@@ -151,11 +151,11 @@ if not log:
                         y='Sb/So', 
                         hue='case', 
                         # hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005', 'mesh_003775', 'mesh_00255', 'mesh_001325', 'mesh_001'], 
-                        hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex', 'mesh_005'], 
+                        hue_order=['soma_dendrites', 'soma_dendrites_ex', 'mesh_005'], 
                         ax=ax, 
                         style='case',
                         s=150, 
-                        palette=['b', 'orange', 'g', 'g', 'k']
+                        palette=['g', 'g', 'k']
                         )
 # else:
 #     means_log = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['log_Sb/So'].mean().reset_index()
@@ -172,7 +172,7 @@ if not log:
     
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles, 
-          ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)', 'Mesh 5%'], 
+          ['Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)', 'Mesh 5%'], 
           loc='upper right', 
           title='Intra signal')
 
@@ -198,11 +198,13 @@ print("soma fraction {:e}".format(soma_fraction))
 soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
 
 ax2 = ax.twinx()
+
 ax2.plot(bvals*1e-9, soma_signal, label=f"Soma", color='b', linestyle="dotted")
 ax2.plot(bvals*1e-9, neurites_signal, label=f"Dendrites", color='orange', linestyle="dotted")
 ax2.plot(bvals*1e-9, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
 if log:
     ax2.plot(bvals*1e-9, -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
+ax2.legend(title='Analytical solution', loc=3)
 ax2.set_yticklabels([])
 ax2.set_yticks([])
 ax2.set_ylim([y_lim_min, y_lim_max])
@@ -217,13 +219,13 @@ g = sns.boxplot(data=df,
                 x='case', 
                 y='MD', 
                 palette="Blues", 
-                order=['mesh_01', 'mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001', 'mesh_0005'],
+                order=['mesh_0001', 'mesh_0005', 'mesh_001', 'mesh_001325', 'mesh_002550', 'mesh_003775', 'mesh_005', 'mesh_01', 'mesh_03'],
                 ax=ax)
 sns.stripplot(data=df, 
               x='case', 
               y='MD', 
               color=(0.1350634371395617, 0.35630911188004605, 0.5703575547866206, 1),
-              order=['mesh_01', 'mesh_005', 'mesh_003775', 'mesh_002550', 'mesh_001325', 'mesh_001', 'mesh_0005']
+              order=['mesh_0001', 'mesh_0005', 'mesh_001', 'mesh_001325', 'mesh_002550', 'mesh_003775', 'mesh_005', 'mesh_01', 'mesh_03'],
               )
 
 from matplotlib.patches import PathPatch
@@ -236,7 +238,7 @@ for patch in box_patches:
 
 # 5% decimation means that we keep only 5% of the faces
 # 100% decimation means no decimation (original mesh)
-labels = ['10%', '5%', '3.775%', '2.55%', '1.325%', '1%', '0.5%']
+labels = ['0.1%', '0.5%', '1%', '1.325%', '2.55%', '3.775%', '5%', '10%', '30%']
 ax.set_xticklabels(labels)
 ax.set_ylabel('Mean diffusivity')
 # ax.set_ylim([0.69, 0.74])

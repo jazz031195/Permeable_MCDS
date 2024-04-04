@@ -99,9 +99,17 @@ for mesh in os.listdir(folder):
                                     if run_time_seconds/60 > 0 and run_time_seconds/60 < 80:
                                         df.loc[len(df)] = {'overlap': mesh, 'time [min.]': run_time_seconds/60}
 
-print(df.groupby(['overlap'])['time [min.]'].mean().reset_index())
-print(df.groupby(['overlap'])['time [min.]'].std().reset_index())
-sns.boxplot(data=df, x='overlap', y='time [min.]', order=['overlap2', 'overlap4', 'overlap8', 'overlap16', 'overlap32', 'mesh_001', 'mesh_001325', 'mesh_002550', 'mesh_003775', 'mesh_005'])
-plt.xticks(list(range(len(df.overlap.unique()))), ["R/2", "R/4", "R/8", "R/16", "R/32", "Mesh 1%", "Mesh 1.325%", "Mesh 2.55%", "Mesh 3.775%", "Mesh 5%"])
+
+from scipy import stats 
+
+means = df.groupby(['overlap'])['time [min.]'].mean().reset_index().values
+stds  = df.groupby(['overlap'])['time [min.]'].std().reset_index().values
+for i in range(len(means)):
+    print(means[i][0], means[i][1], '+/-', stds[i][1])
+    df_overlap = df[df.overlap == means[i][0]]
+    confidence_interval = stats.t.interval(0.95, len(df_overlap)-1, loc=df_overlap['time [min.]'].mean(), scale=stats.sem(df_overlap['time [min.]']))
+    print(confidence_interval)
+sns.boxplot(data=df, x='overlap', y='time [min.]', order=['overlap2', 'overlap4', 'overlap8', 'overlap16', 'overlap32', 'mesh_0001', 'mesh_0005', 'mesh_001', 'mesh_001325', 'mesh_002550', 'mesh_003775', 'mesh_005', 'mesh_01', 'mesh_03'])
+plt.xticks(list(range(len(df.overlap.unique()))), ["R/2", "R/4", "R/8", "R/16", "R/32", "Mesh 0.1%", "Mesh 0.5%", "Mesh 1%", "Mesh 1.325%", "Mesh 2.55%", "Mesh 3.775%", "Mesh 5%", "Mesh 10%", "Mesh 30%"])
 plt.show()
 
