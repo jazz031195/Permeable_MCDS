@@ -52,6 +52,7 @@ public:
     std::vector<std::string> spheres_files;         /*!< file paths with a list of spheres obstacles                              */
     std::vector<std::string> cylinders_files;       /*!< file paths with a list of cilinders obstacles                              */
     std::vector<std::string> axons_files;           /*!< file paths with a list of axons obstacles                              */
+    std::vector<std::string> glials_files;           /*!< file paths with a list of glial cells obstacles                              */
     std::vector<std::string> PLY_files;             /*!< file paths with PLY obstacle files                                         */
     std::vector<double> PLY_scales;                 /*!< Auxiliary vector to save PLY file scales                                   */
     std::vector<float> ini_delta_pos;               /*!< Delta position for the wlakers                                             */
@@ -124,10 +125,14 @@ public:
     /* 
     Implementation of multiple permeability by Remy
     */ 
-    double obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
+    double obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */ 
+    double axon_obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
+    double glial_obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
+    
     std::vector<std::string> sphere_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> cylinder_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> axon_permeability_files;    /*!< Obstacles permeability file if local                                       */
+    std::vector<std::string> glial_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<double> PLY_permeability;
 
     bool subdivision_flag           = false;        /*!< flag to check if we have several voxel subdivision to compute the signal   */
@@ -447,6 +452,13 @@ private:
      *  \brief read a list of axons.
     */
     void readAxonList(std::ifstream &in);
+
+    /*! \fn readGlialList
+     *  \param file input iostreams
+     *  \brief read a list of glial cells.
+    */
+
+    void readGlialList(std::ifstream& in);
 
 };
 

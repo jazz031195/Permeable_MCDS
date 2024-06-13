@@ -80,11 +80,15 @@ public:
      */
     void iniObstacles();
 
+    int str_dist(string s, string t);
+
 private:
 
     void addCylindersObstaclesFromFiles();
 
     void addAxonsObstaclesFromFiles();
+
+    void addGlialsObstaclesFromFiles();
 
     void addPLYObstaclesFromFiles();
 

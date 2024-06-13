@@ -1,8 +1,18 @@
 #include "obstacle.h"
 #include <math.h>
 
-Obstacle::Obstacle():percolation(0.0),T2(0.0),prob_cross_e_i(0.0), prob_cross_i_e(0.0), diffusivity_i(0.0), diffusivity_e(0.0)
+Obstacle::Obstacle():percolation(0.0),T2(0.0),prob_cross_e_i(0.0), prob_cross_i_e(0.0), diffusivity_i(0.0), diffusivity_e(0.0), count_perc_crossings(0)
+{}
+
+Obstacle::Obstacle(const Obstacle &obs)
 {
+    percolation = obs.percolation;
+    T2 = obs.T2;
+    prob_cross_e_i = obs.prob_cross_e_i;
+    prob_cross_i_e = obs.prob_cross_i_e;
+    diffusivity_i = obs.diffusivity_i;
+    diffusivity_e = obs.diffusivity_e;
+    count_perc_crossings = obs.count_perc_crossings;
 }
 
 bool Obstacle::checkCollision(Walker &walker, Eigen::Array3d &step, const double &step_lenght, Collision &colision)

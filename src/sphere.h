@@ -17,13 +17,13 @@ class Sphere : public Obstacle
 {
 public:
 
-
+    int id;                 /*!< ID of the sphere       */
     Eigen::Vector3d P;      /*!< Center of the sphere   */
     double radius;          /*!< Radius of the sphere   */
-
     double volume;
+    int object_id;          /*!< ID of the object */
+    int object_type;        /*!< Type of the object  (0 : axon, 1 : glial)   */
 
-    double ax_id;           /*!< ID of axon sphere belongs to */
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -38,10 +38,11 @@ public:
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-    Sphere(int id_, int ax_id_, Eigen::Vector3d P_, double radius_, double scale = 1, double percolation_=0.0):P(P_*scale), radius(radius_*scale){
+    Sphere(int id_, int object_id_, Eigen::Vector3d P_, double radius_, int object_type_, double inner_radius = -1.0,  double scale = 1, double percolation_=0.0):P(P_*scale), radius(radius_*scale){
         percolation = percolation_;
         id = id_;
-        ax_id = ax_id_;
+        object_id = object_id_;
+        object_type = object_type_;
         volume = 4./3.*M_PI * (radius_*scale) *  (radius_*scale)  *  (radius_*scale);
     }
 

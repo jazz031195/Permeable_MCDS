@@ -64,18 +64,19 @@ bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY,
         stuck_count++;
         throw(this->error);
     }
-
-    if( (walker.location != Walker::unknown) && (params.obstacle_permeability <= 0.0) && (params.obstacle_permeability != -1.0) && deport_illegals == true ){
+    if( (walker.location != Walker::unknown) && (params.obstacle_permeability == 0.0 || params.obstacle_permeability ==-1) && (params.axon_obstacle_permeability == 0.0 || params.axon_obstacle_permeability ==-1) && (params.glial_obstacle_permeability == 0.0 || params.glial_obstacle_permeability ==-1) && deport_illegals ){
+        //cout << "initial location: " << walker.initial_location << " location: " << walker.location << endl;
         if(walker.initial_location != walker.location){
             setCrossingError(uint(walker.in_obj_index));
             illegal_count++;
             throw(this->error);
         }
     }
-    if ((walker.location != Walker::unknown) and (walker.previous_location != Walker::unknown) and walker.is_allowed_to_cross == false and (walker.location != walker.previous_location))
+    if ((params.obstacle_permeability > 0.0) and (walker.location != Walker::unknown) and (walker.previous_location != Walker::unknown) and walker.is_allowed_to_cross == false and (walker.location != walker.previous_location))
     {
         setCrossingError(uint(walker.in_obj_index));
         illegal_count++;
+        cout << "Error: Walker " << walker.index << " crossed the membrane from " << walker.previous_location << " to " << walker.location << endl;
         throw(this->error);
 
     }
@@ -106,7 +107,7 @@ void Sentinel::deportationProcess(Walker &walker, unsigned& w, unsigned &t, bool
         cout << endl <<  SH_FG_GRAY <<  "[INFO]   " << SH_DEFAULT << " Sim: " << id << " " <<
                     "Walker "<< w << " labeled as 'illegal' after crossing obstacle id: " << this->obstacle_id <<
                     "\nBacktraking...\nDone" << endl;
-        cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
+        cout << "Walker was initially in :" << walker.initial_location << " but is now in :" << walker.location << endl;
         w--;
         //assert(0);
         back_tracking = true;

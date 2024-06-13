@@ -33,6 +33,8 @@ public:
      */
     Obstacle();
 
+    Obstacle(const Obstacle& obs);
+
     /*! \fn  checkCollision
      *  \param walker, Walker instance in the simulation.
      *  \param 3d step. Is assumed to be normalized.

@@ -19,7 +19,9 @@ Walker::Walker()
     steps_per_second = 0;
     colision_in = colision_ext = crossing_in = crossing_ext= 0;
     normal= {0,0,0}; 
-    in_ax_index = in_sph_index = -1;
+    in_obj_index = -1;
+    in_obj_type = -1;
+    sph_id_to_check = {};
 }
 
 Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
@@ -45,6 +47,9 @@ Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, 
     steps_per_second = 0;
     colision_in = colision_ext = crossing_in = crossing_ext= 0;
     normal= {0,0,0}; 
+    in_obj_index = -1;
+    in_obj_type = -1;
+    sph_id_to_check = {};
 }
 
 void Walker::getRealPosition(double &x_, double &y_, double &z_) const

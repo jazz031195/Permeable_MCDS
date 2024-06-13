@@ -76,7 +76,7 @@ void SphereDistribution::createSubstrate()
                     double z = (t*max_limits[2] + (1-t)*min_limits[2]);
 
                     Vector3d P = {x,y,z};
-                    Sphere sph(0,0,P,this->radiis[i]);
+                    Sphere sph(0,0,P,this->radiis[i], -1);
 
 
                     double min_distance;

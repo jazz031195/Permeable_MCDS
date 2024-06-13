@@ -38,7 +38,7 @@ void Axon::set_spheres(std::vector<Sphere> spheres_to_add){
 
     // set axon_id of spheres to the id of axon
     for (int i=0; i<spheres_to_add.size(); ++i){
-        spheres_to_add[i].ax_id = id;
+        spheres_to_add[i].object_id = id;
         spheres_to_add[i].id = i;
 
         // highest y value
@@ -96,7 +96,7 @@ bool check_with_edge(Eigen::Vector3d position, Eigen::Vector2d x_limits, Eigen::
 
 
 
-bool Axon::intersection_sphere_vector(double &t1, double &t2, Sphere &s, Eigen::Vector3d &step, double &step_length, Eigen::Vector3d &pos, double &c){
+bool Axon::intersection_sphere_vector(double &t1, double &t2, Sphere &s, Eigen::Vector3d &step, double &step_length, Eigen::Vector3d &pos){
     //https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
 
     Eigen::Vector3d m = pos - s.P;
@@ -104,7 +104,7 @@ bool Axon::intersection_sphere_vector(double &t1, double &t2, Sphere &s, Eigen::
 
     double a = 1;
     double b = (m.dot(step));
-    c = m.dot(m) - rad*rad;
+    double c = m.dot(m) - rad*rad;
     double discr = b*b - a*c;
 
     if (discr < 0.0 ){
@@ -143,13 +143,13 @@ void Axon::set_prob_crossings(double step_length_pref){
     double prob_cross_i_e_, prob_cross_e_i_;
     double dse, dsi;
 
-    if (percolation > 0.0){
+    if (this->percolation > 0.0){
         // for axon object
-        dse = sqrt(step_length_pref*diffusivity_e);
-        dsi = sqrt(step_length_pref*diffusivity_i);
+        dse = sqrt(step_length_pref*this->diffusivity_e);
+        dsi = sqrt(step_length_pref*this->diffusivity_i);
 
-        prob_cross_i_e_ = percolation * dsi * 2. / 3. / diffusivity_i;
-        prob_cross_e_i_ = percolation * dse * 2. / 3. / diffusivity_e; 
+        prob_cross_i_e_ = percolation * dsi * 2. / 3. / this->diffusivity_i;
+        prob_cross_e_i_ = percolation * dse * 2. / 3. / this->diffusivity_e; 
 
         this->prob_cross_e_i = prob_cross_e_i_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
         this->prob_cross_i_e = prob_cross_i_e_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
@@ -157,16 +157,14 @@ void Axon::set_prob_crossings(double step_length_pref){
             
     // for all spheres
     for(unsigned i= 0 ; i < spheres.size();i++){
+        spheres[i].percolation = this->percolation;
 
         if(spheres[i].percolation > 0.0){
-            dse = sqrt(step_length_pref*spheres[i].diffusivity_e);
-            dsi = sqrt(step_length_pref*spheres[i].diffusivity_i);
+            spheres[i].diffusivity_e = this->diffusivity_e;
+            spheres[i].diffusivity_i = this->diffusivity_i;
 
-            prob_cross_i_e_ = spheres[i].percolation * dsi * 2. / 3. / spheres[i].diffusivity_i;
-            prob_cross_e_i_ = spheres[i].percolation * dse * 2. / 3. / spheres[i].diffusivity_e; 
-
-            spheres[i].prob_cross_e_i = prob_cross_e_i_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
-            spheres[i].prob_cross_i_e = prob_cross_i_e_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
+            spheres[i].prob_cross_e_i = this->prob_cross_e_i;
+            spheres[i].prob_cross_i_e = this->prob_cross_i_e;
             
         }
     }
@@ -228,7 +226,8 @@ void Axon::bouncing(Walker &walker, Collision &colision, double dist_to_collisio
 
             // if crosses from extra to intra, save id of axon
             if (walker.location == Walker::extra){
-                walker.in_ax_index = this->id;
+                walker.in_obj_index = this->id;
+                walker.in_obj_type = 0;
                         
             }
             
@@ -248,187 +247,182 @@ void Axon::bouncing(Walker &walker, Collision &colision, double dist_to_collisio
 
 
 } 
-bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_lenght, Collision &colision)
-{
-
-
+bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_lenght, Collision &colision){
     // distances to intersections
     std::vector<double> dist_intersections;
-    // values indicating whether the walker is inside or outside a sphere
-    std::vector<double> rns;
-    std::vector<int> sph_ids;
+    //all_spheres.insert(all_spheres.end(), processes.begin(), processes.end());
 
-    //int range = 50;
-    //int first_ind = max(walker.in_sph_index- range, 0);
-    //int last_ind = min(walker.in_sph_index+ range, int(spheres.size()-1));
-    int first_ind = 0;
-    int last_ind = spheres.size();
-    double rn;
+    walker.previous_location = walker.location;
 
-    for (unsigned i= first_ind ; i< last_ind; ++i){
+ 
+    //cout << "----------------" << endl;
+    std::vector<int> spheres_ids;
+    //cout << "all_spheres.size() : " << all_spheres.size() << endl;
+
+    //cout << "walker.sph_id_to_check size : " << walker.sph_id_to_check.size() << endl;
+
+
+
+    for (auto i = 0; i < walker.sph_id_to_check.size(); ++i) {
         
-        // distances to collision
+        Sphere sphere_to_check = spheres[walker.sph_id_to_check[i]];
+
+        if (sphere_to_check.minDistance(walker.pos_v) > 3*(step_lenght+barrier_tickness)){
+            continue;
+        }
+    
         double t1, t2;
-        double c;
-        bool intersect = intersection_sphere_vector(t1, t2, spheres[i], step, step_lenght, walker.pos_v, c); 
+        bool intersect = intersection_sphere_vector(t1, t2, sphere_to_check, step, step_lenght, walker.pos_v);
         if (intersect){
-
-            Eigen::Vector3d position; 
-            std::vector<int> sph_ids_;
-            bool isinside; 
-            
-            //if the collision are too close or negative.
-            if(walker.status == walker.bouncing){
-                if( t1 >= EPS_VAL ){
-                    
-                    rn = find_rn(t1, walker.pos_v, step, spheres[i].P);
-                    if (walker.location == Walker::extra || (walker.location == Walker::intra && rn <0)){ 
-                    
-                        dist_intersections.push_back(t1);
-                        sph_ids.push_back(i);
-                        rns.push_back(rn);
-                    } 
-                    
-                }
-                
-                if(t2 >= EPS_VAL ){
-     
-                    rn = find_rn(t2, walker.pos_v, step, spheres[i].P);
-                    if (walker.location == Walker::extra || (walker.location == Walker::intra && rn <0)){                  
-                        dist_intersections.push_back(t2);
-                        sph_ids.push_back(i);
-                        rns.push_back(rn);
-                    } 
-              
-                }
-                
+            if (t1 > 0){
+                //cout << "t1 : " << t1 <<  " i : "<< i <<  endl;
+                dist_intersections.push_back(t1);
+                spheres_ids.push_back(walker.sph_id_to_check[i]);
             }
-            else{
-                if( t1 >= 0 ){
-                    rn = find_rn(t1, walker.pos_v, step, spheres[i].P);
-                    if (walker.location == Walker::extra || (walker.location == Walker::intra && rn <0)){ 
-                    
-                        dist_intersections.push_back(t1);
-                        sph_ids.push_back(i);
-                        rns.push_back(rn);
-                    } 
-                 
-                }
-                if(t2 >= 0 ){
-
-                    rn = find_rn(t2, walker.pos_v, step, spheres[i].P);
-                    if (walker.location == Walker::extra || (walker.location == Walker::intra && rn <0)){ 
-                    
-                        dist_intersections.push_back(t2);
-                        sph_ids.push_back(i);
-                        rns.push_back(rn);
-                    } 
-                }  
-            } 
-                
-        }    
-        
+            if (t2 > 0){
+                //cout << "t2 : " << t2 << " i : "<< i << endl;
+                dist_intersections.push_back(t2);
+                spheres_ids.push_back(walker.sph_id_to_check[i]);
+            }
+        }
     }
 
-    if(dist_intersections.size() > 0){
-
-        unsigned index_;
-        // extra -> closest colision
-
-        if (walker.location == Walker::extra){  
-            auto min_distance_int = std::min_element(std::begin(dist_intersections), std::end(dist_intersections));
-            index_ = std::distance(std::begin(dist_intersections), min_distance_int);
-
-            walker.in_sph_index = -1;
-        } 
-        // intra -> furthest colision
-        else if (walker.location == Walker::intra){
-            auto max_distance_int = std::max_element(std::begin(dist_intersections), std::end(dist_intersections));
-            index_ = std::distance(std::begin(dist_intersections), max_distance_int);
-            // index of sphere it is inside
-            //auto min_distance_int = std::min_element(std::begin(dist_intersections), std::end(dist_intersections));
-            //int index_min = std::distance(std::begin(dist_intersections), min_distance_int);
-            //int sphere_ind_min = sph_ids[index_min];
-            // save sphere index
-            //walker.in_sph_index = sphere_ind_min;
-        } 
-        else{
-            auto min_distance_int = std::min_element(std::begin(dist_intersections), std::end(dist_intersections));
-            index_ = std::distance(std::begin(dist_intersections), min_distance_int);
-        }
-     
-        int sphere_ind = sph_ids[index_];
-        double dist_to_collision = dist_intersections[index_];
-
-        if (dist_to_collision <= step_lenght + barrier_tickness){
-
-            bouncing(walker, colision, dist_to_collision, step_lenght, sphere_ind, step, index_,rns);
-            return true;
-
-        }
-        else{
-
-            if (walker.location == Walker::intra){
-                std::vector<int> sph_ids_;
-                Eigen::Vector3d colision_point_ = walker.pos_v + dist_to_collision*step;
-                Eigen::Vector3d next_pos = walker.pos_v + step_lenght*step;
-                // check if next position is inside axon
-                bool isinside = isPosInsideAxon_(next_pos, barrier_tickness,sph_ids_);
-                if (!isinside){ 
-                    
-                    while(dist_intersections.size() > 0 && dist_to_collision > step_lenght + barrier_tickness){
-                        dist_intersections.erase(dist_intersections.begin() + index_);
-                        sph_ids.erase(sph_ids.begin() + index_);
-
-                        auto max_distance_int = std::max_element(std::begin(dist_intersections), std::end(dist_intersections));
-                        index_ = std::distance(std::begin(dist_intersections), max_distance_int);
-
-                        sphere_ind = sph_ids[index_];
-                        dist_to_collision = dist_intersections[index_];
-                    }
-
-                    if (dist_intersections.size() == 0){
-                        // PROBLEM...
-                        cout << "PROBLEM... " << endl;
-                        colision.col_location = Collision::outside;
-                        colision.type = Collision::hit;
-                        return true;
-                    } 
-
-                    else {
-                        bouncing(walker, colision, dist_to_collision, step_lenght, sphere_ind, step, index_,rns);
-                        return true;
-
-                    }
-                    
-                }
-                else{  
-                    //std::cout << "dist_to_collision > step_lenght + barrier_tickness " << endl;
-                    colision.type = Collision::null;
-                    return false;
-                } 
-            }
-            else{
-                colision.type = Collision::null;
-                return false;
-            }
-
-        }
-    } 
-    else{
- 
-        //std::cout << "dist_intersections.size() = 0 " << endl;
+    if (dist_intersections.empty()){
+        //cout << "dist_intersections.empty()" << endl;
         colision.type = Collision::null;
         return false;
-    } 
+    }
+    else{
+
+    
+        // sort indexes based on dist_intersections
+        std::vector<int> idx(dist_intersections.size());
+        std::iota(idx.begin(), idx.end(), 0);
+        std::sort(idx.begin(), idx.end(), [&dist_intersections](int i1, int i2) {return dist_intersections[i1] < dist_intersections[i2];});
+
+
+        //bool isnearEdge_walker = !isPosInsideGlialCell_(walker.pos_v , -EPS_VAL);
+        //for (auto i = 0; i < idx.size(); ++i) {
+        //    int index = idx[i];
+        //    Eigen::Vector3d pos = walker.pos_v + dist_intersections[index]*step;
+        //    bool isnearEdge_minus = !isPosInsideGlialCell_(pos, -EPS_VAL);
+        //    cout << " step length :" <<step_lenght <<" i : " <<i <<" index : " << index << " dist_intersections[i] : " << dist_intersections[index] << " id_to_check[i] : " <<  spheres_ids[index] << " isnearEdge_walker : " << isnearEdge_walker << " isnearEdge_minus : " << isnearEdge_minus  << endl;
+        //}
+
+
+        for (auto i = 0; i < idx.size(); ++i) {
+            int index = idx[i];
+            Eigen::Vector3d pos = walker.pos_v + dist_intersections[index]*step;
+            bool isnearEdge = !isPosInsideAxon_(pos, -EPS_VAL);
+
+
+            if (isnearEdge ){
+                //cout <<"Chosen: step length :" <<step_lenght <<" i : " <<i <<" index : " << index << " dist_intersections[i] : " << dist_intersections[index] << " id_to_check[i] : " <<  spheres_ids[index] << " isnearEdge : " << isnearEdge << endl;
+
+                if (dist_intersections[index] <= step_lenght+barrier_tickness ){
+                    
+
+                    Sphere sph = spheres[spheres_ids[index]];
+                    
+                    //cout << "distance to sphere wall :" << sph.minDistance(pos)  << endl;
+                    colision.type = Collision::hit;
+                    colision.colision_point = pos;
+                    colision.obstacle_ind = id;
+                    colision.t = dist_intersections[index];
+
+
+                    //Normal point
+                    Eigen::Vector3d normal = (colision.colision_point - sph.P).normalized();
+                    // Elastic bounce
+                    Eigen::Vector3d temp_step = step;
+                    Eigen::Vector3d ray =  (-colision.t*step).normalized();//
+                    double rn = ray.dot(normal);
+                    step = -ray + 2.0*normal*rn;
+                    //cout << "bounced_step : " << step << " step : "<< temp_step << endl;
+                    //cout << " collision point : " << colision.colision_point <<endl;
+
+                    colision.bounced_direction = step.normalized();
+
+                    if (rn < -1e-10){
+                        colision.col_location = Collision::inside;
+                        walker.in_obj_index = id;
+                        walker.in_obj_type = 0;
+                        walker.location = Walker::intra;
+                        
+                    }
+                    else if (rn > 1e-10){
+                        colision.col_location = Collision::outside;
+                        walker.in_obj_index = -1;
+                        walker.in_obj_type = -1;
+
+                        walker.location = Walker::extra;
+                        cout << "rn > 1e-10" << endl;
+                        //assert(0);
+                 
+                        
+                    }
+                    else{
+                        colision.col_location = Collision::unknown;
+                    }
+
+                    // Membrane permeability    
+                    if((sph.percolation>0.0)){
+                        if(colision.type == Collision::hit && colision.col_location != Collision::voxel){
+
+                            std::mt19937 gen_perm;          // Random engine for permeability
+                            std::random_device rd;
+                            gen_perm.seed(rd());
+                            std::uniform_real_distribution<double> udist(0,1);
+                            
+                            double _percolation_ = udist(gen_perm); 
+
+                            double dynamic_percolation = 0.0;
+                            
+                            if (colision.col_location == Collision::inside){ 
+                                dynamic_percolation =  sph.prob_cross_i_e; 
+                            } 
+
+                            else if (colision.col_location == Collision::outside){
+                                dynamic_percolation = sph.prob_cross_e_i;
+                            } 
+
+                            if( dynamic_percolation - _percolation_ > EPS_VAL ){            
+                                count_perc_crossings++;
+                                colision.perm_crossing      = _percolation_;
+                                colision.bounced_direction  = step; 
+                                return true;
+                            }
+                        }  
+                    }
+
+
+                    colision.perm_crossing = 0.;
+                    //cout <<"hit" << endl;
+
+                    return true;
+                }
+                else{
+                    //cout << "dist_intersections[index] > step_lenght+barrier_tickness" << endl;
+                    colision.type = Collision::null;
+                    return false;
+                }
+                
+            }
+            
+        }
+        colision.type = Collision::null;
+        return false;
+        
+    }
+    
+
 }
 
 bool Axon::isWalkerInsideAxon(Walker &walker, double distance_to_be_inside){
     
     Eigen::Vector3d O;
     walker.getVoxelPosition(O);
-    std::vector<int> sph_ids;
-    bool isinside = isPosInsideAxon_(O, distance_to_be_inside, sph_ids);
+    bool isinside = isPosInsideAxon_(O, distance_to_be_inside);
     
     return isinside;
 }
@@ -470,8 +464,8 @@ std::vector<int> findCommonIntegers(const std::vector<int>& vec1, const std::vec
     return commonIntegers;
 }
 
-bool Axon::isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside, std::vector<int> &sph_ids){
-    sph_ids.clear();
+bool Axon::isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside){
+  
     //cout << "isSphereInsideAxon_ : " << id << endl;
     if(isNearAxon(position, distance_to_be_inside)){ // if near axon
         //cout << "is near axon : " << id << endl;
@@ -487,23 +481,22 @@ bool Axon::isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_insi
         for (auto i = 0; i < spheres_to_check_all_axes.size(); ++i) {
             Sphere sphere_to_check = spheres[spheres_to_check_all_axes[i]];
             if (sphere_to_check.minDistance(position) <= distance_to_be_inside){
-                sph_ids.push_back(spheres_to_check_all_axes[i]);
-
-                //return true;
+                //sph_ids.push_back(spheres_to_check_all_axes[i]);
+                return true;
             }
         }
-        spheres_id_to_check.clear();
-        spheres_to_check_all_axes.clear();
+        //spheres_id_to_check.clear();
+        //spheres_to_check_all_axes.clear();
     }
     
-    if (sph_ids.size()>0){
-        return true;
-    }
-    else{
-        return false;
-    }
+    //if (sph_ids.size()>0){
+    //    return true;
+    //}
+    //else{
+    //    return false;
+    //}
     
-    //return false;
+    return false;
 }
 /*
 bool Axon::isPosInsideAxon(Eigen::Vector3d &position,  double distance_to_be_inside, double max_radius, std::vector<int> &sph_ids){

@@ -422,7 +422,12 @@ void Parameters::readObstacles(ifstream& in)
             num_obstacles++;
         }
         if(str_dist(tmp,"<axons_list>") <= 2){
+            cout << "Reading axons list" << endl;
             readAxonList(in);
+            num_obstacles++;
+        }
+        if(str_dist(tmp,"<glials_list>") <= 2){
+            readGlialList(in);
             num_obstacles++;
         }
         if(str_dist(tmp,"oriented_cylinders_list") <= 2){
@@ -993,13 +998,40 @@ void Parameters::readAxonList(ifstream& in)
                     std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
             if(str_dist(tmp,"global") <= 1){
                 // One permeability for all obstacles
-                in >> obstacle_permeability;
+                in >> axon_obstacle_permeability;
+        
             }
             if(str_dist(tmp,"local") <= 1){
                 // One permeability per obstacles
                 string path;
                 in >> path;
                 axon_permeability_files.push_back(path);
+            }
+        }
+    } 
+}
+
+void Parameters::readGlialList(std::ifstream& in)
+{
+    string path;
+    in >> path;
+    glials_files.push_back(path);
+
+    string tmp="";
+    while(!(str_dist(tmp,"</glials_list>") <= 2)){
+        in >> tmp;    
+        if(!(str_dist(tmp,"permeability") <= 2)){
+                    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+            if(str_dist(tmp,"global") <= 1){
+                // One permeability for all obstacles
+                in >> glial_obstacle_permeability;
+             
+            }
+            if(str_dist(tmp,"local") <= 1){
+                // One permeability per obstacles
+                string path;
+                in >> path;
+                glial_permeability_files.push_back(path);
             }
         }
     } 

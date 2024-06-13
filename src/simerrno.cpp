@@ -533,7 +533,7 @@ bool SimErrno::checkAxonsListFile(Parameters &params)
         {
 
             std::vector<std::string> jkr = split_(line,' ');
-            if(jkr.size() != 8){
+            if(jkr.size() != 10){
                 error( "Axon list file is not in the correct format." ,cout);
                 string mess  = "Length of line : "+ to_string(jkr.size());
                 error( mess,cout);

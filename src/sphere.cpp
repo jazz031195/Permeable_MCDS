@@ -19,14 +19,9 @@ Sphere::Sphere(const Sphere &sph)
     radius          = sph.radius;
     id              = sph.id;
     volume          = sph.volume;
-    ax_id           = sph.ax_id;
+    object_id       = sph.object_id;
+    object_type     = sph.object_type;
 
-    // To be improved: move this line to Obstacle class.
-    percolation     = sph.percolation;
-    diffusivity_e   = sph.diffusivity_e; 
-    diffusivity_i   = sph.diffusivity_i;
-    prob_cross_e_i  = sph.prob_cross_e_i;
-    prob_cross_i_e  = sph.prob_cross_i_e;
 }
 
 bool Sphere::checkCollision(Walker &walker, Eigen::Vector3d &step, double &step_lenght, Collision &colision)
@@ -183,7 +178,7 @@ double Sphere::minDistance(Walker &w){
 
     //Minimum distance to the sphere wall.
     double d_ = (distance_to_sphere - radius);
-    return d_>0.0?d_:0.0;
+    return d_;
 
 }
 
@@ -195,6 +190,6 @@ double Sphere::minDistance(Eigen::Vector3d O){
 
     //Minimum distance to the sphere wall.
     double d_ = (distance_to_sphere - radius);
-    return d_>0.0?d_:0.0;
+    return d_;
 
 }
