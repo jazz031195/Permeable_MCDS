@@ -347,12 +347,14 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         } 
 
         while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
-            // convert to mm
+         
+            // convert um to m
             x = x/1000.0;
             y = y/1000.0;
             z = z/1000.0;
             rout = rout/1000.0;
             rin = rin/1000.0;
+            //cout << "x :" << x << " y :" << y << " z :" << z << " rin :" << rin << " rout :" << rout << endl;
 
             // if the new line is from a different axon
             if (line_num !=0 and last_ax_id != ax_id and str_dist(last_type,"axon") <= 1){
@@ -601,7 +603,9 @@ void MCSimulation::addGlialsObstaclesFromFiles()
 void MCSimulation::addCylindersObstaclesFromFiles()
 {
 
+   
     for(unsigned i = 0; i < params.cylinders_files.size(); i++){
+        cout << "Adding Cylinders" << endl;
 
 
         std::ifstream in(params.cylinders_files[i]);
@@ -616,7 +620,7 @@ void MCSimulation::addCylindersObstaclesFromFiles()
             if(first) {first-=1;continue;}
 
             std::vector<std::string> jkr = split(line,' ');
-            if (jkr.size() != 8){
+            if (jkr.size() != 10){
                 //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
             }
             break;
@@ -636,38 +640,41 @@ void MCSimulation::addCylindersObstaclesFromFiles()
         double diff_e;
 
         in.open(params.cylinders_files[i]);
-
-        double x,y,z,r;
-        double last_z = 0.0;
-        int cyl_id, sph_id, p;
-        int last_cyl_id = -1;
-        std::string type_object;
+        double x,y,z,rout, rin, p, r, last_z;
+        int ax_id, sph_id, branch_id;
+        int last_ax_id = -1;
+        std::string type_object, last_type ="";
         std::string header;
+
         int line_num = 0;
 
-        Cylinder cylinder;
-
-        int header_size = 8;
+        int header_size = 10;
 
         for(unsigned j = 0; j < header_size; j++){  
             in >>header;
             //cout << "header :" << header << endl;
         } 
 
-        while (in >>cyl_id >> sph_id >> type_object >> x >> y >> z >> r >> p){
+        diff_i = params.diffusivity_intra; 
+        diff_e = params.diffusivity_extra;
+        perm_ = params.obstacle_permeability;
 
+
+        while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
             // convert to mm
             x = x/1000.0;
             y = y/1000.0;
             z = z/1000.0;
-            r = r/1000.0;
-            if (line_num !=0 and last_cyl_id != cyl_id){
-                // Calculate the factor to shift the decimal places
-                double factor = std::pow(10, 2);
-                // Round the number to the desired digits
-                double rounded_last_z = std::round(last_z * factor) / factor;
-                cylinder = Cylinder(cyl_id, Eigen::Vector3d(x,y,0), Eigen::Vector3d(x,y,rounded_last_z), r);
-                    
+            rout = rout/1000.0;
+            rin = rin/1000.0;
+
+            // if the new line is from a different axon
+            if (line_num !=0 and last_ax_id != ax_id and str_dist(last_type,"axon") <= 1){
+                // create the axon with id : last_ax_id
+                Cylinder cyl (last_ax_id, {x,y,0.0}, {x,y,last_z}, rout);
+                Cylinder cyl_in (last_ax_id, {x,y,0.0}, {x,y,last_z}, rin);
+
+
                 // Local permeability - Different for each obstacle
                 if(in_perm){
                     in_perm >> perm_;
@@ -676,162 +683,46 @@ void MCSimulation::addCylindersObstaclesFromFiles()
                 else{
                     perm_ = params.obstacle_permeability;
                 }  
+                
+                cyl.setDiffusion(diff_i, diff_e);
+                cyl.setPercolation(perm_);
+                cyl_in.setDiffusion(diff_i, diff_e);
+                cyl_in.setPercolation(perm_);
+                dynamicsEngine->cylinders_list.push_back(cyl);
 
-                cylinder.setPercolation(perm_);
+                dynamicsEngine->inner_cylinders_list.push_back(cyl_in);
 
-                // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                diff_i = params.diffusivity_intra; 
-                diff_e = params.diffusivity_extra;
-                cylinder.setDiffusion(diff_i, diff_e);
-
-                dynamicsEngine->cylinders_list.push_back(cylinder);
             }
-            
+            last_ax_id = ax_id;
+            last_type = type_object;
             line_num += 1;
-            last_cyl_id = cyl_id;
             last_z = z;
+                
         }
-        in_perm.close();
+        
+        if (str_dist(last_type,"axon") <= 1) {
+            // add last sphere
+            Cylinder cyl (last_ax_id, {x,y, 0.0}, {x,y,last_z}, rout);
+            Cylinder cyl_in (last_ax_id, {x,y, 0.0}, {x,y,last_z}, rin);
+
+            cyl.setDiffusion(diff_i, diff_e);
+            cyl.setPercolation(perm_);
+            dynamicsEngine->cylinders_list.push_back(cyl);
+
+            cyl_in.setDiffusion(diff_i, diff_e);
+            cyl_in.setPercolation(perm_);
+            dynamicsEngine->inner_cylinders_list.push_back(cyl_in);
+
+        }
+
+        cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
+        
+        //cout << " ICVF :" << icvf<< endl;
+        cout << " Number of particles :" << params.num_walkers << endl;
+        cout << "Number of cylinders :" << dynamicsEngine->cylinders_list.size() << endl;
+
         in.close();
-        cout << last_z << endl;
-        double max_limits = last_z; 
-        // z of first sphere of first axon
-        double min_limits = 0.0; 
-
-        params.max_limits = Eigen::Vector3d(max_limits,max_limits,max_limits);
-        params.min_limits = Eigen::Vector3d(min_limits,min_limits,min_limits);
-        //pair<Eigen::Vector3d,Eigen::Vector3d> voxel_(min_limits,max_limits);
-        //params.voxels_list.push_back(voxel_);
-
-        double volume = (params.max_limits[0]-params.min_limits[0])*(params.max_limits[1]-params.min_limits[1])*(params.max_limits[2]-params.min_limits[2]);
-        
-        std::cout << " Volume :" << volume << endl;
-        // set icvf
-        double icvf = computeAreaICVF(params.min_limits, params.max_limits, dynamicsEngine->cylinders_list);
-
-        // set number of particles
-        if (params.concentration != 0){
-            if (params.ini_walker_flag == "intra"){
-                int num_walkers = params.concentration*volume*icvf/params.num_proc;
-                params.setNumWalkers(num_walkers);
-            }
-            else if (params.ini_walker_flag == "extra"){
-                int num_walkers = params.concentration*volume*(1.0-icvf)/params.num_proc;
-                params.setNumWalkers(num_walkers);
-            }
-            else{
-                int num_walkers = params.concentration*volume/params.num_proc;
-                params.setNumWalkers(num_walkers);
-            } 
-        }
-        std::cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
-
-        std::cout << " ICVF :" << icvf<< endl;
-        std::cout << " Number of particles :" << params.num_walkers << endl;
-        std::cout << "voxel size :"  << max_limits << endl;
-        
     }
-    /*
-    for(unsigned i = 0; i < params.cylinders_files.size(); i++){
-
-        bool z_flag = false;
-        std::ifstream in(params.cylinders_files[i]);
-
-        if(!in){
-            return;
-        }
-
-        bool first=true;
-        for( std::string line; getline( in, line ); )
-        {
-            if(first) {first-=1;continue;}
-
-            std::vector<std::string> jkr = split(line,' ');
-            if (jkr.size() != 7){
-                z_flag = true;
-                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
-            }
-            break;
-        }
-        in.close();
-
-        // Permeability file - if any
-        double perm_; 
-
-        std::ifstream in_perm;
-        if(params.cylinder_permeability_files.size() >0){
-            in_perm.open(params.cylinder_permeability_files[i]);
-        }
-
-        // Diffusion coefficients
-        double diff_i; 
-        double diff_e;
-        
-        in.open(params.cylinders_files[i]);
-
-
-        if(z_flag){
-            double x,y,z,r;
-            double scale;
-            in >> scale;
-            while (in >> x >> y >> z >> r)
-            {
-                Cylinder cyl(Cylinder(Eigen::Vector3d(x,y,z),Eigen::Vector3d(x,y,z+1.0),r,scale, perm_));
-
-                // Local permeability - Different for each obstacle
-                if(in_perm){
-                    in_perm >> perm_;
-                }
-                // Global permeability - Same for all obstacle
-                else{
-                    perm_ = params.obstacle_permeability;
-                }  
-        
-                cyl.setPercolation(perm_);
-
-                // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                diff_i = params.diffusivity_intra; 
-                diff_e = params.diffusivity_extra;
-                cyl.setDiffusion(diff_i, diff_e);
-
-                dynamicsEngine->cylinders_list.push_back(cyl);
-            }
-            in_perm.close();
-            in.close();
-        }
-        else{
-            double x,y,z,ox,oy,oz,r;
-            double scale;
-            in >> scale;
-            while (in >> x >> y >> z >> ox >> oy >> oz >> r)
-            {
-
-                Cylinder cyl(Eigen::Vector3d(x,y,z),Eigen::Vector3d(ox,oy,oz),r,scale, perm_);
-
-                // Local permeability - Different for each obstacle
-                if(in_perm){
-                    in_perm >> perm_;
-                }
-                // Global permeability - Same for all obstacle
-                else{
-                    perm_ = params.obstacle_permeability;
-                }  
-        
-                cyl.setPercolation(perm_);
-
-                // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
-                diff_i = params.diffusivity_intra; 
-                diff_e = params.diffusivity_extra;
-                cyl.setDiffusion(diff_i, diff_e);
-
-                dynamicsEngine->cylinders_list.push_back(cyl);
-            }
-            in_perm.close();
-            in.close();
-        }
-
-    }
-    */
 }
 
 

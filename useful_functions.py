@@ -9,6 +9,25 @@ import warnings
 warnings.filterwarnings("ignore")
 from DKI import calculate_DKI, array_to_nifti
 import glob
+import re
+
+def extract_simulation_info(file_path):
+    with open(file_path, 'r') as file:
+        content = file.read()
+
+    # Regular expressions to extract the number of particles and steps
+    particles_pattern = r'Number of particles:\s*-+\s*(\d+)'
+    steps_pattern = r'Number of steps:\s*-+\s*(\d+)'
+
+    # Find the matches
+    particles_match = re.search(particles_pattern, content)
+    steps_match = re.search(steps_pattern, content)
+
+    # Extract the values
+    number_of_particles = int(particles_match.group(1)) if particles_match else None
+    number_of_steps = int(steps_match.group(1)) if steps_match else None
+
+    return number_of_particles, number_of_steps
 
 def read_binary_file(file_name):
     """

@@ -234,25 +234,26 @@ void Glial::find_all_intersections(const Walker &walker,  Eigen::Vector3d &step,
     dist_intersections.clear();
     spheres_ids.clear();
 
-    //new_sph_id_to_check.push_back(0);
+    std::vector<int> sph_ids_walker_is_inside;
+    Eigen::Vector3d pos = walker.pos_v;
+    bool isinside = FindSphereinGlial(pos, 2*(step_lenght+barrier_tickness),sph_ids_walker_is_inside);
 
-    for (auto i = 0; i < walker.sph_id_to_check.size(); ++i) {
+    for (auto i = 0; i < sph_ids_walker_is_inside.size() ; ++i) {
 
 
         Sphere sphere_to_check;
 
-        
-        if (walker.sph_id_to_check[i] == 0){
+        if (i == 0){
             //soma
             sphere_to_check = soma;
         }
         else{
             //processes
-            sphere_to_check = processes[walker.sph_id_to_check[i]-1];
+            sphere_to_check = processes[sph_ids_walker_is_inside[i]-1];
 
         }
 
-        if (sphere_to_check.minDistance(walker.pos_v) > 3*(step_lenght + barrier_tickness)){
+        if (sphere_to_check.minDistance(walker.pos_v) > (step_lenght + barrier_tickness)){
             continue;
         }
 
@@ -261,11 +262,11 @@ void Glial::find_all_intersections(const Walker &walker,  Eigen::Vector3d &step,
         if (intersect){
             if (t1 > 0){
                 dist_intersections.push_back(t1);
-                spheres_ids.push_back(walker.sph_id_to_check[i]);
+                spheres_ids.push_back(i);
             }
             if (t2 > 0){
                 dist_intersections.push_back(t2);
-                spheres_ids.push_back(walker.sph_id_to_check[i]);
+                spheres_ids.push_back(i);
             }
         }
     }
@@ -451,6 +452,55 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
         
     }
 
+}
+
+bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids){
+  
+    //cout << "isSphereInsideAxon_ : " << id << endl;
+    sph_ids.clear();
+
+    if (isNearGlialCell(position, distance_to_be_inside)){
+  
+        std::vector<std::vector<int>> spheres_id_to_check;
+        for (auto axis = 0; axis < 3; ++axis) {
+            spheres_id_to_check.push_back(checkAxisForCollision(position,distance_to_be_inside, axis)); // check for collision along 1 axis
+            if (spheres_id_to_check[axis].size() == 0){
+                return false;
+            }
+        }
+        // find common ids in all 3 axes
+        std::vector<int> spheres_to_check_all_axes = findCommonIntegers(spheres_id_to_check[0], spheres_id_to_check[1], spheres_id_to_check[2]);
+        for (auto i = 0; i < spheres_to_check_all_axes.size(); ++i) {
+            if (spheres_to_check_all_axes[i] == 0){
+                // soma
+                Sphere sphere_to_check = soma;
+                if (sphere_to_check.minDistance(position) <= distance_to_be_inside){
+                    sph_ids.push_back(spheres_to_check_all_axes[i] );
+                }
+
+            }
+            else{
+                //processes
+                Sphere sphere_to_check = processes[spheres_to_check_all_axes[i]-1];
+                if (sphere_to_check.minDistance(position) <= distance_to_be_inside){
+                    sph_ids.push_back(spheres_to_check_all_axes[i]);
+                }
+            }
+        }
+        spheres_id_to_check.clear();
+        spheres_to_check_all_axes.clear();
+    }
+
+
+    if (sph_ids.size()>0){
+        // Sort sph_ids in ascending order
+        std::sort(sph_ids.begin(), sph_ids.end());
+        return true;
+    }
+    else{
+        return false;
+    }
+    
 }
 
 void Glial::set_prob_crossings(double step_length_pref){

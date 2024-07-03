@@ -478,7 +478,7 @@ bool SimErrno::checkCylindersListFile(Parameters &params)
         {
             if(first) {
                 std::vector<std::string> jkr = split_(line,' ');
-                if (jkr.size() != 8 && jkr.size() != 4){
+                if (jkr.size() != 10 && jkr.size() != 4){
                     error( "Cylinder list file is not in the correct format." ,cout);
                     in.close();
                     assert(0);

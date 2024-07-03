@@ -7,10 +7,10 @@ import plotly.graph_objects as go
 import plotly.colors as colors
 
 def read_bin_file(file_path):
-    nbr_steps = 10000
+    nbr_steps = 73500
     scatters= []
 
-    for i in range(40):
+    for i in range(10):
         start = (nbr_steps+1)*i
         limit = nbr_steps*(i+1)-1
 
@@ -23,6 +23,7 @@ def read_bin_file(file_path):
 
         for t in traj_part:
             if t != " ":
+  
                 if e%3 == 0:
                     xs.append(t)
                 elif e%3 == 1:
@@ -31,6 +32,7 @@ def read_bin_file(file_path):
                     zs.append(t)
                 e= e+ 1
 
+        print("done")
         # Example scatter plot
         colours = colors.qualitative.Plotly[:10]
         c = colours[0]  # Assuming e is defined somewhere in your code
@@ -64,7 +66,7 @@ def read_bin_file(file_path):
             )
         )
         scatters.append(scatter)
-
+    print(len(scatters))
     # Create the figure
     fig = go.Figure(data=scatters, layout=layout)
 
@@ -72,5 +74,5 @@ def read_bin_file(file_path):
     fig.show()
 
 
-file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/_0.traj"
+file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence/test_0.traj"
 read_bin_file(file)

@@ -105,7 +105,7 @@ void Sentinel::deportationProcess(Walker &walker, unsigned& w, unsigned &t, bool
         //If the particle crosses and object because numerical problems
         //if(params.verbatim)
         cout << endl <<  SH_FG_GRAY <<  "[INFO]   " << SH_DEFAULT << " Sim: " << id << " " <<
-                    "Walker "<< w << " labeled as 'illegal' after crossing obstacle id: " << this->obstacle_id <<
+                    "Walker "<< w << " labeled as 'illegal' after crossing obstacle id: " << walker.in_obj_index <<
                     "\nBacktraking...\nDone" << endl;
         cout << "Walker was initially in :" << walker.initial_location << " but is now in :" << walker.location << endl;
         w--;

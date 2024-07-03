@@ -24,7 +24,6 @@ public:
     int object_id;          /*!< ID of the object */
     int object_type;        /*!< Type of the object  (0 : axon, 1 : glial)   */
 
-
     /*!
      *  \brief Default constructor. Does nothing
      */

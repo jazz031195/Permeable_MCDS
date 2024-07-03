@@ -204,6 +204,21 @@ double Cylinder::minDistance(Walker &w){
 
     //Minimum distance to the cylinders wall.
     double d_ = (distance_to_cilinder - radius);
-    return d_>0.0?d_:0.0;
+
+    return d_;
+
+}
+
+double Cylinder::minDistance(const Eigen::Vector3d& O){
+
+    //Origin of the ray
+    Vector3d m = O - P;
+    // minimum distance to the cylinder axis.
+    double distance_to_cilinder = (D.cross(-m)).norm();
+
+    //Minimum distance to the cylinders wall.
+    double d_ = (distance_to_cilinder - radius);
+
+    return d_;
 
 }

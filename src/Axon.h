@@ -45,7 +45,7 @@ public:
     std::vector<int> checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis);
     bool isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside);
     //bool isPosInsideAxon(Eigen::Vector3d &position,  double distance_to_be_inside, double max_radius, std::vector<int> &sph_ids);
-    bool intersection_sphere_vector(double &t1, double &t2,Sphere &s, Eigen::Vector3d &step, double &step_length, Eigen::Vector3d &pos);
+    bool intersection_sphere_vector(double &t1, double &t2,Sphere &s, Eigen::Vector3d &step, const double &step_length, Eigen::Vector3d &pos);
     void set_spheres(std::vector<Sphere> spheres_to_add);
     bool isNearAxon(Eigen::Vector3d position, double distance_to_be_inside);
     bool isNearAxon(Walker walker, double distance_to_be_inside);
@@ -56,6 +56,8 @@ public:
      */
     void set_prob_crossings(double step_length_pref);  
     void bouncing(Walker &walker, Collision &colision, double dist_to_collision, double step_lenght, int sphere_ind, Eigen::Vector3d step, int index_, std::vector<double> rns); 
+    void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double &step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
+    bool FindSphereinAxon(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
     
     
 };

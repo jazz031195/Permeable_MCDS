@@ -22,9 +22,8 @@ public:
     Eigen::Vector3d P,Q;    /*!< Cilinder Axis reference Points, P should be the "center"       */
     Eigen::Vector3d D;      /*!< Pre-computed and normalized P - Q vector                       */
     double radius;          /*!< Radius of the cylinder                                         */
-
     double volume;          /*!< Volume/area of the cylinder                                    */
-
+    int id;                 /*!< Unique id of the cylinder                                   */
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -46,6 +45,7 @@ public:
         id = id_;     
         volume = M_PI * (radius_*scale) *  (radius_*scale);
         percolation = percolation_;
+
     }
 
     /*!
@@ -73,6 +73,7 @@ public:
      *  cylinders that a given walker can reach.
      */
     double minDistance(Walker &w);
+    double minDistance(const Eigen::Vector3d& O);
 
 private:
 

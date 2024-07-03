@@ -53,6 +53,9 @@ public:
     std::vector <PLYObstacle> plyObstacles_list;    /*!< vector with all the instances of PLYObstacles                              */
     std::vector <Cylinder> cylinders_list;          /*!< vector with all the isntances of "Cylider" obstacles                       */
     std::vector<unsigned>  cylinders_deque;         /*!< deque with the indexes of the cylinders (used for optmization)             */
+    std::vector <Cylinder> inner_cylinders_list;          /*!< vector with all the isntances of "Cylider" obstacles                       */
+    std::vector<unsigned>  inner_cylinders_deque;         /*!< deque with the indexes of the cylinders (used for optmization)             */
+    
     std::vector <Axon> axons_list;                  /*!< vector with all the isntances of "Axon" obstacles                       */
     std::vector <Axon> inner_axons_list;            /*!< vector with all the isntances of "Axon" obstacles, in case of myelin                       */
     
@@ -159,7 +162,7 @@ public:
      */
     void writePropagator(std::string path);
 
-    bool isInsideCylinders(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
+    bool isInsideCylinders(Eigen::Vector3d& position, int &object_id, double distance_to_be_inside=1e-6);
 
     bool isInsideAxons(Eigen::Vector3d &position, int &ax_id, double distance_to_be_inside);
 
@@ -174,6 +177,8 @@ public:
     bool elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, const double& t, Eigen::Vector3d &step);
 
     Eigen::Vector3d findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal);
+
+    bool isOutsideCylinders(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside);
 private:    
     /*! \fn     generateStep
      *  \param  step stores the computed step.

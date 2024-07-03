@@ -21,7 +21,7 @@ Walker::Walker()
     normal= {0,0,0}; 
     in_obj_index = -1;
     in_obj_type = -1;
-    sph_id_to_check = {};
+
 }
 
 Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, double zmax)
@@ -49,7 +49,7 @@ Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, 
     normal= {0,0,0}; 
     in_obj_index = -1;
     in_obj_type = -1;
-    sph_id_to_check = {};
+   
 }
 
 void Walker::getRealPosition(double &x_, double &y_, double &z_) const

@@ -514,6 +514,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.previous_location = Walker::intra;
         walker.in_obj_index = object_id;
         walker.in_obj_type = object_type;
+
     }
     else if(params.ini_walker_flag.compare("extra")== 0){
         Vector3d extra_pos;
@@ -763,6 +764,9 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
         if (glials_list.size() > 0){
             expected_object_types.push_back(1);
         }
+        if (inner_cylinders_list.size() > 0){
+            expected_object_types.push_back(2);
+        }
 
         bool isintra = isInIntra(pos_temp, object_id, object_type, -barrier_tickness);
 
@@ -776,30 +780,27 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
             walker.in_obj_index = object_id;
             walker.in_obj_type = object_type;
             
-            walker.sph_id_to_check.clear();
-
-
-            if (walker.in_obj_type == 0){
+            //if (walker.in_obj_type == 0){
                 //cout << "in axon" << endl;
-                for (unsigned i = 0; i < inner_axons_list[walker.in_obj_index].spheres.size(); i++){
-                    //if (axons_list[walker.in_obj_index].spheres[i].minDistance(pos_temp) < sqrt(6.0*params.diffusivity_intra*params.sim_duration)){
+            //    for (unsigned i = 0; i < inner_axons_list[walker.in_obj_index].spheres.size(); i++){
+            //        if (axons_list[walker.in_obj_index].spheres[i].minDistance(pos_temp) < sqrt(6.0*params.diffusivity_intra*params.sim_duration)){
                     //   if (i> axons_list[walker.in_obj_index].spheres.size()){
                     //    assert(0);
                     //   }
-                        walker.sph_id_to_check.push_back(i);
-                    //}
-                }
+            //            walker.sph_id_to_check.push_back(i);
+            //        }
+            //    }
              
-            }
-            else if (walker.in_obj_type == 1){
+            //}
+            //else if (walker.in_obj_type == 1){
                 //cout << "in glial cell" << endl;
-                walker.sph_id_to_check.push_back(0);
-                for (unsigned i = 0; i < glials_list[walker.in_obj_index].processes.size(); i++){
-                    if (glials_list[walker.in_obj_index].processes[i].minDistance(pos_temp) < sqrt(6.0*params.diffusivity_intra*params.sim_duration)){
-                        walker.sph_id_to_check.push_back(i+1);
-                    }
-                }
-            }
+            //    walker.sph_id_to_check.push_back(0);
+            //    for (unsigned i = 0; i < glials_list[walker.in_obj_index].processes.size(); i++){
+            //        if (glials_list[walker.in_obj_index].processes[i].minDistance(pos_temp) < sqrt(6.0*params.diffusivity_intra*params.sim_duration)){
+            //            walker.sph_id_to_check.push_back(i+1);
+            //        }
+            //    }
+            //}
             //cout << "sph_id_to_check size: " << walker.sph_id_to_check.size() << endl;
             return;
         }
@@ -957,19 +958,20 @@ string DynamicsSimulation::secondsToMinutes(double t)
 }
 
 
-bool DynamicsSimulation::isInsideCylinders(Vector3d &position, double distance_to_be_inside)
+bool DynamicsSimulation::isInsideCylinders(Vector3d &position, int &object_id, double distance_to_be_inside)
 {
     Walker tmp;
     tmp.setInitialPosition(position);
 
     //track the number of positions checks for intra/extra positions
 
-    for(unsigned i = 0 ; i < cylinders_list.size(); i++){
+    for(unsigned i = 0 ; i < inner_cylinders_list.size(); i++){
 
-        double dis = cylinders_list[i].minDistance(tmp);
+        double dis = inner_cylinders_list[i].minDistance(tmp);
 
         if( dis <= distance_to_be_inside ){
             intra_tries++;
+            object_id = i;
             return true;
         }
     }
@@ -998,12 +1000,27 @@ bool DynamicsSimulation::isOutsideAxons(Eigen::Vector3d &position, int &object_i
         bool isinside = axons_list[i].isPosInsideAxon_(position,  distance_to_be_inside);
         if (isinside){
             object_id = i;
-            return true;
+            return false;
         }
     }
     object_id = -1;
-    return false;
+    return true;
 }
+
+bool DynamicsSimulation::isOutsideCylinders(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside)
+{
+    for (unsigned i = 0; i < cylinders_list.size() ; i++){
+ 
+        bool isinside = cylinders_list[i].minDistance(position) < distance_to_be_inside;
+        if (isinside){
+            object_id = i;
+            return false;
+        }
+    }
+    object_id = -1;
+    return true;
+}
+
 
 bool DynamicsSimulation::isInsidePLY(Eigen::Vector3d &position, double distance_to_be_inside)
 {
@@ -1103,12 +1120,16 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
     bool isIntra = false;
     total_tries++;
     object_type = -1;
-    int ax_id, glial_id;
-    bool isinside_axons, isinside_glial;
+    int ax_id, glial_id, cyl_id;
+    bool isinside_axons = false, isinside_glial = false, isinside_cyl = false;
 
-    if(cylinders_list.size()>0){
-        isIntra|= this->isInsideCylinders(position,distance_to_be_intra_ply);
-        assert(0);
+    if(inner_cylinders_list.size()>0){
+        isinside_cyl= this->isInsideCylinders(position, cyl_id, distance_to_be_intra_ply);
+        isIntra|= isinside_cyl;
+        if (isinside_cyl){
+            object_type = 2;
+        }
+
     }
 
     if(inner_axons_list.size()>0){
@@ -1116,7 +1137,6 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
         isIntra|= isinside_axons;
         if (isinside_axons){
             object_type = 0;
-
         }
     }
 
@@ -1145,6 +1165,9 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
     else if (isinside_glial){
         object_id = glial_id;
     }
+    else if (isinside_cyl){
+        object_id = cyl_id;
+    }
  
 
     return isIntra;
@@ -1157,17 +1180,19 @@ bool DynamicsSimulation::isInExtra(Eigen::Vector3d &position,  double distance_t
     bool isExtra = true;
     total_tries++;
 
-    int ax_id, glial_id;
+    int ax_id, glial_id, cyl_id;
 
     if(cylinders_list.size()>0){
-        isExtra = isExtra && !this->isInsideCylinders(position,distance_to_be_intra_ply);
-        assert(0);
+        isExtra = isExtra && this->isOutsideCylinders(position, cyl_id, distance_to_be_intra_ply);
+
     }
 
     if(axons_list.size()>0){
+
         isExtra = isExtra && this->isOutsideAxons(position, ax_id, distance_to_be_intra_ply);
 
     }
+    
 
     if(glials_list.size()>0){
         isExtra = isExtra && !this->isInsideGlial(position, glial_id, distance_to_be_intra_ply);
@@ -1220,7 +1245,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         walker.setIndex(w);
 
         walker.normal = {0,0,0};
-        walker.sph_id_to_check.clear();
+  
 
         // Initialize the walker initial position
         iniWalkerPosition();
@@ -1236,8 +1261,8 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
-        {           
-      
+        {         
+            //cout << "t : " << t << endl;
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
 
@@ -1518,7 +1543,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
 
     if(tmax >= 0.0){
 
-         // Update the walker position after the bouncing (or not)
+        // Update the walker position after the bouncing (or not)
         walker.getRealPosition(real_pos);
         Eigen::Vector3d adapted_step;
 
@@ -1572,16 +1597,28 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         handleCollisions(colision,colision_tmp,max_collision_distance,i);
     }
 
-    //For each Cylinder Obstacles
-    for(unsigned int i = 0 ; i < cylinders_list.size(); i++ )
-    {
-        //unsigned index = walker.collision_sphere_cylinders.collision_list->at(i);
-        cylinders_list[i].checkCollision(walker,bounced_step,tmax,colision_tmp);
-        handleCollisions(colision,colision_tmp,max_collision_distance,i);
+    if ((cylinders_list).size()>0 && (inner_cylinders_list).size()>0){
+        //For each Cylinder Obstacles
+        if (walker.location== Walker::intra ){
+            if (walker.in_obj_type == 2 && walker.in_obj_index != -1){
+
+                (inner_cylinders_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
+                handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_obj_index);  
+            }
+        }
+        else{
+            for(unsigned int i = 0 ; i < walker.collision_sphere_cylinders.small_sphere_list_end; i++ )
+            {
+                unsigned index = walker.collision_sphere_cylinders.collision_list->at(i);
+                cylinders_list[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
+                handleCollisions(colision,colision_tmp,max_collision_distance,index);
+            }
+        }
     }
     //For each Axon Obstacle
     if ((axons_list).size()>0 && (inner_axons_list).size()>0){
         // intra walkers
+ 
         if (walker.location== Walker::intra ){
             if (walker.in_obj_type == 0 && walker.in_obj_index != -1){
                 (inner_axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
@@ -1591,10 +1628,13 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         // extra walkers or unknown
         else {
             for(unsigned int i = 0 ; i < walker.collision_sphere_axons.small_sphere_list_end; i++ ){
+            //for (unsigned int i = 0 ; i < axons_list.size(); i++ ){
                 unsigned index = walker.collision_sphere_axons.collision_list->at(i);
+                //unsigned index = i;
                 (axons_list)[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
                 handleCollisions(colision,colision_tmp,max_collision_distance,index);  
             }
+
         }
     }
     //For each Glial Obstacle
@@ -1638,10 +1678,8 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
             for(unsigned int i = 0 ; i < walker.collision_sphere_glials.small_sphere_list_end; i++ ){
                 unsigned index = walker.collision_sphere_glials.collision_list->at(i);
                 (glials_list)[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-                handleCollisions(colision,colision_tmp,max_collision_distance,index);  
-                
+                handleCollisions(colision,colision_tmp,max_collision_distance,index);     
             }
-            
         }
     }
 
@@ -1711,7 +1749,7 @@ void DynamicsSimulation::handleCollisions(Collision &colision, Collision &colisi
 
 void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Collision &colision,double barrier_thicknes)
 {
-
+  
     walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
 
     Eigen::Vector3d voxel_pos = walker.pos_v + (colision.t)*bounced_step;
@@ -1730,6 +1768,7 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
     }
 
     walker.setVoxelPosition(voxel_pos);
+
 
     if (mapped){
         initWalkerObstacleIndexes();
@@ -1835,7 +1874,6 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
         walker.setRealPosition(walker.pos_r + colision.t*adapted_step);
     } 
     
-
     Eigen::Vector3d temp_step = bounced_step;
     Eigen::Vector3d normal = {0,0,0} ;
     bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, colision.t,temp_step);
@@ -1850,6 +1888,14 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
         walker.normal = {abs(walker.normal[0]),abs(walker.normal[1]),abs(walker.normal[2])};
         initWalkerObstacleIndexes();
     } 
+
+    bool isintra = isInIntra(walker.pos_v, walker.in_obj_index, walker.in_obj_type, -barrier_tickness);
+    if (isintra){
+        cout << "is in intra" << endl;
+        assert(0);
+    }
+    
+
 
 
 } 
@@ -1923,7 +1969,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                                 
                 walker.intra_extra_consensus--;
                 walker.previous_location = walker.location;
-                walker.location = Walker::extra;
+                walker.location = Walker::intra;
                 /*
                std::cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
                std::cout << " walker is now extra after crossing" << endl;
@@ -1941,7 +1987,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
   
                 walker.intra_extra_consensus++;
                 walker.previous_location = walker.location;
-                walker.location = Walker::intra;
+                walker.location = Walker::extra;
                 /*
                std::cout << "Walker was in :" << walker.previous_location << " but is now in :" << walker.location << endl;
                std::cout << " walker is now intra after crossing" << endl;
@@ -2024,8 +2070,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             walker.setRealPosition(real_pos + displ*adapted_step);
         } 
         walker.setVoxelPosition(voxel_pos  + displ*bounced_step);
-
-
+        
 
         bounced_step = colision.bounced_direction;
 
@@ -2082,7 +2127,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         walker.status = Walker::on_object;
         return false;
     }
-
+   
     return bounced;
 }
 

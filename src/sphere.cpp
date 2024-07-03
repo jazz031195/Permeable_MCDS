@@ -22,6 +22,7 @@ Sphere::Sphere(const Sphere &sph)
     object_id       = sph.object_id;
     object_type     = sph.object_type;
 
+
 }
 
 bool Sphere::checkCollision(Walker &walker, Eigen::Vector3d &step, double &step_lenght, Collision &colision)

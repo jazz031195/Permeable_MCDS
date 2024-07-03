@@ -4,11 +4,14 @@ import os
 import pandas as pd
 import seaborn as sns
 from pathlib import Path
+
+
 import dipy.reconst.dki as dki
 import dipy.reconst.dti as dti
 from dipy.core.gradients import gradient_table
 import nibabel as nib
 import glob
+
 
 
 def get_files_from_folder(folder_path, binaray = True):
@@ -28,11 +31,11 @@ def read_and_extract_bvals(file_path):
                     # Split each line into space-separated values and extract the 4th column
                     columns = line.strip().split()
                     if len(columns) >= 5:
-                        G = float(columns[3])*1e-3
-                        giro = 2.6751525e8 #Gyromagnetic radio given in rad/(ms*T)
+                        G = float(columns[3]) # Gradient strength given in T/m
+                        giro = 2.6751525e5 #Gyromagnetic radio given in rad/(ms*T)
                         delta = float(columns[5])
                         Delta = float(columns[4])
-                        b = pow(G * giro * delta, 2) * (Delta - delta/ 3) / 1000
+                        b = pow(G * giro * delta, 2) * (Delta - delta/ 3) 
                         column_4.append(b)  # Assuming columns are 0-based
 
     except FileNotFoundError:
@@ -101,48 +104,44 @@ def array_to_nifti(dwi_array):
     return img
 
 
-def calculate_DKI(path_scheme, dwi):
+def calculate_DKI(path_scheme, path_to_DWI, bvals, bvecs):
 
-    bvals = read_and_extract_bvals(path_scheme)
+    #bvals = read_and_extract_bvals(path_scheme)
 
-    bvecs = read_and_extract_bvecs(path_scheme)
+    #bvecs = read_and_extract_bvecs(path_scheme)
 
     gtab = gradient_table(bvals, bvecs)
 
-    #dwi = txt_to_nifti(path_to_DWI)
+    dwi = txt_to_nifti(path_to_DWI)
 
     # build model
-    #dkimodel = dki.DiffusionKurtosisModel(gtab)
-    dtimodel = dti.TensorModel(gtab)
-    tenfit = dtimodel.fit(dwi.get_fdata())
-    #dkifit = dkimodel.fit(dwi.get_fdata())
+    dkimodel = dki.DiffusionKurtosisModel(gtab)
+    #dtimodel = dti.TensorModel(gtab)
+    #tenfit = dtimodel.fit(dwi.get_fdata())
+    dkifit = dkimodel.fit(dwi.get_fdata())
     # save maps
 
-    #FA = dkifit.fa
-    #MD = dkifit.md
-    #AD = dkifit.ad
-    #RD = dkifit.rd
-    #MK = dkifit.mk(0, 10)
-    #AK = dkifit.ak(0, 10)
-    #RK = dkifit.rk(0, 10)
+    FA = dkifit.fa
+    MD = dkifit.md
+    AD = dkifit.ad
+    RD = dkifit.rd
+    MK = dkifit.mk(0, 10)
+    AK = dkifit.ak(0, 10)
+    RK = dkifit.rk(0, 10)
 
-    FA = tenfit.fa
-    MD = tenfit.md
-    AD = tenfit.ad
-    RD = tenfit.rd
+    #FA = tenfit.fa
+    #MD = tenfit.md
+    #AD = tenfit.ad
+    #RD = tenfit.rd
 
-    eigenvectors = tenfit.evecs  # Eigenvectors of the diffusion tensor
+    #eigenvectors = dkifit.evecs  # Eigenvectors of the diffusion tensor
 
     # Each column of eigenvectors corresponds to an eigenvector
     # The orientation of the axial diffusion is given by the eigenvector corresponding to the largest eigenvalue
-    axial_diffusion_orientation = eigenvectors[..., 0]  # Assuming the axial diffusion direction corresponds to the eigenvector with the largest eigenvalue
+    #axial_diffusion_orientation = eigenvectors[..., 0]  # Assuming the axial diffusion direction corresponds to the eigenvector with the largest eigenvalue
 
-    RK= 0
-    AK = 0
-    MK = 0
-
-
-    return FA, MD, AD, RD, MK, AK, RK, axial_diffusion_orientation
+    return FA, MD, AD, RD, MK, AK, RK
+    #return FA, MD, AD, RD
 
 def add_to_data(dwi,  path_scheme, factor, repetition):
 

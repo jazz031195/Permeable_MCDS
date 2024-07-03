@@ -53,7 +53,6 @@ public:
     int in_obj_index; 
     int in_obj_type;    
     
-    std::vector<int> sph_id_to_check;                               /*!< Vector of spheres to check for collision                               */
 
     CylinderCollisionSphere collision_sphere_cylinders;             /*!< Collision sphere for collition against cylidners                       */
 
