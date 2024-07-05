@@ -103,8 +103,26 @@ def array_to_nifti(dwi_array):
     img = nib.Nifti1Image(dwi_array, affine)
     return img
 
+def extract_and_save_dirs_bvals_DWI(path_to_DWI, path_scheme, path_to_folder):
+    
+        bvals = read_and_extract_bvals(path_scheme)
 
-def calculate_DKI(path_scheme, path_to_DWI, bvals, bvecs):
+        #save as text file
+        np.savetxt(f"{path_to_folder}/pgse_21_dir.bval", bvals)
+    
+        bvecs = read_and_extract_bvecs(path_scheme)
+
+        #save as text file
+        np.savetxt(f"{path_to_folder}/pgse_21_dir.bvec", bvecs)
+    
+        dwi = txt_to_nifti(path_to_DWI)
+
+        #save as nifti file
+        nib.save(dwi, f"{path_to_folder}/dwi_voxel_0.nii")
+    
+
+
+def calculate_DKI(path_to_DWI, bvals, bvecs):
 
     #bvals = read_and_extract_bvals(path_scheme)
 
@@ -358,4 +376,7 @@ def plot():
     plt.show()
 
 
-
+path_to_DWI = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/SMI/voxel_0_DWI.bfloat"
+path_scheme = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_21_dir_12_b.scheme"
+path_to_folder = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/SMI/"
+extract_and_save_dirs_bvals_DWI(path_to_DWI, path_scheme, path_to_folder)

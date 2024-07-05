@@ -56,6 +56,7 @@ void Glial::set_spheres(const std::vector<Sphere> &spheres_to_add){
             Box.push_back({sph_lowest_z_val, sph_highest_z_val});
 
         }
+        
         else{
             // take values in the box
             sph_highest_x_val = Box[0][1];
@@ -236,14 +237,14 @@ void Glial::find_all_intersections(const Walker &walker,  Eigen::Vector3d &step,
 
     std::vector<int> sph_ids_walker_is_inside;
     Eigen::Vector3d pos = walker.pos_v;
-    bool isinside = FindSphereinGlial(pos, 2*(step_lenght+barrier_tickness),sph_ids_walker_is_inside);
+    bool isinside = FindSphereinGlial(pos, 2*(step_lenght),sph_ids_walker_is_inside);
 
     for (auto i = 0; i < sph_ids_walker_is_inside.size() ; ++i) {
 
 
         Sphere sphere_to_check;
 
-        if (i == 0){
+        if (sph_ids_walker_is_inside[i] == 0){
             //soma
             sphere_to_check = soma;
         }
@@ -253,20 +254,33 @@ void Glial::find_all_intersections(const Walker &walker,  Eigen::Vector3d &step,
 
         }
 
-        if (sphere_to_check.minDistance(walker.pos_v) > (step_lenght + barrier_tickness)){
+        if (sphere_to_check.minDistance(walker.pos_v) > (step_lenght)){
             continue;
         }
 
         double t1, t2;
         bool intersect = intersection_sphere_vector(t1, t2, sphere_to_check, step, step_lenght, walker.pos_v);
         if (intersect){
-            if (t1 > 0){
-                dist_intersections.push_back(t1);
-                spheres_ids.push_back(i);
+            if (walker.status == Walker::bouncing){
+                if (t1 > EPS_VAL){
+                    dist_intersections.push_back(t1);
+                    spheres_ids.push_back(sph_ids_walker_is_inside[i]);
+
+                }
+                if (t2 > EPS_VAL){
+                    dist_intersections.push_back(t2);
+                    spheres_ids.push_back(sph_ids_walker_is_inside[i]);
+                }
             }
-            if (t2 > 0){
-                dist_intersections.push_back(t2);
-                spheres_ids.push_back(i);
+            else{
+                if (t1 > 0){
+                    dist_intersections.push_back(t1);
+                    spheres_ids.push_back(sph_ids_walker_is_inside[i]);
+                }
+                if (t2 > 0){
+                    dist_intersections.push_back(t2);
+                    spheres_ids.push_back(sph_ids_walker_is_inside[i]);
+                }
             }
         }
     }
@@ -290,7 +304,7 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
 
     //cout << "walker.sph_id_to_check size : " << walker.sph_id_to_check.size() << endl;
 
-    find_all_intersections(walker, step, step_lenght, dist_intersections, spheres_ids);
+    find_all_intersections(walker, step, step_lenght + barrier_tickness, dist_intersections, spheres_ids);
     
     if (dist_intersections.empty()){
         //cout << "dist_intersections.empty()" << endl;
@@ -336,7 +350,10 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
         for (auto i = 0; i < idx.size(); ++i) {
             int index = idx[i];
             Eigen::Vector3d pos = walker.pos_v + dist_intersections[index]*step;
-            bool isnearEdge = !isPosInsideGlialCell(pos, -EPS_VAL);
+            bool isnearEdge = true;
+            if (walker.location == Walker::intra){  
+                isnearEdge = !isPosInsideGlialCell(pos, -EPS_VAL);
+            }
 
             //bool isnearEdge = true;
 
@@ -365,13 +382,13 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                     Eigen::Vector3d normal = (colision.colision_point - sph.P).normalized();
                     // Elastic bounce
                     Eigen::Vector3d temp_step = step;
-                    Eigen::Vector3d ray =  (-colision.t*step).normalized();//
+                    Eigen::Vector3d ray =  (-colision.t*temp_step).normalized();//
                     double rn = ray.dot(normal);
-                    step = -ray + 2.0*normal*rn;
+                    temp_step = -ray + 2.0*normal*rn;
                     //cout << "bounced_step : " << step << " step : "<< temp_step << endl;
                     //cout << " collision point : " << colision.colision_point <<endl;
 
-                    colision.bounced_direction = step.normalized();
+                    colision.bounced_direction = temp_step.normalized();
 
                     if (rn < -1e-10){
                         colision.col_location = Collision::inside;

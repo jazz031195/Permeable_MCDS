@@ -363,12 +363,15 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_le
             int index = idx[i];
             Eigen::Vector3d pos = walker.pos_v + dist_intersections[index]*step;
 
-            bool isnearEdge = !isPosInsideAxon_(pos, -EPS_VAL);
+            bool isnearEdge = true;
             
+            if (walker.location == Walker::intra){ 
+                isnearEdge = !isPosInsideAxon_(pos, -EPS_VAL);
+            }
 
             if (isnearEdge ){
                 
-                if (dist_intersections[index] <= step_lenght+barrier_tickness && dist_intersections[index] >0 ){
+                if (dist_intersections[index] <= step_lenght+barrier_tickness){
                     //cout <<"Chosen: step length :" <<step_lenght <<" i : " <<i <<" index : " << index << " dist_intersections[i] : " << dist_intersections[index] << " id_to_check[i] : " <<  spheres_ids[index] << " isnearEdge : " << isnearEdge << endl;
 
                     Sphere sph = spheres[spheres_ids[index]];

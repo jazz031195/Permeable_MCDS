@@ -43,47 +43,55 @@ def read_swc_file(file_path):
 
 def get_cylinders_R(swc_file_path):
     df = read_swc_file(swc_file_path)
-    df = df.loc[df["P"] == -1]
+    # get mean rdaius for each cylinder
+    df = df.groupby(["ax_id", "sph_id", "type"]).mean()
     R = df["Rout"].values
     return R
 
-def signal_attenuation_all_cylinders(swc_file_path, b_values, S0):
-    Rs = get_cylinders_R(swc_file_path)
-    Rs = [R*1e-3 for R in Rs] # mm
-    D = 2.0e-3   # Example diffusion coefficient in mm^2/s
-    signals = []
-    for R in Rs:
-        s = signal_attenuation_in_cylinder(b_values, S0, D, R)
-        signals.append(s)
-    signal = np.mean(signals, axis=0)
+def volume_cylinder(R, L):
+    V = np.pi * R**2 * L
+    return V
 
-    return signal
+def signal_attenuation_all_cylinders(swc_file_path, b_values, S0, L):
+    Rs = get_cylinders_R(swc_file_path)
+    D = 2.0e-3   # Example diffusion coefficient in mm^2/s
+    signal_total = 0
+    total_volume = 0
+    for R in Rs:
+        V = volume_cylinder(R, L)
+        s = V*signal_attenuation_in_cylinder(b_values, S0, D, R)
+        signal_total += s
+        total_volume += V
+
+    return signal_total/total_volume
 
 
 # Example usage:
 if __name__ == "__main__":
 
-    file_path_scheme ="/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/test.scheme"
+    file_path_scheme ="/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_22_dir_12_b.scheme"
     data = read_scheme(file_path_scheme)
-    info_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/cylinder__simulation_info.txt"
+    info_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/intra_cyl_simulation_info.txt"
     N, steps = extract_simulation_info(info_path)
-    DWI_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/cylinder__DWI.bfloat"
+    DWI_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/intra_cyl_DWI.bfloat"
     DWIs = read_DWI(DWI_path)
     df_cylinder = create_df_parameters_21d(DWIs, data, DWI_path, file_path_scheme) 
+    df_cylinder = df_cylinder.loc[(df_cylinder["x"] == 0) & (df_cylinder["y"] == 0) & (df_cylinder["z"] == 1)]
 
-    info_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/_simulation_info.txt"
+    info_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/intra_tort_simulation_info.txt"
     N, steps = extract_simulation_info(info_path)
-    DWI_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/_DWI.bfloat"
+    DWI_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/intra_tort_DWI.bfloat"
     DWIs = read_DWI(DWI_path)
     df_spheres = create_df_parameters_21d(DWIs, data, DWI_path, file_path_scheme) 
-
+    df_spheres = df_spheres.loc[(df_spheres["x"] == 0) & (df_spheres["y"] == 0) & (df_spheres["z"] == 1)]
 
     b_values = np.array(df_cylinder["b-value"].unique())
     S0 = N
-    signal = signal_attenuation_all_cylinders("/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/growth_vox_200_factor_2_0.swc", b_values, S0)
+    L = 100
+    signal = signal_attenuation_all_cylinders("/home/localadmin/Documents/MCDS/Permeable_MCDS/output/analytical_solution/voxel_tort.swc", b_values, S0, L)
     plt.plot(b_values, signal, label='analytical')
     plt.plot(df_cylinder["b-value"], df_cylinder["DWI"], 'ro', label='simulation cylinder')
-    plt.plot(df_spheres["b-value"], df_spheres["DWI"], 'bo', label='simulation spheres')
+    plt.plot(df_spheres["b-value"], df_spheres["DWI"], 'bo', label='simulation tortuous and beading axons (R/2)')
     plt.xlabel('b-value (s/mm^2)')
     plt.ylabel('Signal Intensity')
     plt.title('DWI Signal Attenuation in a Cylinder')

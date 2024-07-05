@@ -7,10 +7,10 @@ import plotly.graph_objects as go
 import plotly.colors as colors
 
 def read_bin_file(file_path):
-    nbr_steps = 73500
+    nbr_steps = 40000
     scatters= []
 
-    for i in range(10):
+    for i in range(20):
         start = (nbr_steps+1)*i
         limit = nbr_steps*(i+1)-1
 
@@ -74,5 +74,5 @@ def read_bin_file(file_path):
     fig.show()
 
 
-file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence/test_0.traj"
+file = "/home/localadmin/Documents/CATERPillar/arthurs_analysis/test_rep_00_1.traj"
 read_bin_file(file)

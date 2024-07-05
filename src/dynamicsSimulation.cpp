@@ -50,6 +50,9 @@ DynamicsSimulation::DynamicsSimulation() {
     step_lenght_intra = sqrt(6.0*params.diffusivity_intra*params.sim_duration/params.num_steps);
     step_lenght_extra = sqrt(6.0*params.diffusivity_extra*params.sim_duration/params.num_steps);
 
+    cout << "step_lenght_intra: " << step_lenght_intra << endl;
+    cout << "step_lenght_extra: " << step_lenght_extra << endl;
+
     params.write_traj = trajectory.write_traj = false;
     params.write_hit = trajectory.write_hit = false;
     params.write_txt = trajectory.write_txt   = false;
@@ -361,6 +364,9 @@ void DynamicsSimulation::initSimulation()
     step_length_pref  = 6.0*time_step;
     step_lenght_intra = sqrt(step_length_pref*params.diffusivity_intra);
     step_lenght_extra = sqrt(step_length_pref*params.diffusivity_extra);
+
+    cout << "step_lenght_intra: " << step_lenght_intra << endl;
+    cout << "step_lenght_extra: " << step_lenght_extra << endl;
 
     curr_step_lenght  = step_lenght_intra;
     curr_diffusivity  = params.diffusivity_intra;
@@ -1888,15 +1894,6 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
         walker.normal = {abs(walker.normal[0]),abs(walker.normal[1]),abs(walker.normal[2])};
         initWalkerObstacleIndexes();
     } 
-
-    bool isintra = isInIntra(walker.pos_v, walker.in_obj_index, walker.in_obj_type, -barrier_tickness);
-    if (isintra){
-        cout << "is in intra" << endl;
-        assert(0);
-    }
-    
-
-
 
 } 
 

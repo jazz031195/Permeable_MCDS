@@ -23,42 +23,37 @@ def get_scheme_info(scheme_path):
     return b_values, directions
 
 def calculate_ADC(b0 ,b1, scheme_path, path_to_data):
-    b_values, directions = get_scheme_info(scheme_path)
+    
     all_b_values = [] 
     all_directions = []
     all_DWIs = []
     all_swellings = []
-    all_locations = []
+
     files = get_files_from_folder(path_to_data)
     for file in files:
-        if "img" not in file and "simulation" not in file:
+        if "img" not in file and "info" not in file:
+
             DWI = read_binary_file(file) 
             DWI =[float(i) for i in DWI] 
-            all_DWIs.extend(DWI)
-            all_b_values.extend(b_values)
-            all_directions.extend(directions)
-            if "intra" in file:
-                all_locations.extend(["intra"]*len(DWI))
-            elif "extra" in file:
-                all_locations.extend(["extra"]*len(DWI))
-            else:
-                print("Error, no location found")
-                assert(0)
-            if "swell_0_" in file:
+            if "_0_" in file:
                 all_swellings.extend(np.zeros(len(DWI)))
-            elif "swell_0.01_" in file:
-                all_swellings.extend(np.ones(len(DWI))*0.01)
-            elif "swell_0.005_" in file:
-                all_swellings.extend(np.ones(len(DWI))*0.005)
-            elif "swell_0.0025_" in file:
-                all_swellings.extend(np.ones(len(DWI))*0.0025)
-            elif "swell_0.0075_" in file:
-                all_swellings.extend(np.ones(len(DWI))*0.0075)
+            elif "_0.25_" in file:
+                all_swellings.extend(np.ones(len(DWI))*0.25)
+            elif "_0.5_" in file:
+                all_swellings.extend(np.ones(len(DWI))*0.5)
+            elif "_0.75_" in file:
+                all_swellings.extend(np.ones(len(DWI))*0.75)
+            elif "_1_" in file:
+                all_swellings.extend(np.ones(len(DWI))*1)
+                scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_22_dir_12_b.scheme"
             else:
                 print("Error, no swelling found")
                 assert(0)
-    df = pd.DataFrame({"DWI": all_DWIs, "b_value": all_b_values, "direction": all_directions, "swelling": all_swellings, "location": all_locations})
-    print(df)
+            b_values, directions = get_scheme_info(scheme_path)
+            all_DWIs.extend(DWI)
+            all_b_values.extend(b_values)
+            all_directions.extend(directions)
+    df = pd.DataFrame({"DWI": all_DWIs, "b_value": all_b_values, "direction": all_directions, "swelling": all_swellings})
     # calculate angle between direction and vector (0,0,1)
     df["angle (rad)"] = df["direction"].apply(lambda x: np.arccos(np.dot(x, [0,0,1]))) 
     # angle must be from 0 to pi
@@ -66,24 +61,22 @@ def calculate_ADC(b0 ,b1, scheme_path, path_to_data):
     
 
     df_b0 = df.loc[df["b_value"] == b0]
-    df_b0 = df_b0.groupby(["angle (rad)", "swelling", "location"]).sum()
     df_b0 = df_b0.groupby(["angle (rad)", "swelling"]).sum()
-    print(df_b0)
+    df_b0 = df_b0.groupby(["angle (rad)", "swelling"]).sum()
+
     df_b1 = df.loc[df["b_value"] == b1]
-    df_b1 = df_b1.groupby(["angle (rad)", "swelling", "location"]).sum()
     df_b1 = df_b1.groupby(["angle (rad)", "swelling"]).sum()
-    print(df_b1)
+    df_b1 = df_b1.groupby(["angle (rad)", "swelling"]).sum()
     
     # calculate adc list form the two b values
     adc = np.log(df_b0["DWI"].values/df_b1["DWI"].values)/(b1-b0)
     df_b0["ADC"] = adc
     df_b0["ADC"] = df_b0["ADC"].replace([np.inf, -np.inf], np.nan)
-    df_b0 = df_b0.dropna()
+    df_b0 = df_b0.dropna().reset_index()
 
-    
-    print(df_b0)
+    df_b0 = df_b0.loc[df_b0["angle (rad)"] > 0]
 
-    return df_b0.reset_index()
+    return df_b0
 
 def plot_with_respect_to_direction(df):
     # df = df.loc[df.location == "intra"] 
@@ -114,16 +107,22 @@ def plot_with_respect_to_direction(df):
     # Show plot
     plt.show()
     # multiplie swelling by 100 to get percentage 
-    df["swelling"] = df["swelling"]*100
+    df["swelling (%)"] = df["swelling"]
     print(df)
-    # normalise ADC with respect to adc at swelling = 0 for each direction
-    df["ADC"] = df.groupby("angle (rad)")["ADC"].apply(lambda x: x/x.iloc[0]) 
- 
+
+    # Calculate ADC_relative
+    def calculate_relative(group):
+        base_adc = group.loc[group['swelling'] == 0, 'ADC'].values[0]
+        group['ADC_relative'] = group['ADC'] / base_adc
+        return group
+
+    df = df.groupby('angle (rad)').apply(calculate_relative)
+
     sns.set_style("whitegrid")
     sns.set_context("paper", font_scale=1.5)
-    sns.lineplot(hue="angle (rad)", y="ADC", x="swelling", data=df)
-    plt.ylabel('Relative ADC (um2/ms)')
-    plt.xlabel('Swelling (%)')
+    sns.lmplot(hue="swelling (%)", y="ADC_relative", x="angle (rad)", data=df)
+    plt.ylabel('Relative ADC')
+    plt.xlabel('Angle (rad)')
     plt.title('Relative ADC decrease with swelling')
     plt.show()
 
@@ -131,8 +130,8 @@ def plot_with_respect_to_direction(df):
 def main():
     b0 = 0.2
     b1 = 1
-    scheme_path = "/home/localadmin/Documents/permeable_MCDS/MCDC_Simulator_public/docs/scheme_files/PGSE_sample_scheme_21_dir.scheme"
-    path_to_data = "/home/localadmin/Documents/permeable_MCDS/MCDC_Simulator_public/instructions/axons/icvf_70_vox_50/"
+    scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_21_dir_12_b.scheme"
+    path_to_data = "/home/localadmin/Documents/CATERPillar/arthurs_analysis"
     df = calculate_ADC(b0 ,b1, scheme_path, path_to_data)
     plot_with_respect_to_direction(df)
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import math
 from scipy.optimize import least_squares
 from DKI import calculate_DKI
-from useful_functions import extract_simulation_info
+from useful_functions import extract_simulation_info, get_files_from_folder
 import copy
 
 def read_DWI(file_path):
@@ -147,7 +147,7 @@ def create_df_parameters_21d(DWIs, data, path_to_DWI, path_scheme):
 
     bvecs = np.array(data[["x", "y", "z"]])
 
-    FA, MD, AD, RD, MK, AK, RK = calculate_DKI(path_scheme, path_to_DWI, bvals, bvecs)
+    FA, MD, AD, RD, MK, AK, RK = calculate_DKI(path_to_DWI, bvals, bvecs)
 
     data["FA"] = FA
     data["MD"] = MD
@@ -161,9 +161,99 @@ def create_df_parameters_21d(DWIs, data, path_to_DWI, path_scheme):
 
     return data
 
+def convert_steps_to_time(file_path_scheme, data):
+    folders = ["/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.3", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.25", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.2", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.15", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.1", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.05"]
+    nbr_repetitions = 1
+
+    all_dfs = []
+
+    for folder in folders:
+        for rep in range(nbr_repetitions):
+            if rep == 0:
+                info_path = f"{folder}/test_simulation_info.txt"
+                DWI_path = f"{folder}/test_DWI.bfloat"
+            else:
+                info_path = f"{folder}/_rep_0{rep-1}_simulation_info.txt"
+                DWI_path = f"{folder}/_rep_0{rep-1}_DWI.bfloat"
+
+            N, steps = extract_simulation_info(info_path)
+            DWIs = read_DWI(DWI_path)
+            df = create_df_parameters_21d(DWIs, data, DWI_path, file_path_scheme)
+            
+            df["N"] = N
+            df["steps"] = steps
+            df["rep"] = rep
+
+            # Make a deep copy of the DataFrame before appending
+            df_copy = copy.deepcopy(df)
+            all_dfs.append(df_copy)
+
+    df_final = pd.concat(all_dfs)
+    print(df_final)
+    sns.scatterplot(x="steps", y="MD", data=df_final, hue = "rep")
+    plt.show()
+
+    sns.scatterplot(x="steps", y="FA", data=df_final, hue = "rep")
+    plt.show()
+
+    sns.scatterplot(x="steps", y="MK", data=df_final, hue = "rep")
+    plt.show()
+
+
+def converge_overlapping_factor(path_to_folder, file_path_scheme):
+    #find all files in folder
+    files = get_files_from_folder(path_to_folder)
+    data_scheme = read_scheme(file_path_scheme)
+
+    all_dfs = []
+    for file in files:
+        if "img" not in file and "info" not in file and "swc" not in file:
+       
+            if "factor_2_" in file:
+                print(file)
+                factor = 2
+            elif "factor_4_" in file:
+                factor = 4
+            elif "factor_8_" in file:
+                factor = 8
+            elif "factor_16_" in file:
+                factor = 16
+            else:
+                print("Error, no factor found")
+                assert(0)
+            
+            if "intra" in file:
+                location= True
+            elif "extra" in file:
+                location= False
+            else:
+                print("Error, no location found")
+                assert(0)
+            
+            DWIs = read_DWI(file)
+            df = create_df_parameters_21d(DWIs, data_scheme, file, file_path_scheme)
+            df["factor"] = [factor]*len(df)
+            df["isintra"] = [location]*len(df)
+
+            # Make a deep copy of the DataFrame before appending
+            df_copy = copy.deepcopy(df)
+            all_dfs.append(df_copy)
+    
+    final_df = pd.concat(all_dfs)
+
+    sns.boxplot(x="factor", y="AD", data=final_df, hue = "isintra")
+    plt.show()
+    print(final_df)
+
+            
+
+
 def main():
-    file_path_scheme ="/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_21_dir_12_b.scheme"
-    data = read_scheme(file_path_scheme)
+    file_path_scheme ="/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_22_dir_12_b.scheme"
+    #data = read_scheme(file_path_scheme)
+    path_to_folder = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/overlap_factor/"
+
+    converge_overlapping_factor(path_to_folder, file_path_scheme)
     #################################### BASIC TEST ####################################
     #folders = ["/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/"]
 
@@ -210,46 +300,6 @@ def main():
     #print(df_final)
 
 
-    #################################### CONVERGENCE ANALYSIS NUMBER OF STEPS ####################################
-
-    #folders = ["/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.3", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.25", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.2", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.15", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.1", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.05"]
-    folders = ["/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.3", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.25", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.2", "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/convergence_steps/step_length_0.15"]
-
-    nbr_repetitions = 5
-
-    all_dfs = []
-
-    for folder in folders:
-        for rep in range(nbr_repetitions):
-            if rep == 0:
-                info_path = f"{folder}/_simulation_info.txt"
-                DWI_path = f"{folder}/_DWI.bfloat"
-            else:
-                info_path = f"{folder}/_rep_0{rep-1}_simulation_info.txt"
-                DWI_path = f"{folder}/_rep_0{rep-1}_DWI.bfloat"
-
-            N, steps = extract_simulation_info(info_path)
-            DWIs = read_DWI(DWI_path)
-            df = create_df_parameters_21d(DWIs, data, DWI_path, file_path_scheme)
-            
-            df["N"] = N
-            df["steps"] = steps
-            df["rep"] = rep
-
-            # Make a deep copy of the DataFrame before appending
-            df_copy = copy.deepcopy(df)
-            all_dfs.append(df_copy)
-
-    df_final = pd.concat(all_dfs)
-    print(df_final)
-    sns.scatterplot(x="steps", y="MD", data=df_final, hue = "rep")
-    plt.show()
-
-    sns.scatterplot(x="steps", y="FA", data=df_final, hue = "rep")
-    plt.show()
-
-    sns.scatterplot(x="steps", y="MK", data=df_final, hue = "rep")
-    plt.show()
     #################################### TIME DEPENDENCE ANALYSIS ####################################
 
     #i = Ns[-1]
@@ -260,3 +310,4 @@ def main():
     #plt.show()
     #sns.lineplot(x="1/sqrt(t)", y="K", data=df)
     #plt.show()
+main()
