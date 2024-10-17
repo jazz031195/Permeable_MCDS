@@ -2,6 +2,7 @@
 #include "constants.h"
 #include "Eigen/Dense"
 #include <iostream>
+#include <numeric> // Add this line to include std::iota
 
 
 using namespace Eigen;
@@ -331,7 +332,20 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_le
         //cout << "dist_intersections.empty()" << endl;
         //bool isinside = isPosInsideAxon_(walker.pos_v, -EPS_VAL);
         //cout << "isinside : " << isinside << endl;
- 
+        
+        
+        if (walker.location == Walker::intra){ 
+            bool isinside = isPosInsideAxon_(walker.pos_v, EPS_VAL);
+            if (!isinside){
+                colision.col_location = Collision::outside;
+                walker.in_obj_index = -1;
+                walker.in_obj_type = -1;
+                walker.location = Walker::extra;
+                return true;
+            }
+        }
+        
+        
         colision.type = Collision::null;
         return false;
     }
@@ -366,7 +380,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_le
             bool isnearEdge = true;
             
             if (walker.location == Walker::intra){ 
-                isnearEdge = !isPosInsideAxon_(pos, -EPS_VAL);
+                isnearEdge = !isPosInsideAxon_(pos, -barrier_tickness);
             }
 
             if (isnearEdge ){
@@ -390,6 +404,7 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_le
                     Eigen::Vector3d ray =  (-colision.t*temp_step).normalized();//
                     double rn = ray.dot(normal);
                     temp_step = -ray + 2.0*normal*rn;
+                    colision.perm_crossing = 0.;
                     //cout << "bounced_step : " << temp_step << " step : "<< step << endl;
                     //cout << "next_pos_ : " << walker.pos_v + colision.t*step << endl;
                     //cout << " collision point : " << colision.colision_point <<endl;
@@ -399,26 +414,60 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_le
 
                     //cout << "rn :" << rn << endl;
 
-                    
+                    //inside
                     if (rn < -1e-10){
+                        if (walker.location == Walker::extra){ 
+                            bool isinside_ = isPosInsideAxon_(walker.pos_v, -EPS_VAL);
+                            if (isinside_){
+                                colision.col_location = Collision::inside;
+                                walker.in_obj_index = id;
+                                walker.in_obj_type = 0;
+                                walker.location = Walker::intra;
 
-                        colision.col_location = Collision::inside;
-                        walker.in_obj_index = id;
-                        walker.in_obj_type = 0;
-                        walker.location = Walker::intra;
+                            }
+                            else{
+                                colision.col_location = Collision::outside;
+                                walker.in_obj_index = -1;
+                                walker.in_obj_type = -1;
+                                walker.location = Walker::extra;
+                            }
+                        }
+                        else{
+                            colision.col_location = Collision::inside;
+                            walker.in_obj_index = id;
+                            walker.in_obj_type = 0;
+                            walker.location = Walker::intra;
+                        }
                         //cout << "rn :" << rn << endl;
                         //assert(0);
                         
                     }
+                    //outside
                     else if (rn > 1e-10){
-                        colision.col_location = Collision::outside;
-                        walker.in_obj_index = -1;
-                        walker.in_obj_type = -1;
+                        
+                        if (walker.location == Walker::intra){ 
+                            bool isinside_ = isPosInsideAxon_(walker.pos_v, EPS_VAL);
+                            if (!isinside_){
+                                colision.col_location = Collision::outside;
+                                walker.in_obj_index = -1;
+                                walker.in_obj_type = -1;
+                                walker.location = Walker::extra;
+    
+                            }
+                            else{
+                                colision.col_location = Collision::inside;
+                                walker.in_obj_index = id;
+                                walker.in_obj_type = 0;
+                                walker.location = Walker::intra;
+                            }
+                        }
+                        else{
+                            colision.col_location = Collision::outside;
+                            walker.in_obj_index = -1;
+                            walker.in_obj_type = -1;
+                            walker.location = Walker::extra;
+                        }
 
-                        walker.location = Walker::extra;
-                        //cout << "rn > 1e-10" << endl;
-                        //assert(0);
-                 
                         
                     }
                     else{
@@ -426,24 +475,24 @@ bool Axon::checkCollision(Walker &walker,  Eigen::Vector3d &step, double step_le
                     }
 
                     // Membrane permeability    
-                    if((sph.percolation>0.0)){
+                    if((this->percolation>0.0)){
                         if(colision.type == Collision::hit && colision.col_location != Collision::voxel){
 
                             std::mt19937 gen_perm;          // Random engine for permeability
                             std::random_device rd;
                             gen_perm.seed(rd());
                             std::uniform_real_distribution<double> udist(0,1);
-                            
+                            // generate a random number between 0 and 1
                             double _percolation_ = udist(gen_perm); 
 
                             double dynamic_percolation = 0.0;
                             
                             if (colision.col_location == Collision::inside){ 
-                                dynamic_percolation =  sph.prob_cross_i_e; 
+                                dynamic_percolation =  this->prob_cross_i_e; 
                             } 
 
                             else if (colision.col_location == Collision::outside){
-                                dynamic_percolation = sph.prob_cross_e_i;
+                                dynamic_percolation = this->prob_cross_e_i;
                             } 
 
                             if( dynamic_percolation - _percolation_ > EPS_VAL ){            
@@ -584,7 +633,7 @@ bool Axon::FindSphereinAxon(const Eigen::Vector3d &position, const double &dista
     }
     if (sph_ids.size()>0){
         // Sort sph_ids in ascending order
-        std::sort(sph_ids.begin(), sph_ids.end());
+        //std::sort(sph_ids.begin(), sph_ids.end());
         return true;
     }
     else{
@@ -699,4 +748,24 @@ bool Axon::isNearAxon(Walker walker, double distance_to_be_inside){
 }
 
 
+double Axon::minDistance(Walker &w){
+    //Origin of the ray
+    Vector3d O;
+    w.getVoxelPosition(O);
+    // find distance to Box
+    double minDistSquared = 0.0;
 
+    for (int i = 0; i < 3; ++i) {
+        double v = O[i];
+        double min = Box[i][0];
+        double max = Box[i][1];
+
+        if (v < min) {
+            minDistSquared += (min - v) * (min - v);
+        } else if (v > max) {
+            minDistSquared += (v - max) * (v - max);
+        }
+    }
+
+    return std::sqrt(minDistSquared);
+}

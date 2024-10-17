@@ -100,6 +100,15 @@ void ParallelMCSimulation::startSimulation()
     SimErrno::info("Number of particles labeled as stuck: "        + to_string(stuck_count)  ,out,false);
     SimErrno::info("Number of particles eliminated due crossings: "+ to_string(illegal_count),out,false);
 
+    int tot_nbr_walker_extra = 0;
+    int tot_nbr_walker_intra = 0;
+    for (unsigned i = 0; i < simulations.size(); i++){
+        tot_nbr_walker_extra += simulations[i]->dynamicsEngine->nbr_walker_extra;
+        tot_nbr_walker_intra += simulations[i]->dynamicsEngine->nbr_walker_intra;
+    }
+    SimErrno::info("Number of intracellular particles : "+ to_string(tot_nbr_walker_intra),out,false);
+    SimErrno::info("Number of extracellular particles : "+ to_string(tot_nbr_walker_extra),out,false);
+
     if(params.max_simulation_time > 0){
         SimErrno::info("Number of simulated particles: "+ to_string(total_sim_particles),out,false);
         SimErrno::info("Mean simulation speed: "+ to_string( unsigned(params.num_steps*total_sim_particles/mean_second_passed)) + " steps/second",out,false);

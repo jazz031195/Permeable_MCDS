@@ -57,6 +57,9 @@ DynamicsSimulation::DynamicsSimulation() {
     params.write_hit = trajectory.write_hit = false;
     params.write_txt = trajectory.write_txt   = false;
 
+    nbr_walker_extra = 0;
+    nbr_walker_intra = 0;
+
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
     }
@@ -98,6 +101,9 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
     total_tries=0;
     step_nbr = 0;
 
+    nbr_walker_extra = 0;
+    nbr_walker_intra = 0;
+
 }
 
 /**
@@ -123,6 +129,9 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
     intra_tries=0;
     total_tries=0;
     step_nbr = 0;
+
+    nbr_walker_extra = 0;
+    nbr_walker_intra = 0;
 }
 
 void DynamicsSimulation::initObstacleInformation(){
@@ -159,31 +168,74 @@ void DynamicsSimulation::initObstacleInformation(){
 
     for(unsigned i= 0 ; i < axons_list.size();i++){
         axons_deque.push_back(i);
-        axons_list[i].set_prob_crossings(step_length_pref);
+
+        // if myelinated axon
+        if (axons_list[i].radius != inner_axons_list[i].radius){
+            axons_list[i].percolation = 0.0;
+        }
+
+        if(axons_list[i].percolation > 0.0){
+
+            double dse = sqrt(step_length_pref*axons_list[i].diffusivity_e);
+            double dsi = sqrt(step_length_pref*axons_list[i].diffusivity_i);
+            
+            double prob_cross_i_e = axons_list[i].percolation * dsi * 2. / 3. / axons_list[i].diffusivity_i;
+            double prob_cross_e_i = axons_list[i].percolation * dse * 2. / 3. / axons_list[i].diffusivity_e; 
+
+            axons_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+            axons_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+        }
     }
 
-    walker.collision_sphere_axons.collision_list        = &axons_deque;
-    walker.collision_sphere_axons.list_size             = unsigned(axons_deque.size());
-    walker.collision_sphere_axons.big_sphere_list_end   = walker.collision_sphere_axons.list_size;
+    walker.axons_collision_sphere.collision_list        = &axons_deque;
+    walker.axons_collision_sphere.list_size             = unsigned(axons_deque.size());
+    walker.axons_collision_sphere.big_sphere_list_end   = walker.axons_collision_sphere.list_size;
 
     //Inner Axons list of index initialization
 
     for(unsigned i= 0 ; i < inner_axons_list.size();i++){
+
         inner_axons_deque.push_back(i);
-        inner_axons_list[i].set_prob_crossings(step_length_pref);
+
+        // if myelinated axon
+        if (axons_list[i].radius != inner_axons_list[i].radius){
+            axons_list[i].percolation = 0.0;
+        }
+
+        if(inner_axons_list[i].percolation > 0.0){
+
+            double dse = sqrt(step_length_pref*inner_axons_list[i].diffusivity_e);
+            double dsi = sqrt(step_length_pref*inner_axons_list[i].diffusivity_i);
+            
+            double prob_cross_i_e = inner_axons_list[i].percolation * dsi * 2. / 3. / inner_axons_list[i].diffusivity_i;
+            double prob_cross_e_i = inner_axons_list[i].percolation * dse * 2. / 3. / inner_axons_list[i].diffusivity_e; 
+
+            inner_axons_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+            inner_axons_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+        }
     }
 
-    walker.collision_sphere_inner_axons.collision_list        = &inner_axons_deque;
-    walker.collision_sphere_inner_axons.list_size             = unsigned(inner_axons_deque.size());
-    walker.collision_sphere_inner_axons.big_sphere_list_end   = walker.collision_sphere_inner_axons.list_size;
-
+    walker.inner_axons_collision_sphere.collision_list        = &inner_axons_deque;
+    walker.inner_axons_collision_sphere.list_size             = unsigned(inner_axons_deque.size());
+    walker.inner_axons_collision_sphere.big_sphere_list_end   = walker.inner_axons_collision_sphere.list_size;
 
 
     //Glial cells list of index initialization
 
     for(unsigned i= 0 ; i < glials_list.size();i++){
         glials_deque.push_back(i);
-        glials_list[i].set_prob_crossings(step_length_pref);
+
+        if(glials_list[i].percolation > 0.0){
+
+            double dse = sqrt(step_length_pref*glials_list[i].diffusivity_e);
+            double dsi = sqrt(step_length_pref*glials_list[i].diffusivity_i);
+            
+            double prob_cross_i_e = glials_list[i].percolation * dsi * 2. / 3. / glials_list[i].diffusivity_i;
+            double prob_cross_e_i = glials_list[i].percolation * dse * 2. / 3. / glials_list[i].diffusivity_e; 
+
+            glials_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+            glials_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+        }
     }
 
     walker.collision_sphere_glials.collision_list        = &glials_deque;
@@ -554,6 +606,7 @@ void DynamicsSimulation::iniWalkerPosition()
             walker.previous_location = Walker::intra;
             walker.in_obj_index = object_id;
             walker.in_obj_type = object_type;
+            nbr_walker_intra++;
         }
         else {
             walker.initial_location = Walker::extra;
@@ -561,6 +614,7 @@ void DynamicsSimulation::iniWalkerPosition()
             walker.previous_location = Walker::extra;
             walker.in_obj_index = -1;
             walker.in_obj_type = -1;
+            nbr_walker_extra++;
         }
 
         if(params.computeVolume){
@@ -600,36 +654,29 @@ void DynamicsSimulation::initWalkerObstacleIndexes()
     }
 
     //* Axons Collision Sphere *//
-    walker.collision_sphere_axons.setBigSphereSize(outer_col_dist_factor);
-    walker.collision_sphere_axons.setSmallSphereSize(inner_col_dist_factor);
+    walker.axons_collision_sphere.setBigSphereSize(outer_col_dist_factor);
+    walker.axons_collision_sphere.setSmallSphereSize(inner_col_dist_factor);
     // New version Axons obstacle selection
-    walker.collision_sphere_axons.small_sphere_list_end = 0;
-    walker.collision_sphere_axons.big_sphere_list_end = unsigned(axons_deque.size());
-
-    // We add and remove the axons indexes that are or not inside sphere.
-    for(unsigned i = 0 ; i < walker.collision_sphere_axons.list_size; i++ ){
-        unsigned index = walker.collision_sphere_axons.collision_list->at(i);
-        float dist = float(axons_list[index].minDistance(walker));
-        if (dist < walker.collision_sphere_axons.small_sphere_distance){
-            walker.collision_sphere_axons.pushToSmallSphere(i);
-        }
-    }
+    walker.axons_collision_sphere.small_sphere_list_end = 0;
+    walker.axons_collision_sphere.big_sphere_list_end = unsigned(axons_deque.size());
 
     //* Inner Axons Collision Sphere *//
-    walker.collision_sphere_inner_axons.setBigSphereSize(outer_col_dist_factor);
-    walker.collision_sphere_inner_axons.setSmallSphereSize(inner_col_dist_factor);
+    walker.inner_axons_collision_sphere.setBigSphereSize(outer_col_dist_factor);
+    walker.inner_axons_collision_sphere.setSmallSphereSize(inner_col_dist_factor);
     // New version Axons obstacle selection
-    walker.collision_sphere_inner_axons.small_sphere_list_end = 0;
-    walker.collision_sphere_inner_axons.big_sphere_list_end = unsigned(axons_deque.size());
+    walker.inner_axons_collision_sphere.small_sphere_list_end = 0;
+    walker.inner_axons_collision_sphere.big_sphere_list_end = unsigned(inner_axons_deque.size());
 
     // We add and remove the axons indexes that are or not inside sphere.
-    for(unsigned i = 0 ; i < walker.collision_sphere_inner_axons.list_size; i++ ){
-        unsigned index = walker.collision_sphere_inner_axons.collision_list->at(i);
-        float dist = float(inner_axons_list[index].minDistance(walker));
-        if (dist < walker.collision_sphere_inner_axons.small_sphere_distance){
-            walker.collision_sphere_inner_axons.pushToSmallSphere(i);
+    for(unsigned i = 0 ; i < walker.axons_collision_sphere.list_size; i++ ){
+        unsigned index = walker.axons_collision_sphere.collision_list->at(i);
+        float dist = float(axons_list[index].minDistance(walker));
+        if (dist < walker.axons_collision_sphere.small_sphere_distance){
+            walker.axons_collision_sphere.pushToSmallSphere(i);
+            walker.inner_axons_collision_sphere.pushToSmallSphere(i);
         }
     }
+
 
     //* Glial Collision Sphere *//
     walker.collision_sphere_glials.setBigSphereSize(outer_col_dist_factor);
@@ -906,6 +953,27 @@ void DynamicsSimulation::updateWalkerObstacleIndexes(unsigned t_)
         }
     }
 
+    walker.axons_collision_sphere.small_sphere_list_end = 0;
+    walker.inner_axons_collision_sphere.small_sphere_list_end = 0;
+
+    for(unsigned i = 0 ; i < walker.axons_collision_sphere.big_sphere_list_end; i++ )
+    {
+        unsigned index = walker.axons_collision_sphere.collision_list->at(i);
+        float dist    = float(axons_list[index].minDistance(walker));
+
+        if (dist > walker.axons_collision_sphere.big_sphere_distance)
+        {
+            walker.axons_collision_sphere.popFromBigSphere(i);
+            walker.inner_axons_collision_sphere.popFromBigSphere(i);
+        }
+        if (dist < walker.axons_collision_sphere.small_sphere_distance)
+        {
+            walker.axons_collision_sphere.pushToSmallSphere(i);
+            walker.inner_axons_collision_sphere.pushToSmallSphere(i);
+        }
+    }
+
+
     //PLY update obstacle
     for(unsigned i = 0 ; i < walker.collision_sphere_ply.list_size; i++ )
     {
@@ -981,7 +1049,7 @@ bool DynamicsSimulation::isInsideCylinders(Vector3d &position, int &object_id, d
             return true;
         }
     }
-
+    object_id = -1;
     return false;
 }
 
@@ -1261,6 +1329,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         // Selects only obstacles that are close enough to collide and the ones inside a collision sphere
         initWalkerObstacleIndexes();
+        
         //Initial position;
         walker.setRealPosLog(walker.pos_r,0);
         walker.setVoxPosLog (walker.pos_v,0);
@@ -1302,15 +1371,16 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             walker.setRealPosLog(walker.pos_r,t);
             walker.setVoxPosLog (walker.pos_v,t);
 
-
             // Save the colision 
             walker.setColision(walker.colision_in, walker.colision_ext, walker.crossing_in, walker.crossing_ext, t);           
 
             // Update step length and current diffusivity based on the walker position in space
             updateStepLength(l);
 
-            //updates the collision neighborhood (if any)
-            updateCollitionSphere(t);
+
+            if (walker.location != Walker::intra){
+                updateCollitionSphere(t);
+            }
 
             walker.steps_count++;
             walker.rejection_count = 0;
@@ -1325,19 +1395,13 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         //auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
         //cout << "Time taken by walker: " << duration.count() << " seconds" << endl;
 
-
-        /*
+        
         if(!back_tracking)
             if(finalPositionCheck()){
                 back_tracking=true;
                 w--;
             }
-        */
-
-        //if (double(num_crossed/params.num_walkers)>= 0.01){
-        //    std::cout << "Too much leakage !" << endl;
-        //    assert(0);
-        //}
+        
         //If there was an error, we don't compute the signal or write anything.
         if(back_tracking){
             continue;
@@ -1633,9 +1697,9 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         }
         // extra walkers or unknown
         else {
-            for(unsigned int i = 0 ; i < walker.collision_sphere_axons.small_sphere_list_end; i++ ){
+            for(unsigned int i = 0 ; i < walker.axons_collision_sphere.small_sphere_list_end; i++ ){
             //for (unsigned int i = 0 ; i < axons_list.size(); i++ ){
-                unsigned index = walker.collision_sphere_axons.collision_list->at(i);
+                unsigned index = walker.axons_collision_sphere.collision_list->at(i);
                 //unsigned index = i;
                 (axons_list)[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
                 handleCollisions(colision,colision_tmp,max_collision_distance,index);  
@@ -1648,35 +1712,11 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
 
         // intra walkers
         if (walker.location== Walker::intra ){
-            //bool isinside = (glials_list)[walker.in_obj_index].isPosInsideGlialCell(walker.pos_v, step_lenght_intra);
-            //if (!isinside){
-                //cout << "OUTSIDE" << endl;
-                //walker.location = Walker::extra;
 
-            //} 
-            //else{ 
-            //cout << "step nbr: " << step_nbr << endl;
-
-            
-            //if (step_nbr % 100 == 0){
-                //cout << "update sph_id_to_check" << endl;
-                //walker.sph_id_to_check.clear();
-                //walker.sph_id_to_check.push_back(0);
-                //for (unsigned i = 0; i < glials_list[walker.in_obj_index].processes.size(); i++){
-                //    if (glials_list[walker.in_obj_index].processes[i].minDistance(walker.pos_v) < 2*(step_lenght_intra+barrier_tickness)){
-                //        walker.sph_id_to_check.push_back(i+1);
-                //    }
-                //}
-                //cout << "sph_id_to_check size: " << walker.sph_id_to_check.size() << endl;
-            //}
-            
             if (walker.in_obj_type == 1 && walker.in_obj_index != -1){
                 (glials_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
                 handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_obj_index);  
             } 
-
-            //} 
-            
         }
         // extra walkers or unknown
         else {
@@ -2049,11 +2089,9 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             
         }
         
-
- 
         if (tmax < 0.0){
-                tmax = 0.0;
-                bounced = false;
+            tmax = 0.0;
+            bounced = false;
         }
 
         
@@ -2073,8 +2111,6 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
 
         // Save colision - for validation purpose
         //trajectory.writeFullCollision(colision.colision_point, crossed, col_loc, t, walker.index);
-
-
     
     }
     else if(colision.type == Collision::hit && colision.col_location == Collision::voxel)

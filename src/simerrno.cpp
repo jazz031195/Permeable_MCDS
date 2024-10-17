@@ -278,6 +278,7 @@ bool SimErrno::checkSchemeFile(Parameters &params)
         float holder;
         in >> holder;
         num_rep = uint(holder);
+        //cout << "Wave duration: " << wave_duration << " Wave bins: " << wave_bins << " Num rep: " << num_rep << endl;
 
         if(params.scale_from_stu == 1){
             if(wave_duration > 1){
@@ -305,6 +306,7 @@ bool SimErrno::checkSchemeFile(Parameters &params)
         while( in >> tmp){
             counter++;
         }
+        //cout << "Counter: " << counter << " " << wave_bins*num_rep*3 << endl;
 
         if(counter != uint(wave_bins*num_rep*3)){
             error("Waveform Scheme file has inconsistent size. WAVEFORM Format ERROR.",cout);

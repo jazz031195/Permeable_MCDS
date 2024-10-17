@@ -327,6 +327,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
         in.open(params.axons_files[i]);
         double x,y,z,rout, rin, p, r;
+        double ax_id_, sph_id_, branch_id_;
         int ax_id, sph_id, branch_id;
         int last_ax_id = -1;
         std::string type_object, last_type ="";
@@ -346,7 +347,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             //cout << "header :" << header << endl;
         } 
 
-        while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
+        while (in >>ax_id_ >> sph_id_ >> branch_id_ >> type_object >> x >> y >> z >> rin >> rout >> p){
          
             // convert um to m
             x = x/1000.0;
@@ -354,6 +355,10 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             z = z/1000.0;
             rout = rout/1000.0;
             rin = rin/1000.0;
+
+            sph_id = int(sph_id_);
+            ax_id = int(ax_id_);
+            branch_id = int(branch_id_);
             //cout << "x :" << x << " y :" << y << " z :" << z << " rin :" << rin << " rout :" << rout << endl;
 
             // if the new line is from a different axon
@@ -621,7 +626,7 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
             std::vector<std::string> jkr = split(line,' ');
             if (jkr.size() != 10){
-                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
+                std::cout << "\033[1;33m[Warning]\033[0m Cylinder file does not have 10 elements per line" << std::endl;
             }
             break;
         }
@@ -641,7 +646,7 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
         in.open(params.cylinders_files[i]);
         double x,y,z,rout, rin, p, r, last_z;
-        int ax_id, sph_id, branch_id;
+        double ax_id, sph_id, branch_id;
         int last_ax_id = -1;
         std::string type_object, last_type ="";
         std::string header;
@@ -661,6 +666,7 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
 
         while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
+            //cout << "Ax_id :" << ax_id << endl;
             // convert to mm
             x = x/1000.0;
             y = y/1000.0;
@@ -670,10 +676,10 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
             // if the new line is from a different axon
             if (line_num !=0 and last_ax_id != ax_id and str_dist(last_type,"axon") <= 1){
+                //cout << "ax_id :" << ax_id << endl;
                 // create the axon with id : last_ax_id
                 Cylinder cyl (last_ax_id, {x,y,0.0}, {x,y,last_z}, rout);
                 Cylinder cyl_in (last_ax_id, {x,y,0.0}, {x,y,last_z}, rin);
-
 
                 // Local permeability - Different for each obstacle
                 if(in_perm){

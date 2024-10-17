@@ -237,7 +237,7 @@ void Glial::find_all_intersections(const Walker &walker,  Eigen::Vector3d &step,
 
     std::vector<int> sph_ids_walker_is_inside;
     Eigen::Vector3d pos = walker.pos_v;
-    bool isinside = FindSphereinGlial(pos, 2*(step_lenght),sph_ids_walker_is_inside);
+    bool isinside = FindSphereinGlial(pos, step_lenght,sph_ids_walker_is_inside);
 
     for (auto i = 0; i < sph_ids_walker_is_inside.size() ; ++i) {
 
@@ -308,28 +308,19 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
     
     if (dist_intersections.empty()){
         //cout << "dist_intersections.empty()" << endl;
-        //if (walker.location == Walker::intra){
-        //    bool isnearEdge_walker = !isPosInsideGlialCell(walker.pos_v, -EPS_VAL);
-        //    isnearEdge_walker = isnearEdge_walker && isPosInsideGlialCell(walker.pos_v, EPS_VAL);
-        //    if (isnearEdge_walker){
-        //        cout <<"ON EDGE" << endl;
-        //        step = -step;
-        //        find_all_intersections(walker, step, step_lenght, dist_intersections, spheres_ids, new_sph_id_to_check);
-        //        if (dist_intersections.empty()){
+        if (walker.location == Walker::intra){
+            bool isinside = isPosInsideGlialCell(walker.pos_v, EPS_VAL);
+            if (isinside){
+                colision.col_location = Collision::outside;
+                walker.in_obj_index = -1;
+                walker.in_obj_type = -1;
+                walker.location = Walker::extra;
+                return true;
+            }
+        }
         colision.type = Collision::null;
         return false;
-        //        }
-        //    }
-        //    else{
-        //        walker.in_obj_index = -1;
-        //        walker.in_obj_type = -1;
-        //        walker.location = Walker::extra;
-        //        colision.type = Collision::null;
-        
-        //        return false;
-        //    }
-        //}
-        
+
     }
     else{
 
@@ -389,6 +380,7 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                     //cout << " collision point : " << colision.colision_point <<endl;
 
                     colision.bounced_direction = temp_step.normalized();
+                    colision.perm_crossing = 0.;
 
                     if (rn < -1e-10){
                         colision.col_location = Collision::inside;
@@ -411,7 +403,7 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                     }
 
                     // Membrane permeability    
-                    if((sph.percolation>0.0)){
+                    if((this->percolation>0.0)){
                         if(colision.type == Collision::hit && colision.col_location != Collision::voxel){
 
                             std::mt19937 gen_perm;          // Random engine for permeability
@@ -424,11 +416,11 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                             double dynamic_percolation = 0.0;
                             
                             if (colision.col_location == Collision::inside){ 
-                                dynamic_percolation =  sph.prob_cross_i_e; 
+                                dynamic_percolation =  this->prob_cross_i_e; 
                             } 
 
                             else if (colision.col_location == Collision::outside){
-                                dynamic_percolation = sph.prob_cross_e_i;
+                                dynamic_percolation = this->prob_cross_e_i;
                             } 
 
                             if( dynamic_percolation - _percolation_ > EPS_VAL ){            
@@ -511,7 +503,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
 
     if (sph_ids.size()>0){
         // Sort sph_ids in ascending order
-        std::sort(sph_ids.begin(), sph_ids.end());
+        //std::sort(sph_ids.begin(), sph_ids.end());
         return true;
     }
     else{
@@ -561,4 +553,27 @@ void Glial::set_prob_crossings(double step_length_pref){
         soma.diffusivity_i = this->diffusivity_i;
         
     }
+}
+
+
+double Glial::minDistance(Walker &w){
+    //Origin of the ray
+    Vector3d O;
+    w.getVoxelPosition(O);
+    // find distance to Box
+    double minDistSquared = 0.0;
+
+    for (int i = 0; i < 3; ++i) {
+        double v = O[i];
+        double min = Box[i][0];
+        double max = Box[i][1];
+
+        if (v < min) {
+            minDistSquared += (min - v) * (min - v);
+        } else if (v > max) {
+            minDistSquared += (v - max) * (v - max);
+        }
+    }
+
+    return std::sqrt(minDistSquared);
 }

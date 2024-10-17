@@ -37,8 +37,7 @@ public:
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-    Sphere(int id_, int object_id_, Eigen::Vector3d P_, double radius_, int object_type_, double inner_radius = -1.0,  double scale = 1, double percolation_=0.0):P(P_*scale), radius(radius_*scale){
-        percolation = percolation_;
+    Sphere(int id_, int object_id_, Eigen::Vector3d P_, double radius_, int object_type_,  double scale = 1):P(P_*scale), radius(radius_*scale){
         id = id_;
         object_id = object_id_;
         object_type = object_type_;

@@ -57,7 +57,7 @@ private:
     /*!
      *  \brief return the number of processors in your machine
      */
-    void getNumberOfProcessors();
+    //void getNumberOfProcessors();
 
     /*!
      *  \brief Initialize every individual MCSimulation

@@ -63,6 +63,7 @@ class Glial : public Obstacle
     bool isPosInsideGlialCell_(const Eigen::Vector3d& position, const double& distance_to_be_inside);
     void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
     bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
+    double minDistance(Walker &w);
 
 };
 

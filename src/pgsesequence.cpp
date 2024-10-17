@@ -78,7 +78,7 @@ PGSESequence::~PGSESequence()
 {
 }
 
-void PGSESequence::getGradImpulse(int grad_index, double t, double tLast, Eigen::Vector3d& Gdt){
+void PGSESequence:: getGradImpulse(int grad_index, double t, double tLast, Eigen::Vector3d& Gdt){
 
     for(int i = 0; i < 3; i++)
         Gdt[i] = 0;

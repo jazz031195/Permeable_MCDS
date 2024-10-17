@@ -58,7 +58,7 @@ public:
     void bouncing(Walker &walker, Collision &colision, double dist_to_collision, double step_lenght, int sphere_ind, Eigen::Vector3d step, int index_, std::vector<double> rns); 
     void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double &step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
     bool FindSphereinAxon(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
-    
+    double minDistance(Walker &w);
     
 };
 

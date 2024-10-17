@@ -74,6 +74,8 @@ public:
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
     std::vector<unsigned>  spheres_deque;           /*!< deque with the indexes of the spheres (used for optmization)             */
 
+    int nbr_walker_intra;                           /*!< Number of walkers that are inside the intra-cellular space                 */
+    int nbr_walker_extra;                           /*!< Number of walkers that are inside the extra-cellular space                 */
 
     /******   Auxiliar variables   ********/
     Eigen::Vector3d step;
