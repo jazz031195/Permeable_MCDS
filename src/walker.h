@@ -56,9 +56,9 @@ public:
 
     CylinderCollisionSphere collision_sphere_cylinders;             /*!< Collision sphere for collition against cylidners                       */
 
-    AxonCollisionSphere collision_sphere_axons;                     /*!< Collision sphere for collition against axons                      */
+    AxonCollisionSphere axons_collision_sphere;                     /*!< Collision sphere for collition against axons                      */
 
-    AxonCollisionSphere collision_sphere_inner_axons;                /*!< Collision sphere for collition against inner axons                      */
+    AxonCollisionSphere inner_axons_collision_sphere;                /*!< Collision sphere for collition against inner axons                      */
 
     GlialCollisionSphere collision_sphere_glials;                     /*!< Collision sphere for collition against glial cells                      */
 
