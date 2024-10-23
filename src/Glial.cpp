@@ -39,15 +39,15 @@ void Glial::set_spheres(const std::vector<Sphere> &spheres_to_add){
         // value of center of sphere at z that has the lowest z center value
         double sph_lowest_z_val;
 
-        if (this->Box.empty()){
+        if (this->Box.empty() && soma.radius > 0){
             // intialise box to soma
             // create box around that one sphere
-            sph_highest_x_val = soma.P[0]+ soma.radius;
-            sph_lowest_x_val = soma.P[0] -soma.radius;
-            sph_highest_y_val = soma.P[1] +soma.radius;
-            sph_lowest_y_val = soma.P[1] -soma.radius;
-            sph_highest_z_val = soma.P[2] +soma.radius;
-            sph_lowest_z_val = soma.P[2] -soma.radius;
+            sph_highest_x_val = soma.P[0]+ 2.0*soma.radius;
+            sph_lowest_x_val = soma.P[0] -2.0*soma.radius;
+            sph_highest_y_val = soma.P[1] +2.0*soma.radius;
+            sph_lowest_y_val = soma.P[1] -2.0*soma.radius;
+            sph_highest_z_val = soma.P[2] +2.0*soma.radius;
+            sph_lowest_z_val = soma.P[2] -2.0*soma.radius;
             //x
             Box.push_back({sph_lowest_x_val, sph_highest_x_val});
             //y
@@ -71,28 +71,28 @@ void Glial::set_spheres(const std::vector<Sphere> &spheres_to_add){
         //cout << "Box: " << Box[0][0] << " " << Box[0][1] << " " << Box[1][0] << " " << Box[1][1] << " " << Box[2][0] << " " << Box[2][1] << endl;
 
         // if the extemity of sphere is higher than extermity of Box (x)
-        if (sph_highest_x_val < sphere_to_add.P[0]+ sphere_to_add.radius){
-            Box[0][1] = sphere_to_add.P[0]+ sphere_to_add.radius;
+        if (sph_highest_x_val < sphere_to_add.P[0]+ 2.0*sphere_to_add.radius){
+            Box[0][1] = sphere_to_add.P[0]+ 2.0*sphere_to_add.radius;
         }
         // if the extemity of sphere is lower than extermity of Box (x)
-        if(sph_lowest_x_val > sphere_to_add.P[0]- sphere_to_add.radius){
-            Box[0][0] = sphere_to_add.P[0]- sphere_to_add.radius;
+        if(sph_lowest_x_val > sphere_to_add.P[0]- 2.0*sphere_to_add.radius){
+            Box[0][0] = sphere_to_add.P[0]- 2.0*sphere_to_add.radius;
         }
         // if the extemity of sphere is higher than extermity of Box (y)
-        if (sph_highest_y_val < sphere_to_add.P[1]+ sphere_to_add.radius){
-            Box[1][1] = sphere_to_add.P[1]+ sphere_to_add.radius;
+        if (sph_highest_y_val < sphere_to_add.P[1]+ 2.0*sphere_to_add.radius){
+            Box[1][1] = sphere_to_add.P[1]+ 2.0*sphere_to_add.radius;
         }
         // if the extemity of sphere is lower than extermity of Box (y)
         if(sph_lowest_y_val > sphere_to_add.P[1]- sphere_to_add.radius){
-            Box[1][0]= sphere_to_add.P[1]- sphere_to_add.radius;
+            Box[1][0]= sphere_to_add.P[1]- 2.0*sphere_to_add.radius;
         }
         // if the extemity of sphere is higher than extermity of Box (z)
-        if (sph_highest_z_val < sphere_to_add.P[2]+ sphere_to_add.radius){
-            Box[2][1] = sphere_to_add.P[2]+ sphere_to_add.radius;
+        if (sph_highest_z_val < sphere_to_add.P[2]+ 2.0*sphere_to_add.radius){
+            Box[2][1] = sphere_to_add.P[2]+ 2.0*sphere_to_add.radius;
         }
         // if the extemity of sphere is lower than extermity of Box (z)
-        if(sph_lowest_z_val > sphere_to_add.P[2]- sphere_to_add.radius){
-            Box[2][0] = sphere_to_add.P[2]- sphere_to_add.radius;
+        if(sph_lowest_z_val > sphere_to_add.P[2]- 2.0*sphere_to_add.radius){
+            Box[2][0] = sphere_to_add.P[2]- 2.0*sphere_to_add.radius;
         }
     //cout << "Box: " << Box[0][0] << " " << Box[0][1] << " " << Box[1][0] << " " << Box[1][1] << " " << Box[2][0] << " " << Box[2][1] << endl;
 
@@ -119,29 +119,32 @@ bool Glial::isNearGlialCell(const Eigen::Vector3d &position, const double &dista
 std::vector<int> Glial::checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis){
 
 	std::vector<int> spheres_id_to_check;
-    std::vector<Sphere> all_spheres = {soma};
+    std::vector<Sphere> all_spheres;
+    if (soma.radius > 0)
+        all_spheres = {soma};
+    
     all_spheres.insert(all_spheres.end(), processes.begin(), processes.end());
 
     //cout << "all_spheres.size() : " << all_spheres.size() << endl;
 	for (auto i = 0; i < all_spheres.size(); ++i) {
 
             double min_i = all_spheres[i].P[axis] - all_spheres[i].radius;
-
 			if (min_i - distance_to_be_inside > position[axis]) {
 				continue;
 			}
 			else {
 				double max_i = all_spheres[i].P[axis] + all_spheres[i].radius;
-
-                if (position[axis]> max_i + distance_to_be_inside) {
+                if (position[axis] > max_i + distance_to_be_inside) {
                     continue;
                 }
                 else{
-                    spheres_id_to_check.push_back(i);
+                    if ((soma.radius > 0) && (i > 0))
+                        spheres_id_to_check.push_back(i-1);
+                    else
+                        spheres_id_to_check.push_back(i);
                 }
 			}
 	}
-
     return spheres_id_to_check;
 }
 std::vector<int> Glial::findCommonIntegers(const std::vector<int>& vec1, const std::vector<int>& vec2, const std::vector<int>& vec3) {
@@ -195,7 +198,7 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& position, const double& 
             }
             else{
                 //processes
-                Sphere sphere_to_check = processes[spheres_to_check_all_axes[i]-1];
+                Sphere sphere_to_check = processes[spheres_to_check_all_axes[i]];
                 if (sphere_to_check.minDistance(position) <= distance_to_be_inside){
                     return true;
                 }
@@ -250,8 +253,7 @@ void Glial::find_all_intersections(const Walker &walker,  Eigen::Vector3d &step,
         }
         else{
             //processes
-            sphere_to_check = processes[sph_ids_walker_is_inside[i]-1];
-
+            sphere_to_check = processes[sph_ids_walker_is_inside[i]];
         }
 
         if (sphere_to_check.minDistance(walker.pos_v) > (step_lenght)){
@@ -310,11 +312,12 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
         //cout << "dist_intersections.empty()" << endl;
         if (walker.location == Walker::intra){
             bool isinside = isPosInsideGlialCell(walker.pos_v, EPS_VAL);
-            if (isinside){
+            if (!isinside){
                 colision.col_location = Collision::outside;
                 walker.in_obj_index = -1;
                 walker.in_obj_type = -1;
                 walker.location = Walker::extra;
+                cout << "no intersection but outside " << endl;
                 return true;
             }
         }
@@ -359,7 +362,7 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                         sph = soma;
                     }
                     else{
-                        sph = processes[spheres_ids[index]-1];
+                        sph = processes[spheres_ids[index]];
                     }
                                 
                     //cout << "distance to sphere wall :" << sph.minDistance(pos)  << endl;
@@ -382,6 +385,10 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                     colision.bounced_direction = temp_step.normalized();
                     colision.perm_crossing = 0.;
 
+                    // if(walker.location == Walker::extra)
+                    // {
+
+                    // }
                     if (rn < -1e-10){
                         colision.col_location = Collision::inside;
                         walker.in_obj_index = id;
@@ -393,7 +400,6 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                         colision.col_location = Collision::outside;
                         walker.in_obj_index = -1;
                         walker.in_obj_type = -1;
-
                         walker.location = Walker::extra;
                  
                         
@@ -490,7 +496,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
             }
             else{
                 //processes
-                Sphere sphere_to_check = processes[spheres_to_check_all_axes[i]-1];
+                Sphere sphere_to_check = processes[spheres_to_check_all_axes[i]];
                 if (sphere_to_check.minDistance(position) <= distance_to_be_inside){
                     sph_ids.push_back(spheres_to_check_all_axes[i]);
                 }

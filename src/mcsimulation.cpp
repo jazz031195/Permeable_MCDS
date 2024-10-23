@@ -115,7 +115,7 @@ void MCSimulation::iniObstacles()
 
     addAxonsObstaclesFromFiles();
 
-    addGlialsObstaclesFromFiles();
+    addNeuronsObstaclesFromFiles();
 
     addPLYObstaclesFromFiles();
 
@@ -604,6 +604,160 @@ void MCSimulation::addGlialsObstaclesFromFiles()
     }
 }
 
+void MCSimulation::addNeuronsObstaclesFromFiles()
+{
+    
+
+    for(unsigned i = 0; i < params.glials_files.size(); i++){
+        std::ifstream in(params.glials_files[i]);
+
+        if(!in){
+            std::cout <<  "[ERROR] Unable to open:" << params.glials_files[i] << std::endl;
+            return;
+        }
+        unsigned enum_ = 1;
+
+        bool first = true;
+
+        for( std::string line; getline( in, line ); )
+        {
+            if(first) {
+                first  = false;
+                enum_ += 1;
+                continue;
+                }
+            if (enum_ == 2 || enum_ == 3 || enum_ == 4 || enum_ == 5 || enum_ == 6){
+                enum_ += 1;
+                continue;
+            }
+
+            std::vector<std::string> jkr = split(line,' ');
+            if (jkr.size() != 4 && jkr.size() != 2 && jkr.size() != 7){
+                std::cout << jkr.size() <<  " elements per line" << std::endl;
+                std::cout << "wrong number of elements per line in file" << std::endl;
+            }
+            break;
+        }
+        in.close();
+        // Permeability file - if any
+        double perm_; 
+
+        std::ifstream in_perm;
+        if(params.glial_permeability_files.size() > 0)
+            in_perm.open(params.glial_permeability_files[i]);
+        
+
+        // Local permeability - Different for each obstacle
+        if(params.glial_permeability_files.size() > 0)
+            in_perm >> perm_;
+        // Global permeability - Same for all obstacle
+        else
+            perm_ = params.obstacle_permeability;
+        
+                
+        // Diffusion coefficients
+        double diff_i; 
+        double diff_e;
+
+        // cout << params.neurons_files[neurons_files_id] << endl;
+        double x,y,z,r;
+        double running_time, icvf;
+
+        in.open(params.glials_files[i]);
+
+        string part;
+        std::string line;
+        int sph_id, ax_id = 0;
+
+        Glial glial_cell;
+        std::vector <Sphere> processes_ = std::vector<Sphere>();
+
+        while (getline( in, line )) {
+            string type;
+            int neuron_id;
+    
+            if(line.size() > 0)
+            {
+                vector<string> jkr = split(line,' ');
+                // Local permeability - Different for each obstacle
+                if(in_perm)
+                    in_perm >> perm_;
+                // Global permeability - Same for all obstacle
+                else
+                    perm_ = params.obstacle_permeability; 
+
+                // Process neuron
+                if (jkr[0] == "Neuron") 
+                {
+                    getline( in, line );
+
+                    vector<string> jkr = split(line,' ');
+                    x = stod(jkr[0]) / 1000.0;
+                    y = stod(jkr[1]) / 1000.0;
+                    z = stod(jkr[2]) / 1000.0;
+                    r = stod(jkr[3]) / 1000.0;
+
+                    if(r > 0)
+                    {
+                        Sphere soma = Sphere (0, processes_.size(), Eigen::Vector3d(x,y,z), r, 1);
+                        soma.setDiffusion(diff_i, diff_e);
+                        soma.setPercolation(perm_);
+                        glial_cell = Glial(dynamicsEngine->glials_list.size(), soma);
+                    }
+                    else
+                    {
+                        Sphere soma = Sphere (0, processes_.size(), Eigen::Vector3d(x,y,z), 0, 1);
+                        soma.setDiffusion(diff_i, diff_e);
+                        soma.setPercolation(perm_);
+                        glial_cell = Glial(dynamicsEngine->glials_list.size(), soma);
+                    }
+                    
+                } 
+                // end neuron
+                else if (jkr[0] == "end") 
+                {
+                    // create the glial with id : last_ax_id
+                    glial_cell.setDiffusion(diff_i, diff_e);
+                    glial_cell.setPercolation(perm_);
+                    //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
+                    glial_cell.set_spheres(processes_);
+                    processes_.clear();
+                    dynamicsEngine->glials_list.push_back(glial_cell);
+                } // end neuron
+                // Process dendrite
+                else if (jkr.size() > 3)  
+                {
+                    x = stod(jkr[0]) / 1000.0;
+                    y = stod(jkr[1]) / 1000.0;
+                    z = stod(jkr[2]) / 1000.0;
+                    r = stod(jkr[3]) / 1000.0;
+
+                    if(processes_.size() > 0)
+                        if ((Eigen::Vector3d(x,y,z) - processes_[processes_.size()-1].P).norm() > r + processes_[processes_.size()-1].radius)
+                            ax_id++;
+                    Sphere process = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
+                    process.setDiffusion(diff_i, diff_e);
+                    process.setPercolation(perm_);
+                    processes_.push_back(process);
+                    sph_id++;
+                        
+                }    
+            } // if( line.size() > 0)
+        
+        }//while( getline(in, line) )
+            
+        params.gamma_icvf = icvf;
+
+        in.close();
+
+        double volume     = (params.max_limits[0] - params.min_limits[0]) * (params.max_limits[1] - params.min_limits[1]) * (params.max_limits[2] - params.min_limits[2]);
+        // double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
+
+        cout << "Number of glials :" << dynamicsEngine->glials_list.size() << endl;
+        // cout << dynamicsEngine->glials_list[0].processes.size() << endl;
+        // cout << dynamicsEngine->glials_list[0].processes[0].P  << endl;
+    }
+}
 
 void MCSimulation::addCylindersObstaclesFromFiles()
 {

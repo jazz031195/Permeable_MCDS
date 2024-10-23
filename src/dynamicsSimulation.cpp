@@ -417,8 +417,8 @@ void DynamicsSimulation::initSimulation()
     step_lenght_intra = sqrt(step_length_pref*params.diffusivity_intra);
     step_lenght_extra = sqrt(step_length_pref*params.diffusivity_extra);
 
-    cout << "step_lenght_intra: " << step_lenght_intra << endl;
-    cout << "step_lenght_extra: " << step_lenght_extra << endl;
+    cout << "step_lenght_intra [mm]: " << step_lenght_intra << endl;
+    cout << "step_lenght_extra [mm]: " << step_lenght_extra << endl;
 
     curr_step_lenght  = step_lenght_intra;
     curr_diffusivity  = params.diffusivity_intra;
@@ -833,28 +833,12 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
             walker.in_obj_index = object_id;
             walker.in_obj_type = object_type;
             
-            //if (walker.in_obj_type == 0){
-                //cout << "in axon" << endl;
-            //    for (unsigned i = 0; i < inner_axons_list[walker.in_obj_index].spheres.size(); i++){
-            //        if (axons_list[walker.in_obj_index].spheres[i].minDistance(pos_temp) < sqrt(6.0*params.diffusivity_intra*params.sim_duration)){
-                    //   if (i> axons_list[walker.in_obj_index].spheres.size()){
-                    //    assert(0);
-                    //   }
-            //            walker.sph_id_to_check.push_back(i);
-            //        }
-            //    }
-             
-            //}
-            //else if (walker.in_obj_type == 1){
-                //cout << "in glial cell" << endl;
-            //    walker.sph_id_to_check.push_back(0);
-            //    for (unsigned i = 0; i < glials_list[walker.in_obj_index].processes.size(); i++){
-            //        if (glials_list[walker.in_obj_index].processes[i].minDistance(pos_temp) < sqrt(6.0*params.diffusivity_intra*params.sim_duration)){
-            //            walker.sph_id_to_check.push_back(i+1);
-            //        }
-            //    }
-            //}
-            //cout << "sph_id_to_check size: " << walker.sph_id_to_check.size() << endl;
+            std::ofstream out;
+            out.open("results/T_ex/ini_pos_file_intra.txt", std::ios::app);
+            // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
+            out << intra_pos[0] << " " << intra_pos[1] << " " << intra_pos[2] << endl;
+            cout << intra_pos[0] << " " << intra_pos[1] << " " << intra_pos[2] << endl;
+
             return;
         }
         count++;
@@ -1174,7 +1158,6 @@ bool DynamicsSimulation::isInsideSpheres(Vector3d &position, double distance_to_
 
 bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id, const double& distance_to_be_inside)
 {
-
     for (unsigned i = 0; i < glials_list.size() ; i++){
         
         bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside);
@@ -1337,7 +1320,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {         
-            //cout << "t : " << t << endl;
+            // cout << "t : " << t << endl;
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
 
@@ -1416,7 +1399,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             dataSynth->update_DWI_signal(walker);
 
         //Write the positions.
-        trajectory.writePosition(walker.pos_r_log, walker.colision_in_log, walker.colision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
+        trajectory.writePosition(walker.pos_v_log, walker.colision_in_log, walker.colision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
 
         if(params.log_propagator){
             //Update Propagator

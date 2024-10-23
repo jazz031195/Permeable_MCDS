@@ -90,6 +90,8 @@ private:
 
     void addGlialsObstaclesFromFiles();
 
+    void addNeuronsObstaclesFromFiles();
+
     void addPLYObstaclesFromFiles();
 
     void addVoxels();

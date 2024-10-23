@@ -1,0 +1,56 @@
+--- a/Eigen/src/SparseCore/TriangularSolver.h
++++ b/Eigen/src/SparseCore/TriangularSolver.h
+@@ -270,11 +270,11 @@ struct sparse_solve_triangular_sparse_selector<Lhs,Rhs,Mode,UpLo,ColMajor>
+       }
+ 
+ 
+-      Index count = 0;
++      // Index count = 0;
+       // FIXME compute a reference value to filter zeros
+       for (typename AmbiVector<Scalar,StorageIndex>::Iterator it(tempVector/*,1e-12*/); it; ++it)
+       {
+-        ++ count;
++        // ++ count;
+ //         std::cerr << "fill " << it.index() << ", " << col << "\n";
+ //         std::cout << it.value() << "  ";
+         // FIXME use insertBack
+--- a/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h
++++ b/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h
+@@ -75,8 +75,8 @@ void SparseLUImpl<Scalar,StorageIndex>::heap_relax_snode (const Index n, IndexVe
+   // Identify the relaxed supernodes by postorder traversal of the etree
+   Index snode_start; // beginning of a snode 
+   StorageIndex k;
+-  Index nsuper_et_post = 0; // Number of relaxed snodes in postordered etree 
+-  Index nsuper_et = 0; // Number of relaxed snodes in the original etree 
++  // Index nsuper_et_post = 0; // Number of relaxed snodes in postordered etree
++  // Index nsuper_et = 0; // Number of relaxed snodes in the original etree
+   StorageIndex l; 
+   for (j = 0; j < n; )
+   {
+@@ -88,7 +88,7 @@ void SparseLUImpl<Scalar,StorageIndex>::heap_relax_snode (const Index n, IndexVe
+       parent = et(j);
+     }
+     // Found a supernode in postordered etree, j is the last column 
+-    ++nsuper_et_post;
++    // ++nsuper_et_post;
+     k = StorageIndex(n);
+     for (Index i = snode_start; i <= j; ++i)
+       k = (std::min)(k, inv_post(i));
+@@ -97,7 +97,7 @@ void SparseLUImpl<Scalar,StorageIndex>::heap_relax_snode (const Index n, IndexVe
+     {
+       // This is also a supernode in the original etree
+       relax_end(k) = l; // Record last column 
+-      ++nsuper_et; 
++      // ++nsuper_et;
+     }
+     else 
+     {
+@@ -107,7 +107,7 @@ void SparseLUImpl<Scalar,StorageIndex>::heap_relax_snode (const Index n, IndexVe
+         if (descendants(i) == 0) 
+         {
+           relax_end(l) = l;
+-          ++nsuper_et;
++          // ++nsuper_et;
+         }
+       }
+     }
