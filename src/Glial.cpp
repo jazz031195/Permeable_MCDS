@@ -317,7 +317,6 @@ bool Glial::checkCollision(Walker &walker,  Eigen::Vector3d &step, const double&
                 walker.in_obj_index = -1;
                 walker.in_obj_type = -1;
                 walker.location = Walker::extra;
-                cout << "no intersection but outside " << endl;
                 return true;
             }
         }

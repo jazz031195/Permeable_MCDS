@@ -832,12 +832,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
             walker.previous_location = Walker::intra;
             walker.in_obj_index = object_id;
             walker.in_obj_type = object_type;
-            
-            std::ofstream out;
-            out.open("results/T_ex/ini_pos_file_intra.txt", std::ios::app);
-            // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
-            out << intra_pos[0] << " " << intra_pos[1] << " " << intra_pos[2] << endl;
-            cout << intra_pos[0] << " " << intra_pos[1] << " " << intra_pos[2] << endl;
+        
 
             return;
         }
@@ -1317,7 +1312,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         walker.setRealPosLog(walker.pos_r,0);
         walker.setVoxPosLog (walker.pos_v,0);
 
-
+        // Vector3d init_pos = walker.pos_r;
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {         
             // cout << "t : " << t << endl;
@@ -1389,6 +1384,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         if(back_tracking){
             continue;
         }
+
+        // std::ofstream out;
+        // out.open("results/T_ex/ini_pos_file_extra.txt", std::ios::app);
+        // // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
+        // out << init_pos[0] << " " << init_pos[1] << " " << init_pos[2] << endl;
 
         //updates the phase shift.
         if(dataSynth)
