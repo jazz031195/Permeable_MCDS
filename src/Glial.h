@@ -23,8 +23,9 @@ class Glial : public Obstacle
     public : 
     int id;                                         /*!< ID of glial */
     Sphere soma;                                    /*!< soma of glial */
-    std::vector<Sphere> processes; /*!< ramification spheres of glial */
+    std::vector<std::vector<Sphere>> processes; /*!< ramification spheres of glial */
     std::vector<Eigen::Vector2d> Box;               /*!< Box with <min, max> for each axis (x,y,z) */
+    std::vector<std::vector<Eigen::Vector2d>> Box_branch; /*!< Box with <min, max> for each axis (x,y,z) */
 
     Glial();
 
@@ -36,33 +37,27 @@ class Glial : public Obstacle
         soma = soma_;
         // intialise box to soma
         // create box around that one sphere
-        double sph_highest_x_val = soma.P[0]+ soma.radius;
-        double sph_lowest_x_val = soma.P[0] -soma.radius;
-        double sph_highest_y_val = soma.P[1] +soma.radius;
-        double sph_lowest_y_val = soma.P[1] -soma.radius;
-        double sph_highest_z_val = soma.P[2] +soma.radius;
-        double sph_lowest_z_val = soma.P[2] -soma.radius;
-        //x
-        Box.push_back({sph_lowest_x_val, sph_highest_x_val});
-        //y
-        Box.push_back({sph_lowest_y_val, sph_highest_y_val});
-        //z
-        Box.push_back({sph_lowest_z_val, sph_highest_z_val});
+        init_box();
 
     }
 
     Glial(Glial const &gl);
+    void init_box();
     bool isNearGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside);
+    bool isNearDendrite(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int>& dendrite_ids);
     void set_spheres(const std::vector<Sphere> &spheres_to_add);
+    void set_box_neuron();
     bool isPosInsideGlialCell(const Eigen::Vector3d& position, const double& distance_to_be_inside);
-    std::vector<int> checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis);
+    bool isPosInsideGlialCell_verbose(const Eigen::Vector3d& position, const double& distance_to_be_inside);
+    std::vector<int> checkAxisForCollision_soma(Eigen::Vector3d position, double distance_to_be_inside, int axis);
+    std::vector<int> checkAxisForCollision_dendrite(Eigen::Vector3d position, double distance_to_be_inside, int axis, int dendrite_to_check);
     bool intersection_sphere_vector(double &t1, double &t2, Sphere &s, Eigen::Vector3d &step, const double &step_length, const Eigen::Vector3d &pos);
     bool checkCollision(Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, Collision &colision);
     std::vector<int> findCommonIntegers(const std::vector<int>& vec1, const std::vector<int>& vec2, const std::vector<int>& vec3);
     void set_prob_crossings(double step_length_pref);
     bool isPosInsideGlialCell_(const Eigen::Vector3d& position, const double& distance_to_be_inside);
-    void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
-    bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
+    void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, std::vector<double>& dist_intersections, std::vector<Sphere*>& spheres);
+    bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<Sphere*> &sph);
     double minDistance(Walker &w);
 
 };

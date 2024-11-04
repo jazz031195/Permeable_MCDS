@@ -27,35 +27,14 @@ def get_traj(traj_path):
         return np.array(signal)
 
 plot_traj  = True
-neuron_file = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/T_ex/neurons_list_49_perc.txt'
-traj_file   = ['/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/T_ex/_9.traj.txt']
+neuron_file = '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/T_ex/neurons_list_22_5_perc.txt'
+traj_file   = ['/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/T_ex/_rep_00_16.traj.txt']
 
-with open(neuron_file) as f:
-    lines = f.readlines()
-    lines = lines[2:]
 
-    neuron_id = 0
-    df = pd.DataFrame(columns=["neuron_id", "x", "y", "z", "r"])
-    for i in range(len(lines)):
-        coords = lines[i].split(' ')
-        print(i)
-        # If it is the soma, plot it in any case
-        if "end" in coords[0]:
-            neuron_id += 1
-        elif len(coords) > 2 and len(coords) < 6:
-            coords = [float(coord)/1000 for coord in coords]
 
-            d = {"neuron_id": neuron_id, 
-                    "x": coords[0], 
-                    "y": coords[1], 
-                    "z": coords[2], 
-                    "r": coords[3]}
-
-            df_avg_data = pd.DataFrame(d, index=[neuron_id])
-            df = pd.concat([df, df_avg_data])
-
-df_all  = df
-df_all["traj"] = 0
+neuron_id = 0
+df_all = pd.DataFrame(columns=["neuron_id", "x", "y", "z", "r"])
+df_tmp2 = pd.DataFrame(columns=["neuron_id", "x", "y", "z", "r"])
 if plot_traj:
     lines = get_traj(traj_file[0])
     xp = []
@@ -68,13 +47,44 @@ if plot_traj:
             yp.append(float(lines[i]))
         elif i%3 == 2:
             zp.append(float(lines[i]))
-    # xp = np.array(xp)
-    # yp = np.array(yp)
-    # zp = np.array(zp)
-    print(len(xp), len(xp[:1500]), len(yp[:1500]), len(zp[:1500]))
-    d = {'x':xp[:5000], 'y': yp[:5000], 'z': zp[:5000], 'r':0.1/1000, 'traj': 1}
-    df_all = pd.concat([df_all, pd.DataFrame(d)])
 
+    min_ = [min(xp[:1000]), min(yp[:1000]), min(zp[:1000])]
+    max_ = [max(xp[:1000]), max(yp[:1000]), max(zp[:1000])]
+    d = {'x':xp[:5000], 'y': yp[:5000], 'z': zp[:5000], 'r':0.1/1000, 'traj': 1}
+    df_tmp2 = pd.concat([df_tmp2, pd.DataFrame(d)])
+
+with open(neuron_file) as f:
+    lines = f.readlines()
+    lines = lines[2:]
+
+
+    for i in range(len(lines)):
+        coords = lines[i].split(' ')
+        # If it is the soma, plot it in any case
+        if "end" in coords[0]:
+            neuron_id += 1
+        elif len(coords) > 3:
+            coords = [float(coord)/1000 for coord in coords]
+
+            count = 0
+            for k in range(3):
+                if((coords[k+3] > min_[k] - 10/1000) & (coords[k+3] < max_[k] + 10/1000)):
+                    count += 1
+            count = 3
+            if count == 3:
+                print(coords[k+3], min_[k], max_[k])
+                d = {"neuron_id": neuron_id, 
+                        "x": coords[3], 
+                        "y": coords[4], 
+                        "z": coords[5], 
+                        "r": coords[6],
+                        "traj": 0}
+
+                df_avg_data = pd.DataFrame(d, index=[neuron_id])
+                df_all = pd.concat([df_all, df_avg_data])
+
+print(df_all)
+df_all = pd.concat([df_all, df_tmp2])
 fig = go.Figure()    
 fig.add_trace(go.Scatter3d(
                             x=df_all["x"],

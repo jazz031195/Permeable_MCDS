@@ -489,120 +489,120 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
 
 
-void MCSimulation::addGlialsObstaclesFromFiles()
-{
+// void MCSimulation::addGlialsObstaclesFromFiles()
+// {
     
 
-    for(unsigned i = 0; i < params.glials_files.size(); i++){
-        cout << "Adding Glials" << endl;
+//     for(unsigned i = 0; i < params.glials_files.size(); i++){
+//         cout << "Adding Glials" << endl;
 
 
-        std::ifstream in(params.glials_files[i]);
+//         std::ifstream in(params.glials_files[i]);
 
-        if(!in){
-            return;
-        }
+//         if(!in){
+//             return;
+//         }
 
-        bool first=true;
-        for( std::string line; getline( in, line ); )
-        {
-            if(first) {first-=1;continue;}
+//         bool first=true;
+//         for( std::string line; getline( in, line ); )
+//         {
+//             if(first) {first-=1;continue;}
 
-            std::vector<std::string> jkr = split(line,' ');
-            if (jkr.size() != 10){
-                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
-            }
-            break;
-        }
-        in.close();
+//             std::vector<std::string> jkr = split(line,' ');
+//             if (jkr.size() != 10){
+//                 //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
+//             }
+//             break;
+//         }
+//         in.close();
 
-        // Permeability file - if any
-        double perm_; 
+//         // Permeability file - if any
+//         double perm_; 
 
-        std::ifstream in_perm;
-        if(params.glial_permeability_files.size() >0){
-            in_perm.open(params.glial_permeability_files[i]);
-        }
+//         std::ifstream in_perm;
+//         if(params.glial_permeability_files.size() >0){
+//             in_perm.open(params.glial_permeability_files[i]);
+//         }
 
-        // Diffusion coefficients
-        double diff_i; 
-        double diff_e;
+//         // Diffusion coefficients
+//         double diff_i; 
+//         double diff_e;
 
-        in.open(params.glials_files[i]);
-        double x,y,z,rout, rin, p, r;
-        int ax_id, sph_id, branch_id;
-        std::string type_object;
-        std::string header;
+//         in.open(params.glials_files[i]);
+//         double x,y,z,rout, rin, p, r;
+//         int ax_id, sph_id, branch_id;
+//         std::string type_object;
+//         std::string header;
 
-        std::vector<Sphere> spheres_ ;
-        Sphere sphere_;
-        int line_num = 0;
+//         std::vector<Sphere> spheres_ ;
+//         Sphere sphere_;
+//         int line_num = 0;
 
-        int header_size = 10;
+//         int header_size = 10;
 
-        for(unsigned j = 0; j < header_size; j++){  
-            in >>header;
-            cout << "header :" << header << endl;
-        } 
-        std::vector <Sphere> processes_ = std::vector<Sphere>();
-        Glial glial_cell;
-        diff_i = params.diffusivity_intra; 
-        diff_e = params.diffusivity_extra;
-        perm_ = params.obstacle_permeability;
+//         for(unsigned j = 0; j < header_size; j++){  
+//             in >>header;
+//             cout << "header :" << header << endl;
+//         } 
+//         std::vector <Sphere> processes_ = std::vector<Sphere>();
+//         Glial glial_cell;
+//         diff_i = params.diffusivity_intra; 
+//         diff_e = params.diffusivity_extra;
+//         perm_ = params.obstacle_permeability;
 
 
-        while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
+//         while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
 
-            x = x/1000.0;
-            y = y/1000.0;
-            z = z/1000.0;
-            r = rout/1000.0;
+//             x = x/1000.0;
+//             y = y/1000.0;
+//             z = z/1000.0;
+//             r = rout/1000.0;
             
-            if (str_dist(type_object,"glial") == 0){
-                //cout << endl;
-                //cout << "processes_.size() :" << processes_.size() << endl;
-                if (processes_.size() != 0){
-                    // create the glial with id : last_ax_id
-                    glial_cell.setDiffusion(diff_i, diff_e);
-                    glial_cell.setPercolation(perm_);
-                    //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
-                    glial_cell.set_spheres(processes_);
-                    processes_.clear();
-                    processes_ = std::vector<Sphere>();
-                    dynamicsEngine->glials_list.push_back(glial_cell);
-                }
+//             if (str_dist(type_object,"glial") == 0){
+//                 //cout << endl;
+//                 //cout << "processes_.size() :" << processes_.size() << endl;
+//                 if (processes_.size() != 0){
+//                     // create the glial with id : last_ax_id
+//                     glial_cell.setDiffusion(diff_i, diff_e);
+//                     glial_cell.setPercolation(perm_);
+//                     //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
+//                     glial_cell.set_spheres(processes_);
+//                     processes_.clear();
+//                     processes_ = std::vector<Sphere>();
+//                     dynamicsEngine->glials_list.push_back(glial_cell);
+//                 }
      
-                Sphere soma = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
-                soma.setDiffusion(diff_i, diff_e);
-                soma.setPercolation(perm_);
-                glial_cell = Glial(ax_id, soma);
-            }
-            if (str_dist(type_object,"glialRamification") == 0){
+//                 Sphere soma = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
+//                 soma.setDiffusion(diff_i, diff_e);
+//                 soma.setPercolation(perm_);
+//                 glial_cell = Glial(ax_id, soma);
+//             }
+//             if (str_dist(type_object,"glialRamification") == 0){
         
-                Sphere process = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
-                process.setDiffusion(diff_i, diff_e);
-                process.setPercolation(perm_);
-                processes_.push_back(process);
-                //cout << "processes_.size() :" << processes_.size() << endl;
-            }
-            line_num += 1;
+//                 Sphere process = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
+//                 process.setDiffusion(diff_i, diff_e);
+//                 process.setPercolation(perm_);
+//                 processes_.push_back(process);
+//                 //cout << "processes_.size() :" << processes_.size() << endl;
+//             }
+//             line_num += 1;
 
-        }
-        //last cell
-        glial_cell.setDiffusion(diff_i, diff_e);
-        glial_cell.setPercolation(perm_);
-        //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
-        glial_cell.set_spheres(processes_);
-        processes_.clear();
-        dynamicsEngine->glials_list.push_back(glial_cell);
+//         }
+//         //last cell
+//         glial_cell.setDiffusion(diff_i, diff_e);
+//         glial_cell.setPercolation(perm_);
+//         //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
+//         glial_cell.set_spheres(processes_);
+//         processes_.clear();
+//         dynamicsEngine->glials_list.push_back(glial_cell);
 
-        cout << "Number of glials :" << dynamicsEngine->glials_list.size() << endl;
-        cout << dynamicsEngine->glials_list[0].processes.size() << endl;
-        cout << dynamicsEngine->glials_list[0].processes[0].P  << endl;
+//         cout << "Number of glials :" << dynamicsEngine->glials_list.size() << endl;
+//         cout << dynamicsEngine->glials_list[0].processes.size() << endl;
+//         cout << dynamicsEngine->glials_list[0].processes[0].P  << endl;
 
-        in.close();
-    }
-}
+//         in.close();
+//     }
+// }
 
 void MCSimulation::addNeuronsObstaclesFromFiles()
 {
@@ -667,18 +667,23 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
 
         string part;
         std::string line;
-        int sph_id, ax_id = 0;
+        int sph_id = 0;
 
         Glial glial_cell;
-        std::vector <Sphere> processes_ = std::vector<Sphere>();
+        std::vector<std::vector <Sphere>> processes_;
+        std::vector <Sphere> process;
+        int neuron_id, dendrite_id = -1;
+        int last_dendrite_id = 0;
 
         while (getline( in, line )) {
             string type;
-            int neuron_id;
     
             if(line.size() > 0)
             {
                 vector<string> jkr = split(line,' ');
+                // for(int i=0; i < jkr.size(); i++)
+                //     cout << jkr[i] << " ";
+                // cout << endl;
                 // Local permeability - Different for each obstacle
                 if(in_perm)
                     in_perm >> perm_;
@@ -690,12 +695,13 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
                 if (jkr[0] == "Neuron") 
                 {
                     getline( in, line );
-
                     vector<string> jkr = split(line,' ');
-                    x = stod(jkr[0]) / 1000.0;
-                    y = stod(jkr[1]) / 1000.0;
-                    z = stod(jkr[2]) / 1000.0;
-                    r = stod(jkr[3]) / 1000.0;
+                    neuron_id   = stod(jkr[0]);
+                    dendrite_id = stod(jkr[1]);
+                    x = stod(jkr[3]) / 1000.0;
+                    y = stod(jkr[4]) / 1000.0;
+                    z = stod(jkr[5]) / 1000.0;
+                    r = stod(jkr[6]) / 1000.0;
 
                     if(r > 0)
                     {
@@ -716,31 +722,45 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
                 // end neuron
                 else if (jkr[0] == "end") 
                 {
+                    glial_cell.set_spheres(process);
                     // create the glial with id : last_ax_id
                     glial_cell.setDiffusion(diff_i, diff_e);
                     glial_cell.setPercolation(perm_);
-                    //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
-                    glial_cell.set_spheres(processes_);
-                    processes_.clear();
+                    glial_cell.set_box_neuron();
                     dynamicsEngine->glials_list.push_back(glial_cell);
+                    dendrite_id = last_dendrite_id = -1;
+                    processes_.clear();
+                    process.clear();
+                    glial_cell.Box.clear();
+                    glial_cell.Box_branch.clear();
                 } // end neuron
                 // Process dendrite
                 else if (jkr.size() > 3)  
                 {
-                    x = stod(jkr[0]) / 1000.0;
-                    y = stod(jkr[1]) / 1000.0;
-                    z = stod(jkr[2]) / 1000.0;
-                    r = stod(jkr[3]) / 1000.0;
-
-                    if(processes_.size() > 0)
-                        if ((Eigen::Vector3d(x,y,z) - processes_[processes_.size()-1].P).norm() > r + processes_[processes_.size()-1].radius)
-                            ax_id++;
-                    Sphere process = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
-                    process.setDiffusion(diff_i, diff_e);
-                    process.setPercolation(perm_);
-                    processes_.push_back(process);
+                    neuron_id   = stod(jkr[0]);
+                    dendrite_id = stod(jkr[1]);
+                    x = stod(jkr[3]) / 1000.0;
+                    y = stod(jkr[4]) / 1000.0;
+                    z = stod(jkr[5]) / 1000.0;
+                    r = stod(jkr[6]) / 1000.0;
+                    // cout << x << " " << y << " " << z << " " << r << endl;
+                    
+                    // New dendrite
+                    if(dendrite_id != last_dendrite_id)
+                    {
+                        sph_id = 0;
+                        if(last_dendrite_id != -1)
+                        {
+                            glial_cell.set_spheres(process);
+                            process.clear();
+                        }
+                        last_dendrite_id = dendrite_id;
+                    }
+                    Sphere sph = Sphere(sph_id, dendrite_id, Eigen::Vector3d(x,y,z), r, 1);
+                    sph.setDiffusion(diff_i, diff_e);
+                    sph.setPercolation(perm_);
+                    process.push_back(sph);
                     sph_id++;
-                        
                 }    
             } // if( line.size() > 0)
         
@@ -752,7 +772,6 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
 
         double volume     = (params.max_limits[0] - params.min_limits[0]) * (params.max_limits[1] - params.min_limits[1]) * (params.max_limits[2] - params.min_limits[2]);
         // double icvf_calculated = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->neurons_list);
-
         cout << "Number of glials :" << dynamicsEngine->glials_list.size() << endl;
         // cout << dynamicsEngine->glials_list[0].processes.size() << endl;
         // cout << dynamicsEngine->glials_list[0].processes[0].P  << endl;

@@ -124,6 +124,12 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if(str_dist(tmp,"seed") <= 1){
             in >> seed;
         }
+        else if(str_dist(tmp,"icvf") <= 1){
+            in >> packing_icvf;
+        }
+        else if(str_dist(tmp,"soma_vf") <= 1){
+            in >> soma_vf;
+        }
         else if(str_dist(tmp,"<obstacle>") == 0){
             readObstacles(in);
         }

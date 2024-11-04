@@ -320,7 +320,8 @@ private:
      * \param   intra_pos vector to save the 3d position.
      */
     inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &object_id, int& object_type);
-
+    inline void getAnIntraCellularPosition_soma(Eigen::Vector3d& intra_pos);
+    inline void getAnIntraCellularPosition_dendrite(Eigen::Vector3d& intra_pos);
     /*!
      * \brief   finds an extra cellular 3d position inside the voxel (needs a voxel initialized).
      * \param   extra_pos vector to save the 3d position.

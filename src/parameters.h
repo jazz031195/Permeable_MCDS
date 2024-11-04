@@ -82,6 +82,7 @@ public:
     std::vector<unsigned>   packing_num_obstacles;
     bool                    packing_output_conf;
     double                  packing_icvf;
+    double                  soma_vf;
     double                  packing_output_configuration;
 
 
