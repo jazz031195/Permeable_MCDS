@@ -7,30 +7,18 @@ import plotly.graph_objects as go
 import plotly.colors as colors
 
 def read_bin_file(file_path):
-    nbr_steps = 40000
-    scatters= []
-
-    for i in range(20):
-        start = (nbr_steps+1)*i
-        limit = nbr_steps*(i+1)-1
-
-        traj_part = np.fromfile(file_path, dtype="float32")
-
-        xs =[]
-        ys =[]
-        zs =[]  
-        e = 0  
-
-        for t in traj_part:
-            if t != " ":
-  
-                if e%3 == 0:
-                    xs.append(t)
-                elif e%3 == 1:
-                    ys.append(t)
-                elif e%3 == 2:
-                    zs.append(t)
-                e= e+ 1
+    traj_part = np.fromfile(file_path, dtype="float32")
+    chunks = 4
+    nbr_steps=64300
+    valid_traj_part = traj_part[np.isfinite(traj_part)]  # Ensure all entries are valid floats
+    
+    scatters = []
+    for i in range(chunks):
+        start = (nbr_steps+1) * i
+        end = nbr_steps * (i + 1)-1
+        
+        chunk = valid_traj_part[3*start:3*end]
+        xs, ys, zs = chunk[0::3], chunk[1::3], chunk[2::3]
 
         print("done")
         # Example scatter plot
@@ -38,9 +26,9 @@ def read_bin_file(file_path):
         c = colours[0]  # Assuming e is defined somewhere in your code
 
         scatter = go.Scatter3d(
-            x=[i for i in xs[start:limit]],
-            y=[i for i in ys[start:limit]],
-            z=[i for i in zs[start:limit]],
+            x=[i for i in xs],
+            y=[i for i in ys],
+            z=[i for i in zs],
             mode="markers+lines",  # Include both markers and lines
             name=f"Axon",
             marker=dict(
@@ -74,5 +62,31 @@ def read_bin_file(file_path):
     fig.show()
 
 
-file = "/home/localadmin/Documents/CATERPillar/arthurs_analysis/test_rep_00_1.traj"
+def read_bin_file_2d(file_path):
+    traj_part = np.fromfile(file_path, dtype="float32")
+    chunks =1
+    nbr_steps=64300
+    valid_traj_part = traj_part[np.isfinite(traj_part)]  # Ensure all entries are valid floats
+    
+    alls_xs = []
+    alls_ys = []
+    for i in range(chunks):
+        start = (nbr_steps+1) * i
+        end = nbr_steps * (i + 1)-1
+        
+        chunk = valid_traj_part[3*start:3*end]
+        xs, ys = chunk[0::3], chunk[1::3]
+        alls_xs.extend(xs)
+        alls_ys.extend(ys)
+    
+   # 2d plot of all_xs and all_ys
+    fig, ax = plt.subplots()
+    ax.plot(alls_xs, alls_ys, 'o', color='black', markersize=1)
+    ax.set(xlabel='X [mm]', ylabel='Y [mm]',
+           title='2D plot of all X and Y coordinates')
+    ax.grid()
+    plt.show()
+
+
+file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/test_rep_00_0.traj"
 read_bin_file(file)

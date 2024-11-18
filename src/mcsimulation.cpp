@@ -337,6 +337,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         std::vector<Sphere> spheres_in ;
         Sphere sphere_out;
         Sphere sphere_in;
+        bool create_myelin = false;
 
         int line_num = 0;
 
@@ -366,6 +367,10 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 // create the axon with id : last_ax_id
                 Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
                 Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
+
+                if (rin != rout){
+                    create_myelin = true;
+                }
 
                 // Local permeability - Different for each obstacle
                 if(in_perm){
@@ -415,6 +420,10 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
             Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
 
+            if (rin != rout){
+                create_myelin = true;
+            }
+
             for (unsigned i = 0; i < spheres_out.size(); i++){
                 spheres_out[i].setPercolation(perm_);
                 spheres_in[i].setPercolation(perm_);
@@ -438,46 +447,10 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
 
         }
-
-        //double max_limits, min_limits;
-        // z of last sphere of first axon
-        //Axon first_axon = dynamicsEngine->axons_list[0];
-        //cout << "first_axon.spheres.size() : " << first_axon.spheres.size() << endl;
-        //max_limits = first_axon.spheres[first_axon.spheres.size()-1].P[2]; 
-        // z of first sphere of first axon
-        //min_limits = first_axon.spheres[0].P[2]; 
-        //max_limits =0.05; 
-        //cout << "min_limits : " << min_limits << endl;
-        //cout << "max_limits : " << max_limits << endl;
-
-        // voxel
-        //params.max_limits = Eigen::Vector3d(max_limits,max_limits,max_limits);
-        //params.min_limits = Eigen::Vector3d(min_limits,min_limits,min_limits);
-        //double volume = (params.max_limits[0]-params.min_limits[0])*(params.max_limits[1]-params.min_limits[1])*(params.max_limits[2]-params.min_limits[2]);
-        //pair<Eigen::Vector3d,Eigen::Vector3d> voxel_(min_limits,max_limits);
-        //params.voxels_list.push_back(voxel_);
-    
-        //cout << " Volume :" << volume << endl;
-        // set icvf
-        //double icvf = computeICVF(params.min_limits, params.max_limits, dynamicsEngine->axons_list);
-        // set number of particles
-        //if (params.concentration != 0){
-        //    if (params.ini_walker_flag == "intra"){
-        //        int num_walkers = params.concentration*volume*icvf/params.num_proc;
-        //        params.setNumWalkers(num_walkers);
-        //    }
-        //    else if (params.ini_walker_flag == "extra"){
-        //        int num_walkers = params.concentration*volume*(1.0-icvf)/params.num_proc;
-        //        params.setNumWalkers(num_walkers);
-        //    }
-        //    else{
-        //        int num_walkers = params.concentration*volume/params.num_proc;
-        //        params.setNumWalkers(num_walkers);
-        //    } 
-        //}
+        if (!create_myelin){
+            dynamicsEngine->inner_axons_list.clear();
+        }
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
-        
-        //cout << " ICVF :" << icvf<< endl;
         cout << " Number of particles :" << params.num_walkers << endl;
         cout << "Number of axons :" << dynamicsEngine->axons_list.size() << endl;
 
@@ -487,122 +460,85 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 }
 
 
-
-
 void MCSimulation::addGlialsObstaclesFromFiles()
 {
-    
-
-    for(unsigned i = 0; i < params.glials_files.size(); i++){
+    for (unsigned i = 0; i < params.glials_files.size(); i++) {
         cout << "Adding Glials" << endl;
-
 
         std::ifstream in(params.glials_files[i]);
 
-        if(!in){
+        if (!in) {
+            cerr << "Failed to open file: " << params.glials_files[i] << endl;
             return;
         }
 
-        bool first=true;
-        for( std::string line; getline( in, line ); )
-        {
-            if(first) {first-=1;continue;}
-
-            std::vector<std::string> jkr = split(line,' ');
-            if (jkr.size() != 10){
-                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
-            }
-            break;
+        // Skip the header
+        for (int j = 0; j < 10; j++) {
+            std::string header;
+            in >> header;
+            cout << "header: " << header << endl;
         }
-        in.close();
 
         // Permeability file - if any
-        double perm_; 
-
-        std::ifstream in_perm;
-        if(params.glial_permeability_files.size() >0){
-            in_perm.open(params.glial_permeability_files[i]);
-        }
+        double perm_ = params.obstacle_permeability;
 
         // Diffusion coefficients
-        double diff_i; 
-        double diff_e;
+        double diff_i = params.diffusivity_intra;
+        double diff_e = params.diffusivity_extra;
 
-        in.open(params.glials_files[i]);
-        double x,y,z,rout, rin, p, r;
+        // Variables to hold data from the file
+        double x, y, z, rout, rin, p, r;
         int ax_id, sph_id, branch_id;
         std::string type_object;
-        std::string header;
 
-        std::vector<Sphere> spheres_ ;
-        Sphere sphere_;
-        int line_num = 0;
-
-        int header_size = 10;
-
-        for(unsigned j = 0; j < header_size; j++){  
-            in >>header;
-            cout << "header :" << header << endl;
-        } 
-        std::vector <Sphere> processes_ = std::vector<Sphere>();
+        std::vector<Sphere> processes_;
         Glial glial_cell;
-        diff_i = params.diffusivity_intra; 
-        diff_e = params.diffusivity_extra;
-        perm_ = params.obstacle_permeability;
 
+        while (in >> ax_id >> sph_id >> branch_id >> type_object >> x >> y >> z >> rin >> rout >> p) {
+            // Normalize coordinates and radius
+            x /= 1000.0;
+            y /= 1000.0;
+            z /= 1000.0;
+            r = rout / 1000.0;
 
-        while (in >>ax_id >> sph_id >> branch_id>> type_object >> x >> y >> z >> rin >> rout >> p){
-
-            x = x/1000.0;
-            y = y/1000.0;
-            z = z/1000.0;
-            r = rout/1000.0;
-            
-            if (str_dist(type_object,"glial") == 0){
-                //cout << endl;
-                //cout << "processes_.size() :" << processes_.size() << endl;
-                if (processes_.size() != 0){
-                    // create the glial with id : last_ax_id
+            if (type_object.find("glialSoma") != std::string::npos) {
+                // Save the previous glial cell
+                if (!processes_.empty()) {
                     glial_cell.setDiffusion(diff_i, diff_e);
                     glial_cell.setPercolation(perm_);
-                    //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
                     glial_cell.set_spheres(processes_);
-                    processes_.clear();
-                    processes_ = std::vector<Sphere>();
                     dynamicsEngine->glials_list.push_back(glial_cell);
+                    processes_.clear();
                 }
-     
-                Sphere soma = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
+
+                // Create new glial cell
+                Sphere soma(sph_id, ax_id, Eigen::Vector3d(x, y, z), r, 1, branch_id);
                 soma.setDiffusion(diff_i, diff_e);
                 soma.setPercolation(perm_);
                 glial_cell = Glial(ax_id, soma);
-            }
-            if (str_dist(type_object,"glialRamification") == 0){
-        
-                Sphere process = Sphere (sph_id, ax_id, Eigen::Vector3d(x,y,z), r, 1);
+            } else if (type_object.find("glialRamification") != std::string::npos) {
+                // Add a new process to the current glial cell
+                Sphere process(sph_id, ax_id, Eigen::Vector3d(x, y, z), r, 1, branch_id);
                 process.setDiffusion(diff_i, diff_e);
                 process.setPercolation(perm_);
                 processes_.push_back(process);
-                //cout << "processes_.size() :" << processes_.size() << endl;
             }
-            line_num += 1;
-
         }
-        //last cell
-        glial_cell.setDiffusion(diff_i, diff_e);
-        glial_cell.setPercolation(perm_);
-        //cout << "processes_.size() added to glial :" << processes_.size() << " line num :" << line_num << endl;
-        glial_cell.set_spheres(processes_);
-        processes_.clear();
-        dynamicsEngine->glials_list.push_back(glial_cell);
 
-        cout << "Number of glials :" << dynamicsEngine->glials_list.size() << endl;
-        cout << dynamicsEngine->glials_list[0].processes.size() << endl;
-        cout << dynamicsEngine->glials_list[0].processes[0].P  << endl;
+        // Save the last glial cell
+        if (!processes_.empty()) {
+            glial_cell.setDiffusion(diff_i, diff_e);
+            glial_cell.setPercolation(perm_);
+            glial_cell.set_spheres(processes_);
+            dynamicsEngine->glials_list.push_back(glial_cell);
+        }
 
         in.close();
     }
+
+    cout << "Number of glials: " << dynamicsEngine->glials_list.size() << endl;
 }
+
 
 
 void MCSimulation::addCylindersObstaclesFromFiles()

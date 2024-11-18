@@ -16,8 +16,17 @@ public:
     double radius;
     Eigen::Vector3d begin;
     Eigen::Vector3d end;
-    std::vector<Eigen::Vector2d> Box;
-    //Projections projections;
+
+    struct Box {
+        double x_min;
+        double x_max;
+        double y_min;
+        double y_max;
+        double z_min;
+        double z_max;
+    };
+
+    std::vector<Box> boxes;
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -59,6 +68,9 @@ public:
     void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double &step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
     bool FindSphereinAxon(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
     double minDistance(Walker &w);
+    double minDistance(const Eigen::Vector3d &O);
+    bool isInsideBox(const int& i, const Eigen::Vector3d& position, const double &distance_to_be_inside);
+    double distanceToBox(const int& i, const Eigen::Vector3d& O);
     
 };
 

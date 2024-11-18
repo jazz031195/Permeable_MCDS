@@ -81,49 +81,42 @@ def add_kurtosis_to_lists(FA, MD, AD, RD, MK, AK, RK, MDs, ADs, RDs, MKs, AKs, R
 
     return MDs, ADs, RDs, MKs, AKs, RKs, FAs
 
-def create_dataframe_from_files(files, scheme_file):
-    """
-    Create a pandas DataFrame from a list of files.
+def create_dataframe_from_files(files):
 
-    Args:
-        path_to_files (str): The path to the directory containing the files.
-        scheme_file (str): The file containing the scheme information.
-
-    Returns:
-        pandas.DataFrame: The DataFrame containing the data extracted from the files.
-    """
-
-
-    locations_list = []
-    types_list = []
-    factors_list = []
-    MDs = []
-    ADs = []
-    RDs = []
-    MKs = []
-    AKs = []
-    RKs = []
-    FAs = []
-
+    factors = []
+    simulation_times = []
     for file in files:
-        if "img" not in file and "traj" not in file and "bhdr" not in file:
-            locations_list, types_list, factors_list = organise_data_in_lists(file, locations_list, types_list, factors_list)
-            FA, MD, AD, RD, MK, AK, RK = dki_from_file(file, scheme_file)
-            MDs, ADs, RDs, MKs, AKs, RKs, FAs = add_kurtosis_to_lists(FA, MD, AD, RD, MK, AK, RK, MDs, ADs, RDs, MKs, AKs, RKs, FAs)
+        if "info" in file:
+            if "factor_2" in file:
+                factors.append(2)
+            elif "factor_4" in file:
+                factors.append(4)
+            elif "factor_8" in file:
+                factors.append(8)
+            elif "factor_16" in file:
+                factors.append(16)
+            elif "factor_32" in file:   
+                factors.append(32)
+            elif "cylinders_" in file:
+                factors.append(0)
+            else:
+                print("Error, no factor found")
 
-    df = pd.DataFrame(columns = ["location", "type", "factor", "FA", "MD", "AD", "RD", "MK", "AK", "RK"])
-    df["location"] = locations_list
-    df["type"] = types_list
-    df["factor"] = factors_list
-    df["FA"] = FAs
-    df["MD"] = MDs
-    df["AD"] = ADs
-    df["RD"] = RDs
-    df["MK"] = MKs
-    df["AK"] = AKs
-    df["RK"] = RKs
+            
 
-    return df
+    df = pd.DataFrame(columns = ["factor", "simulation_time"])
+    df["factor"] = factors
+    df["simulation_time"] = simulation_times
+    print(df.loc[df["factor"] == 2])
+    sns.set_style("whitegrid")
+    sns.set_context("paper", font_scale=1.5)
+    fig, ax = plt.subplots()
+    sns.barplot(x="factor", y="simulation_time", data=df, ax=ax)
+    ax.set_ylabel("Simulation time (s)")
+    ax.set_xlabel("Overlapping factor (0 for cylinders)")
+    plt.tight_layout()
+
+    plt.show()
 
 def plot_data(df, location):
     """
@@ -207,8 +200,7 @@ def plot_overlapping_spheres():
     path = "/home/localadmin/Documents/permeable_MCDS/MCDC_Simulator_public/instructions/axons_vs_cylinders/data/"
     path_to_files = get_files_from_folder(path)
     df = create_dataframe_from_files(path_to_files, scheme_file)
-    plot_data(df, "extra")
-    plot_data(df, "intra")
+
 
 
 def plot_time_for_run():

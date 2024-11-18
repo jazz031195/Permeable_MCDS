@@ -22,17 +22,30 @@ def get_scheme_info(scheme_path):
     b_values = [round(float(i),2) for i in b_values]
     return b_values, directions
 
+
+def get_scheme_info_iso(path_to_info):
+    with open(path_to_info, "r") as f:
+        lines = f.readlines()
+    vecs = []
+    bs = []
+    for i, line in enumerate(lines):
+        vec = np.array([float(line.split()[0]), float(line.split()[1]), float(line.split()[2])])
+        b = line.split()[3]
+        vecs.append(vec)
+        bs.append(int(b)/1000)
+    return np.array(bs), np.array(vecs)
+
 def calculate_ADC(b0 ,b1, scheme_path, path_to_data):
     
     all_b_values = [] 
     all_directions = []
     all_DWIs = []
     all_swellings = []
-
+    isos = []
     files = get_files_from_folder(path_to_data)
     for file in files:
         if "img" not in file and "info" not in file:
-
+            print(file)
             DWI = read_binary_file(file) 
             DWI =[float(i) for i in DWI] 
             if "_0_" in file:
@@ -45,70 +58,68 @@ def calculate_ADC(b0 ,b1, scheme_path, path_to_data):
                 all_swellings.extend(np.ones(len(DWI))*0.75)
             elif "_1_" in file:
                 all_swellings.extend(np.ones(len(DWI))*1)
-                scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_22_dir_12_b.scheme"
             else:
                 print("Error, no swelling found")
                 assert(0)
-            b_values, directions = get_scheme_info(scheme_path)
+            if "iso" not in file:
+                if "_1_" in file:
+                    scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_22_dir_12_b.scheme"
+                else:
+                    scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_21_dir_12_b.scheme"
+                b_values, directions = get_scheme_info(scheme_path)
+                isos.extend([False]*len(directions))
+            else:
+                scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/iso_waveform_vec_b.txt"
+                b_values, directions = get_scheme_info_iso(scheme_path)
+                isos.extend([True]*len(directions))
             all_DWIs.extend(DWI)
             all_b_values.extend(b_values)
             all_directions.extend(directions)
-    df = pd.DataFrame({"DWI": all_DWIs, "b_value": all_b_values, "direction": all_directions, "swelling": all_swellings})
+    df = pd.DataFrame({"DWI": all_DWIs, "b_value": all_b_values, "direction": all_directions, "swelling": all_swellings, "waveform": isos})
+
     # calculate angle between direction and vector (0,0,1)
-    df["angle (rad)"] = df["direction"].apply(lambda x: np.arccos(np.dot(x, [0,0,1]))) 
+    df["angle (rad)"] = df["direction"].apply(lambda x: np.arccos(np.dot(x, [0,0,1])/np.linalg.norm(x)))
+    
     # angle must be from 0 to pi
     df["angle (rad)"] = df["angle (rad)"].apply(lambda x: x if x <= np.pi/2 else np.pi-x)
     
+    df_waveform = df.loc[df["waveform"] == True]
+    df_pgse = df.loc[df["waveform"] == False]
 
-    df_b0 = df.loc[df["b_value"] == b0]
+
+    df_b0 = df_pgse.loc[df_pgse["b_value"] == b0]
     df_b0 = df_b0.groupby(["angle (rad)", "swelling"]).sum()
     df_b0 = df_b0.groupby(["angle (rad)", "swelling"]).sum()
-
-    df_b1 = df.loc[df["b_value"] == b1]
+    df_b1 = df_pgse.loc[df_pgse["b_value"] == b1]
     df_b1 = df_b1.groupby(["angle (rad)", "swelling"]).sum()
     df_b1 = df_b1.groupby(["angle (rad)", "swelling"]).sum()
-    
     # calculate adc list form the two b values
     adc = np.log(df_b0["DWI"].values/df_b1["DWI"].values)/(b1-b0)
     df_b0["ADC"] = adc
     df_b0["ADC"] = df_b0["ADC"].replace([np.inf, -np.inf], np.nan)
     df_b0 = df_b0.dropna().reset_index()
-
     df_b0 = df_b0.loc[df_b0["angle (rad)"] > 0]
 
-    return df_b0
+    df_b0_waveform = df_waveform.loc[df_waveform["b_value"] == b0]
+    df_b0_waveform = df_b0_waveform.groupby(["angle (rad)", "swelling"]).sum()
+    df_b0_waveform = df_b0_waveform.groupby(["angle (rad)", "swelling"]).sum()
+    df_b1 = df_waveform.loc[df_waveform["b_value"] == b1]
+    df_b1 = df_b1.groupby(["angle (rad)", "swelling"]).sum()
+    df_b1 = df_b1.groupby(["angle (rad)", "swelling"]).sum()
+    # calculate adc list form the two b values
+    adc = np.log(df_b0_waveform["DWI"].values/df_b1["DWI"].values)/(b1-b0)
+    df_b0_waveform["ADC"] = adc
+    df_b0_waveform["ADC"] = df_b0_waveform["ADC"].replace([np.inf, -np.inf], np.nan)
+    df_b0_waveform = df_b0_waveform.dropna().reset_index()
+    df_b0_waveform = df_b0_waveform.loc[df_b0_waveform["angle (rad)"] > 0]
 
-def plot_with_respect_to_direction(df):
-    # df = df.loc[df.location == "intra"] 
-     #df = df.loc[df.location == "extra"] 
-    # df = df.loc[df.angle > 0.4*np.pi] 
+    return df_b0, df_b0_waveform
 
-    # 3d plot, x = angle between direction and (0,0,1), y = swelling, z = ADC
-    # surface plotting with the mean ADC for each angle and swelling
-        
-    # Extract axes data from DataFrame
-    x = df['angle (rad)']
-    y = df['swelling']
-    z = df['ADC']
+def plot_with_respect_to_direction(df_pgse, df_waveform):
 
-    # Create 3D plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    # Plot surface
-    ax.plot_trisurf(x, y, z, cmap='viridis')
-
-    # Set labels and title
-    ax.set_xlabel('Angle difference (rad)')
-    ax.set_ylabel('Percentage of swelling')
-    ax.set_zlabel('ADC (um2/ms)')
-    ax.set_title('ADC decrease with swelling')
-
-    # Show plot
-    plt.show()
     # multiplie swelling by 100 to get percentage 
-    df["swelling (%)"] = df["swelling"]
-    print(df)
+    df_pgse["swelling (%)"] = df_pgse["swelling"]
+    df_waveform["swelling (%)"] = df_waveform["swelling"]
 
     # Calculate ADC_relative
     def calculate_relative(group):
@@ -116,11 +127,25 @@ def plot_with_respect_to_direction(df):
         group['ADC_relative'] = group['ADC'] / base_adc
         return group
 
-    df = df.groupby('angle (rad)').apply(calculate_relative)
+    df_pgse = df_pgse.groupby('angle (rad)').apply(calculate_relative)
+    df_waveform = df_waveform.groupby('angle (rad)').apply(calculate_relative)
+    print(df_pgse)
+    print(df_waveform)
+    # save data
+    folder = "/home/localadmin/Documents/CATERPillar/arthurs_analysis"
+    df_pgse.to_csv(f"{folder}/df_pgse.csv")
+    df_waveform.to_csv(f"{folder}/df_waveform.csv")
+    sns.set_style("whitegrid")
+    sns.set_context("paper", font_scale=1.5)
+    sns.lmplot(hue="swelling (%)", y="ADC_relative", x="angle (rad)", data=df_pgse)
+    plt.ylabel('Relative ADC')
+    plt.xlabel('Angle (rad)')
+    plt.title('Relative ADC decrease with swelling')
+    plt.show()
 
     sns.set_style("whitegrid")
     sns.set_context("paper", font_scale=1.5)
-    sns.lmplot(hue="swelling (%)", y="ADC_relative", x="angle (rad)", data=df)
+    sns.lmplot(hue="swelling (%)", y="ADC_relative", x="angle (rad)", data=df_waveform)
     plt.ylabel('Relative ADC')
     plt.xlabel('Angle (rad)')
     plt.title('Relative ADC decrease with swelling')
@@ -132,7 +157,7 @@ def main():
     b1 = 1
     scheme_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/PGSE_21_dir_12_b.scheme"
     path_to_data = "/home/localadmin/Documents/CATERPillar/arthurs_analysis"
-    df = calculate_ADC(b0 ,b1, scheme_path, path_to_data)
-    plot_with_respect_to_direction(df)
+    df_pgse, df_waveform = calculate_ADC(b0 ,b1, scheme_path, path_to_data)
+    plot_with_respect_to_direction(df_pgse, df_waveform)
 
 main()

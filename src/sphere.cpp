@@ -21,7 +21,7 @@ Sphere::Sphere(const Sphere &sph)
     volume          = sph.volume;
     object_id       = sph.object_id;
     object_type     = sph.object_type;
-
+    branch_id       = sph.branch_id;
 
 }
 
