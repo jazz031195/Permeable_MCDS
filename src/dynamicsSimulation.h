@@ -216,7 +216,7 @@ private:
      *          more the collision with the higher priority is saved /see #Collision#.
      *  \return returns true if there was any collision.
      */
-    inline bool checkObstacleCollision(Eigen::Vector3d& amended_step, double &tmax, Eigen::Vector3d &end_point, Collision &colision);
+    inline bool checkObstacleCollision(Eigen::Vector3d& amended_step, double &tmax, Eigen::Vector3d &end_point, Collision &collision);
 
     /*! \fn     updateWalkerPositionAndHandleBouncing
      *  \param  amended_step, step to be "amended", this is corrected against bouncing and voxel limits
@@ -227,8 +227,8 @@ private:
      *          a special case.
      *  \return returns true if the collision was a correct bouncing.
      */
-    inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision& colision);
-    inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision& colision, unsigned &t);
+    inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision& collision);
+    inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision& collision, unsigned &t);
 
     /*! \fn     handleCollisions
      *  \param  collision A given collision with the highest priority so far.
@@ -238,20 +238,20 @@ private:
      *  \brief  Warping function to handle the priority between 2 collision in a single step. The method uses the inhered comparisson
      *          in the class \see :Obstacle:.
      */
-    inline void handleCollisions(Collision &colision, Collision &colision_tmp,  double &max_collision_distance, unsigned indx);
+    inline void handleCollisions(Collision &collision, Collision &collision_tmp,  double &max_collision_distance, unsigned indx);
 
     /*! \fn     mapWalkerIntoVoxer
      *  \brief  If a voxel is given, maps the walker position back into the voxel, assuming a crossing at
      *          the voxel limits.
      */
-    inline void mapWalkerIntoVoxel(Eigen::Vector3d &amended_step, Collision &colision, double barrier_thickness);
+    inline void mapWalkerIntoVoxel(Eigen::Vector3d &amended_step, Collision &collision, double barrier_thickness);
 
 
     /*! \fn     mapWalkerIntoVoxel_tortuous
      *  \brief  If a voxel is given, maps the walker position at any position in the voxel, but in the same compartment 
      (intra or extra)
      */
-    inline void mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision);
+    inline void mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &collision);
 
 
     /*! \fn     getTimeDt

@@ -50,15 +50,15 @@ class Glial : public Obstacle
     }
 
     Glial(Glial const &gl);
-    bool isNearGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside);
+    bool isNearGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &branches);
     void set_spheres(const std::vector<Sphere> &spheres_to_add);
     bool isPosInsideGlialCell(const Eigen::Vector3d& position, const double& distance_to_be_inside);
-    std::vector<int> checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis);
-    bool intersection_sphere_vector(double &t1, double &t2, Sphere &s, Eigen::Vector3d &step, const double &step_length, const Eigen::Vector3d &pos);
-    bool checkCollision(Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, Collision &colision);
+    std::vector<int> checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches);
+    bool intersection_sphere_vector(double &t1, double &t2, const Sphere &s, const Eigen::Vector3d &step, const Eigen::Vector3d &pos);
+    bool checkCollision(Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, Collision &collision);
     std::vector<int> findCommonIntegers(const std::vector<int>& vec1, const std::vector<int>& vec2, const std::vector<int>& vec3);
     void set_prob_crossings(double step_length_pref);
-    void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
+    void find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &step_length, std::vector<double> &dist_intersections, std::vector<int> &spheres_ids);
     bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
     double minDistance(Walker &w);
     bool isInsideBox(const int& i, const Eigen::Vector3d& position, const double &distance_to_be_inside);

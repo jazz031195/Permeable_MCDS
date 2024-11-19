@@ -50,11 +50,11 @@ public:
     }
     Axon(Axon const &ax);
 
-    bool checkCollision(Walker &walker, Eigen::Vector3d &step, double step_lenght, Collision &colision);
+    bool checkCollision(Walker &walker, Eigen::Vector3d &step, const double &step_length, Collision &collision);
     std::vector<int> checkAxisForCollision(Eigen::Vector3d position, double distance_to_be_inside, int axis);
     bool isPosInsideAxon_(Eigen::Vector3d position, double distance_to_be_inside);
     //bool isPosInsideAxon(Eigen::Vector3d &position,  double distance_to_be_inside, double max_radius, std::vector<int> &sph_ids);
-    bool intersection_sphere_vector(double &t1, double &t2,Sphere &s, Eigen::Vector3d &step, const double &step_length, Eigen::Vector3d &pos);
+    bool intersection_sphere_vector(double &t1, double &t2, const Sphere &s, const Eigen::Vector3d &step, const Eigen::Vector3d &pos);
     void set_spheres(std::vector<Sphere> spheres_to_add);
     bool isNearAxon(Eigen::Vector3d position, double distance_to_be_inside);
     bool isNearAxon(Walker walker, double distance_to_be_inside);
@@ -64,13 +64,13 @@ public:
      *  \brief sets the probability of crossing for all spheres
      */
     void set_prob_crossings(double step_length_pref);  
-    void bouncing(Walker &walker, Collision &colision, double dist_to_collision, double step_lenght, int sphere_ind, Eigen::Vector3d step, int index_, std::vector<double> rns); 
-    void find_all_intersections(const Walker &walker,  Eigen::Vector3d &step, const double &step_lenght, std::vector<double>& dist_intersections, std::vector<int>& spheres_ids);
+    void find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &step_length, std::vector<double> &dist_intersections, std::vector<int> &spheres_ids);
     bool FindSphereinAxon(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
     double minDistance(Walker &w);
     double minDistance(const Eigen::Vector3d &O);
     bool isInsideBox(const int& i, const Eigen::Vector3d& position, const double &distance_to_be_inside);
     double distanceToBox(const int& i, const Eigen::Vector3d& O);
+    std::vector<int> findCommonIntegers(const std::vector<int>& vec1, const std::vector<int>& vec2, const std::vector<int>& vec3);
     
 };
 

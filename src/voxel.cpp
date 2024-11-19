@@ -74,7 +74,7 @@ bool Plane::CheckCollision(Walker &walker, Eigen::Vector3d& step, double tmax, C
     colision.t = t;
     colision.bounced_direction = step;
     colision.col_location = Collision::voxel;
-    colision.colision_point = walker.pos_v + t*step;
+    colision.collision_point = walker.pos_v + t*step;
 
     return true;
 }

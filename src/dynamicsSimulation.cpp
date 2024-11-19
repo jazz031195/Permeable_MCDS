@@ -1125,15 +1125,15 @@ bool DynamicsSimulation::isInsidePLY(Eigen::Vector3d &position, double distance_
     //2) We corroborate by casting an infinite ray and checking collisions
 
     Eigen::Vector3d ray = (-position + plyObstacles_list[min_i_index].faces[min_j_index].center).normalized();
-    Collision colision_temp;
+    Collision collision_temp;
 
     double new_min_t = 1e6;
     for (unsigned i=0; i < plyObstacles_list.size(); i++){
         for (unsigned j=0; j < plyObstacles_list[i].face_number; j++){
-            plyObstacles_list[i].faces[j].stepIntersects_MT(tmp,ray,1e8,colision_temp);
+            plyObstacles_list[i].faces[j].stepIntersects_MT(tmp,ray,1e8,collision_temp);
 
-            if(colision_temp.type == Collision::hit and new_min_t > colision_temp.t){
-                new_min_t = colision_temp.t;
+            if(collision_temp.type == Collision::hit and new_min_t > collision_temp.t){
+                new_min_t = collision_temp.t;
                 min_i_index = i;
                 min_j_index = j;
             }
@@ -1343,7 +1343,8 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {         
-            cout << "t : " << t << endl;
+            //cout << "t : " << t << endl;
+
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
 
@@ -1377,12 +1378,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             walker.setRealPosLog(walker.pos_r,t);
             walker.setVoxPosLog (walker.pos_v,t);
 
-            // Save the colision 
-            walker.setColision(walker.colision_in, walker.colision_ext, walker.crossing_in, walker.crossing_ext, t);           
+            // Save the collision 
+            walker.setColision(walker.collision_in, walker.collision_ext, walker.crossing_in, walker.crossing_ext, t);           
 
             // Update step length and current diffusivity based on the walker position in space
             updateStepLength(l);
-
 
             if (walker.location != Walker::intra){
                 updateCollitionSphere(t);
@@ -1422,7 +1422,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             dataSynth->update_DWI_signal(walker);
 
         //Write the positions.
-        trajectory.writePosition(walker.pos_r_log, walker.colision_in_log, walker.colision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
+        trajectory.writePosition(walker.pos_r_log, walker.collision_in_log, walker.collision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
 
         if(params.log_propagator){
             //Update Propagator
@@ -1560,7 +1560,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
     walker.getRealPosition(previous_real_position);
 
     // Collision instance to save manage the collision (in Spanish).
-    Collision colision;
+    Collision collision;
 
     // True when the particle needs to be bounced and updates.
     bool bounced = false;
@@ -1572,9 +1572,9 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
     // Clears the status of the sentinel.
     sentinela.clear();
 
-    // Reset colision state of walker
-    walker.colision_in = 0;
-    walker.colision_ext = 0;
+    // Reset collision state of walker
+    walker.collision_in = 0;
+    walker.collision_ext = 0;
     walker.crossing_in = 0;
     walker.crossing_ext = 0;
 
@@ -1590,25 +1590,25 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         walker.steps_count++;
 
         // True if there was a collision and the particle needs to be bounced.
-        update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, colision);
+        update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, collision);
 
         // Updates the position and bouncing direction.
         if(update_walker_status){
 
-            //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,colision);
-            bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,colision, t);
+            //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision);
+            bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision, t);
 
             // restarts the variables.
             
             update_walker_status = false;
-            colision.type = Collision::null;
-            colision.col_location  = Collision::unknown;
-            colision.perm_crossing = 0.0;
-            colision.t = INFINITY_VALUE;
+            collision.type = Collision::null;
+            collision.col_location  = Collision::unknown;
+            collision.perm_crossing = 0.0;
+            collision.t = INFINITY_VALUE;
             
         }
         else{
-            if (colision.type == Collision::null){
+            if (collision.type == Collision::null){
                 // clear from previous status
                 walker.status = Walker::free;
                 walker.next_direction = {0,0,0};
@@ -1649,12 +1649,12 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
     return false;
 }
 
-bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &tmax, Eigen::Vector3d& end_point,Collision& colision)
+bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &tmax, Eigen::Vector3d& end_point,Collision& collision)
 {
 
-    Collision colision_tmp;
-    colision_tmp.type = Collision::null;
-    colision_tmp.t = INFINITY_VALUE;
+    Collision collision_tmp;
+    collision_tmp.type = Collision::null;
+    collision_tmp.t = INFINITY_VALUE;
 
     //Origin O
     Eigen::Vector3d ray_origin;
@@ -1670,9 +1670,9 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
     //Check Voxel limits
     for(unsigned int i = 0 ; i < voxels_list.size(); i++ )
     {
-        //voxels_list[i].CheckCollision(walker,bounced_step,tmax,colision_tmp);
-        voxels_list[i].CheckCollision(walker,bounced_step,tmax,colision_tmp);
-        handleCollisions(colision,colision_tmp,max_collision_distance,i);
+        //voxels_list[i].CheckCollision(walker,bounced_step,tmax,collision_tmp);
+        voxels_list[i].CheckCollision(walker,bounced_step,tmax,collision_tmp);
+        handleCollisions(collision,collision_tmp,max_collision_distance,i);
     }
 
     if ((cylinders_list).size()>0 && (inner_cylinders_list).size()>0){
@@ -1680,16 +1680,16 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         if (walker.location== Walker::intra ){
             if (walker.in_obj_type == 2 && walker.in_obj_index != -1){
 
-                (inner_cylinders_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-                handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_obj_index);  
+                (inner_cylinders_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,walker.in_obj_index);  
             }
         }
         else{
             for(unsigned int i = 0 ; i < walker.collision_sphere_cylinders.small_sphere_list_end; i++ )
             {
                 unsigned index = walker.collision_sphere_cylinders.collision_list->at(i);
-                cylinders_list[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-                handleCollisions(colision,colision_tmp,max_collision_distance,index);
+                cylinders_list[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,index);
             }
         }
     }
@@ -1699,13 +1699,15 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
  
         if (walker.location== Walker::intra ){
             if (walker.in_obj_type == 0 && walker.in_obj_index != -1){
+       
                 if (inner_axons_list.size() > 0) {
-                    (inner_axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
+    
+                    (inner_axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 }
                 else{
-                    (axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
+                    (axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 }
-                handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_obj_index);   
+                handleCollisions(collision,collision_tmp,max_collision_distance,walker.in_obj_index);   
             }
         }
         // extra walkers or unknown
@@ -1716,8 +1718,8 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
                 unsigned index = walker.axons_collision_sphere.collision_list->at(i);
                 //unsigned index = i;
                 //cout << "Checking axon " << i << endl;
-                (axons_list)[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-                handleCollisions(colision,colision_tmp,max_collision_distance,index);  
+                (axons_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,index);  
             }
         }
     }
@@ -1726,10 +1728,10 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
 
         // intra walkers
         if (walker.location== Walker::intra ){
-
+            
             if (walker.in_obj_type == 1 && walker.in_obj_index != -1){
-                (glials_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-                handleCollisions(colision,colision_tmp,max_collision_distance,walker.in_obj_index);  
+                (glials_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,walker.in_obj_index);  
             } 
         }
         // extra walkers or unknown
@@ -1737,8 +1739,8 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
 
             for(unsigned int i = 0 ; i < walker.collision_sphere_glials.small_sphere_list_end; i++ ){
                 unsigned index = walker.collision_sphere_glials.collision_list->at(i);
-                (glials_list)[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-                handleCollisions(colision,colision_tmp,max_collision_distance,index);     
+                (glials_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,index);     
             }
         }
     }
@@ -1748,71 +1750,71 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
     for(unsigned int i = 0 ; i < walker.collision_sphere_ply.collision_list->size(); i++ )
     {
 
-        plyObstacles_list[i].checkCollision(walker,bounced_step,tmax,colision_tmp, walker.collision_sphere_ply.collision_list->at(i),
+        plyObstacles_list[i].checkCollision(walker,bounced_step,tmax,collision_tmp, walker.collision_sphere_ply.collision_list->at(i),
                                             walker.collision_sphere_ply.small_sphere_list_end[i]);
 
-        handleCollisions(colision,colision_tmp,max_collision_distance,i);
+        handleCollisions(collision,collision_tmp,max_collision_distance,i);
     }
 
     //For each Sphere Obstacles
     for(unsigned int i = 0 ; i < walker.collision_sphere_spheres.small_sphere_list_end; i++ )
     {
         unsigned index = walker.collision_sphere_spheres.collision_list->at(i);
-        spheres_list[index].checkCollision(walker,bounced_step,tmax,colision_tmp);
-        handleCollisions(colision,colision_tmp,max_collision_distance,index);
+        spheres_list[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+        handleCollisions(collision,collision_tmp,max_collision_distance,index);
     }
 
     step_nbr+= 1;
 
-    return colision.type != Collision::null;
+    return collision.type != Collision::null;
 }
 
 
-void DynamicsSimulation::handleCollisions(Collision &colision, Collision &colision_2, double &max_collision_distance, unsigned indx)
+void DynamicsSimulation::handleCollisions(Collision &collision, Collision &collision_2, double &max_collision_distance, unsigned indx)
 {
     // nothing to do;
-    if (colision_2.type == Collision::null)
+    if (collision_2.type == Collision::null)
         return;
 
-    colision_2.obstacle_ind = int(indx);
+    collision_2.obstacle_ind = int(indx);
 
-    if (colision.type == Collision::hit || colision.type == Collision::boundary){
-        if(colision_2.doIHaveMorePiorityThan(colision)){
-            colision = colision_2;
-            max_collision_distance = colision_2.t;
-            colision.obstacle_ind = int(indx);
+    if (collision.type == Collision::hit || collision.type == Collision::boundary){
+        if(collision_2.doIHaveMorePiorityThan(collision)){
+            collision = collision_2;
+            max_collision_distance = collision_2.t;
+            collision.obstacle_ind = int(indx);
         }
         return;
     }
 
-    if(colision.type == Collision::near ){
-        if (colision_2.type == Collision::hit || colision_2.type == Collision::boundary){
-            colision = colision_2;
-            max_collision_distance = colision_2.t;
-            colision.obstacle_ind = int(indx);
+    if(collision.type == Collision::near ){
+        if (collision_2.type == Collision::hit || collision_2.type == Collision::boundary){
+            collision = collision_2;
+            max_collision_distance = collision_2.t;
+            collision.obstacle_ind = int(indx);
         }
         return;
     }
 
-    // if we get here means that colision.type = 'null'
-    if(colision_2.type == Collision::near){
+    // if we get here means that collision.type = 'null'
+    if(collision_2.type == Collision::near){
 
-        colision = colision_2;
-        colision.obstacle_ind = int(indx);
+        collision = collision_2;
+        collision.obstacle_ind = int(indx);
 
         return;
     }
 
-    colision = colision_2;
+    collision = collision_2;
 }
 
 
-void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Collision &colision,double barrier_thicknes)
+void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Collision &collision,double barrier_thicknes)
 {
   
-    walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+    walker.setRealPosition(walker.pos_r + collision.t*bounced_step);
 
-    Eigen::Vector3d voxel_pos = walker.pos_v + (colision.t)*bounced_step;
+    Eigen::Vector3d voxel_pos = walker.pos_v + (collision.t)*bounced_step;
 
     bool mapped = false;
     for(int i = 0 ; i < 3; i++)
@@ -1835,10 +1837,10 @@ void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Colli
     }
 }
 /*
-void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &colision)
+void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_step, Collision &collision)
 {
     //cout << "MAPPING " << endl;
-    walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+    walker.setRealPosition(walker.pos_r + collision.t*bounced_step);
     Eigen::Vector3d position;
     //cout << "mapped " << endl;
     if (walker.location== Walker::extra){
@@ -1921,25 +1923,25 @@ Eigen::Vector3d DynamicsSimulation::findMirrorStep(const Eigen::Vector3d& bounce
 }
 
 
-void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &colision)
+void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& bounced_step, Collision &collision)
 {
     Eigen::Vector3d previous_v_pos = walker.pos_v;
 
-    walker.setVoxelPosition(walker.pos_v + colision.t*bounced_step); 
+    walker.setVoxelPosition(walker.pos_v + collision.t*bounced_step); 
     if (walker.normal == Eigen::Vector3d {0,0,0}){
-        walker.setRealPosition(walker.pos_r + colision.t*bounced_step);
+        walker.setRealPosition(walker.pos_r + collision.t*bounced_step);
     } 
     else{
         Eigen::Vector3d adapted_step =  findMirrorStep(bounced_step, walker.normal);
-        walker.setRealPosition(walker.pos_r + colision.t*adapted_step);
+        walker.setRealPosition(walker.pos_r + collision.t*adapted_step);
     } 
     
     Eigen::Vector3d temp_step = bounced_step;
     Eigen::Vector3d normal = {0,0,0} ;
-    bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, colision.t,temp_step);
+    bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, collision.t,temp_step);
 
     if (mapped){ 
-        colision.bounced_direction = temp_step.normalized();
+        collision.bounced_direction = temp_step.normalized();
         //cout << "previous_v_pos" << previous_v_pos << endl;
         //cout << "walker.pos_v :" << walker.pos_v << endl;
         //cout << "walker.pos_r :" << walker.pos_r << endl;
@@ -1965,8 +1967,8 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
     }
 }
 
-//bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &colision)
-bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &colision, unsigned &t)
+//bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &collision)
+bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &collision, unsigned &t)
 {
 
     // To avoid numerical errors.
@@ -1988,11 +1990,11 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         return false;   
     }    
 
-    if(colision.type == Collision::hit && colision.col_location != Collision::voxel)
+    if(collision.type == Collision::hit && collision.col_location != Collision::voxel)
     {
    
            //If the collision was really close we can't trust the normal direction;
-        if(colision.t < 1e-10 && walker.status != walker.bouncing){
+        if(collision.t < 1e-10 && walker.status != walker.bouncing){
             sentinela.rejected_step = true;
             Eigen::Vector3d direction = -step;
             generateDirectedStep(walker.next_direction,direction);
@@ -2004,17 +2006,17 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         bounced = true;
         walker.status = Walker::bouncing;
 
-        double displ = colision.t;
+        double displ = collision.t;
 
         // Membrane crossing due to permeability --> Tmax needs to be updated because diffusivity may have changed!
-        int crossed = 0, col_loc = colision.col_location;
+        int crossed = 0, col_loc = collision.col_location;
 
     
-        if (colision.perm_crossing > EPS_VAL){
+        if (collision.perm_crossing > EPS_VAL){
             
             crossed = 1;
 
-            if(colision.col_location == Collision::inside){
+            if(collision.col_location == Collision::inside){
                 
                 tmax = sqrt(params.diffusivity_extra/params.diffusivity_intra) * (tmax-displ);
                                 
@@ -2029,10 +2031,10 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 */
             // Save that walker hit the membrane - For validation purpose
                 walker.crossing_in++;
-                walker.colision_in++;
+                walker.collision_in++;
 
             }
-            else if(colision.col_location == Collision::outside){
+            else if(collision.col_location == Collision::outside){
                 
                 tmax = sqrt(params.diffusivity_intra/params.diffusivity_extra) *(tmax -displ);
   
@@ -2048,7 +2050,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                 
             // Save that walker hit the membrane - For validation purpose
                 walker.crossing_ext++;
-                walker.colision_ext++;
+                walker.collision_ext++;
 
             }
             else{
@@ -2068,7 +2070,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
 
             tmax -= displ;
 
-            if(colision.col_location == Collision::inside){
+            if(collision.col_location == Collision::inside){
                 walker.previous_location = walker.location;
                 walker.location = Walker::intra;
                 /*
@@ -2078,9 +2080,9 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                std::cout << "location:" << walker.location  << endl;
                 */
             // Save that walker hit the membrane - For validation purpose
-                walker.colision_in++;
+                walker.collision_in++;
             }
-            if(colision.col_location == Collision::outside){
+            if(collision.col_location == Collision::outside){
                 walker.previous_location = walker.location;
                 walker.location = Walker::extra;
                 /*
@@ -2090,9 +2092,9 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
                std::cout << "location:" << walker.location  << endl;
                 */
             // Save that walker hit the membrane - For validation purpose
-                walker.colision_ext++;
+                walker.collision_ext++;
             }
-            if (colision.col_location == Collision::unknown){
+            if (collision.col_location == Collision::unknown){
                 walker.previous_location = walker.location;
                 //cout << "previous_location:" << walker.previous_location  << endl;
                 //cout << "location:" << walker.location  << endl;
@@ -2121,52 +2123,52 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         walker.setVoxelPosition(voxel_pos  + displ*bounced_step);
         
 
-        bounced_step = colision.bounced_direction;
+        bounced_step = collision.bounced_direction;
 
-        // Save colision - for validation purpose
-        //trajectory.writeFullCollision(colision.colision_point, crossed, col_loc, t, walker.index);
+        // Save collision - for validation purpose
+        //trajectory.writeFullCollision(collision.collision_point, crossed, col_loc, t, walker.index);
     
     }
-    else if(colision.type == Collision::hit && colision.col_location == Collision::voxel)
+    else if(collision.type == Collision::hit && collision.col_location == Collision::voxel)
     {
 
         bounced = true;
 
         walker.status = Walker::on_voxel;
 
-        mapWalkerIntoVoxel_tortuous(bounced_step,colision);
-        bounced_step = colision.bounced_direction;
-        tmax-=colision.t;
+        mapWalkerIntoVoxel_tortuous(bounced_step,collision);
+        bounced_step = collision.bounced_direction;
+        tmax-=collision.t;
 
         
     }
-    else if(colision.type == Collision::near){
+    else if(collision.type == Collision::near){
         //sentinela.rejected_step   = true;
         Eigen::Vector3d direction = -bounced_step; //WARNING: deberiamos usar el bounced step.
         generateDirectedStep(walker.next_direction,direction);
         walker.status = Walker::on_object;
 
-        if(colision.col_location == Collision::inside){
+        if(collision.col_location == Collision::inside){
             walker.previous_location = walker.location;
             walker.location = Walker::intra;
 
         // Save that walker hit the membrane - For validation purpose
-            walker.colision_in++;
+            walker.collision_in++;
         }
-        else if(colision.col_location == Collision::outside){
+        else if(collision.col_location == Collision::outside){
             walker.previous_location = walker.location;
             walker.location = Walker::extra;
         // Save that walker hit the membrane - For validation purpose
-            walker.colision_ext++;
+            walker.collision_ext++;
         }
 
         //Save info on collision - Validation purpose
-        int crossed=0, col_loc = colision.col_location;
-        trajectory.writeFullCollision(colision.colision_point, crossed, col_loc, t, walker.index);
+        int crossed=0, col_loc = collision.col_location;
+        trajectory.writeFullCollision(collision.collision_point, crossed, col_loc, t, walker.index);
         
         return false;
     }
-    else if(colision.type == Collision::degenerate){
+    else if(collision.type == Collision::degenerate){
         sentinela.rejected_step = true;
         Eigen::Vector3d direction = -step;
         generateDirectedStep(walker.next_direction,direction);

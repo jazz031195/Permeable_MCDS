@@ -23,6 +23,7 @@ public:
     double volume;
     int object_id;          /*!< ID of the object */
     int object_type;        /*!< Type of the object  (0 : axon, 1 : glial)   */
+    int branch_id;          /*!< ID of the branch */
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -37,11 +38,16 @@ public:
      *  \param scale scale factor for the values passed. Useful when reading a file.
      *  \brief Initialize everything.
      */
-    Sphere(int id_, int object_id_, Eigen::Vector3d P_, double radius_, int object_type_,  double scale = 1):P(P_*scale), radius(radius_*scale){
+    Sphere(int id_, int object_id_, Eigen::Vector3d P_, double radius_, int object_type_, int branch_id_ = -1, double scale = 1):P(P_*scale), radius(radius_*scale){
         id = id_;
         object_id = object_id_;
         object_type = object_type_;
+        branch_id = branch_id_;
         volume = 4./3.*M_PI * (radius_*scale) *  (radius_*scale)  *  (radius_*scale);
+        // if sphere is part of axon, no branches
+        if (object_type == 0){
+            branch_id = -1;
+        }
     }
 
     /*!

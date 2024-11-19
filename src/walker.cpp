@@ -17,7 +17,7 @@ Walker::Walker()
     initial_location = location = unknown;
     intra_extra_consensus = intra_coll_count = extra_coll_count = rejection_count = steps_count = 0;
     steps_per_second = 0;
-    colision_in = colision_ext = crossing_in = crossing_ext= 0;
+    collision_in = collision_ext = crossing_in = crossing_ext= 0;
     normal= {0,0,0}; 
     in_obj_index = -1;
     in_obj_type = -1;
@@ -45,7 +45,7 @@ Walker::Walker(double xmin, double xmax, double ymin, double ymax, double zmin, 
     initial_location  = location = unknown;
     intra_extra_consensus = intra_coll_count = extra_coll_count =0;
     steps_per_second = 0;
-    colision_in = colision_ext = crossing_in = crossing_ext= 0;
+    collision_in = collision_ext = crossing_in = crossing_ext= 0;
     normal= {0,0,0}; 
     in_obj_index = -1;
     in_obj_type = -1;
@@ -188,9 +188,9 @@ void Walker::setNumberOfSteps(unsigned T)
 {
     pos_r_log           = Eigen::Matrix3Xd::Zero(3,T+1);
     pos_v_log           = Eigen::Matrix3Xd::Zero(3,T+1);
-    colision_in_log     = Eigen::VectorXi::Zero(T+1);
+    collision_in_log     = Eigen::VectorXi::Zero(T+1);
     crossing_in_log     = Eigen::VectorXi::Zero(T+1);
-    colision_ext_log    = Eigen::VectorXi::Zero(T+1);
+    collision_ext_log    = Eigen::VectorXi::Zero(T+1);
     crossing_ext_log    = Eigen::VectorXi::Zero(T+1);
     
 }
@@ -216,8 +216,8 @@ void Walker::setRandomInitialPosition(const Eigen::Vector3d &_min, const Eigen::
 }
 
 void Walker::setColision(unsigned hit_in,unsigned hit_ext, unsigned cross_in, unsigned cross_ext, unsigned t){
-    this->colision_in_log(t) = hit_in;
-    this->colision_ext_log(t) = hit_ext;
+    this->collision_in_log(t) = hit_in;
+    this->collision_ext_log(t) = hit_ext;
     this->crossing_in_log(t) = cross_in;
     this->crossing_ext_log(t) = cross_ext;
 }

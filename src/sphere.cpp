@@ -111,7 +111,7 @@ inline bool Sphere::handleCollition(Walker& walker, Collision &colision, Vector3
 
     colision.rn = c;
 
-    colision.colision_point = walker.pos_v + colision.t*step;
+    colision.collision_point = walker.pos_v + colision.t*step;
     
 
     // Membrane permeability    
@@ -155,7 +155,7 @@ inline bool Sphere::handleCollition(Walker& walker, Collision &colision, Vector3
 
         /* For a sphere, normal direction is equal to colision point */
         //Normal point
-        Eigen::Vector3d normal = (colision.colision_point - P).normalized();
+        Eigen::Vector3d normal = (colision.collision_point - P).normalized();
 
         Eigen::Vector3d temp_step = step;
         elasticBounceAgainsPlane(walker.pos_v,normal,colision.t,temp_step);

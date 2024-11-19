@@ -158,7 +158,7 @@ inline bool Cylinder::handleCollition(Walker& walker, Collision &colision, Vecto
                 count_perc_crossings++;
                 colision.perm_crossing      = _percolation_;
                 colision.bounced_direction  = step; 
-                colision.colision_point = walker.pos_v + colision.t*step;
+                colision.collision_point = walker.pos_v + colision.t*step;
 
 
                 return true;
@@ -166,7 +166,7 @@ inline bool Cylinder::handleCollition(Walker& walker, Collision &colision, Vecto
         }  
     }
 
-    colision.colision_point = walker.pos_v + colision.t*step;
+    colision.collision_point = walker.pos_v + colision.t*step;
     colision.perm_crossing = 0.;
         
             
@@ -176,11 +176,11 @@ inline bool Cylinder::handleCollition(Walker& walker, Collision &colision, Vecto
     }
     else{
 
-        Eigen::Vector3d V = colision.colision_point - P;
+        Eigen::Vector3d V = colision.collision_point - P;
         double v = V.dot(D);
         Eigen::Vector3d axis_point = P + v*D;
         //Normal point
-        Eigen::Vector3d normal = (colision.colision_point-axis_point).normalized();
+        Eigen::Vector3d normal = (colision.collision_point-axis_point).normalized();
 
         Eigen::Vector3d temp_step = step;
         elasticBounceAgainsPlane(walker.pos_v,normal,colision.t,temp_step);
