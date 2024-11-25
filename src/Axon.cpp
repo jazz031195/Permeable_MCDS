@@ -17,6 +17,13 @@ Axon::Axon(const Axon &ax)
     begin = ax.begin;
     end = ax.end;
     boxes = ax.boxes;
+
+    percolation = ax.percolation;
+    prob_cross_e_i = ax.prob_cross_e_i;
+    prob_cross_i_e = ax.prob_cross_i_e;
+    diffusivity_i = ax.diffusivity_i;
+    diffusivity_e = ax.diffusivity_e;
+    count_perc_crossings = ax.count_perc_crossings;
 }
 
 
@@ -170,37 +177,6 @@ bool Axon::intersection_sphere_vector(double &t1, double &t2, const Sphere &s, c
 }
 
 
-void Axon::set_prob_crossings(double step_length_pref){
-
-    double prob_cross_i_e_, prob_cross_e_i_;
-    double dse, dsi;
-
-    if (this->percolation > 0.0){
-        // for axon object
-        dse = sqrt(step_length_pref*this->diffusivity_e);
-        dsi = sqrt(step_length_pref*this->diffusivity_i);
-
-        prob_cross_i_e_ = percolation * dsi * 2. / 3. / this->diffusivity_i;
-        prob_cross_e_i_ = percolation * dse * 2. / 3. / this->diffusivity_e; 
-
-        this->prob_cross_e_i = prob_cross_e_i_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
-        this->prob_cross_i_e = prob_cross_i_e_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
-    }
-            
-    // for all spheres
-    for(unsigned i= 0 ; i < spheres.size();i++){
-        spheres[i].percolation = this->percolation;
-
-        if(spheres[i].percolation > 0.0){
-            spheres[i].diffusivity_e = this->diffusivity_e;
-            spheres[i].diffusivity_i = this->diffusivity_i;
-
-            spheres[i].prob_cross_e_i = this->prob_cross_e_i;
-            spheres[i].prob_cross_i_e = this->prob_cross_i_e;
-            
-        }
-    }
-}
 
 void Axon::find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &step_length,
                                   std::vector<double> &dist_intersections, std::vector<int> &spheres_ids) {
@@ -255,20 +231,21 @@ bool Axon::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &s
     std::vector<double> dist_intersections;
     std::vector<int> sphere_ids;
 
-    walker.previous_location = walker.location;
-
     // Find all intersections
     find_all_intersections(walker, step, step_length + barrier_tickness, dist_intersections, sphere_ids);
+
 
     if (dist_intersections.empty()) {
         // Handle case with no intersections
         if (walker.location == Walker::intra && !isPosInsideAxon_(walker.pos_v, EPS_VAL)) {
             //cout << "Walker is outside axon" << endl;
+            collision.type = Collision::hit;
             collision.col_location = Collision::outside;
-            walker.in_obj_index = -1;
-            walker.in_obj_type = -1;
-            walker.location = Walker::extra;
-            assert(0);
+            collision.collision_point = walker.pos_v;
+            collision.t = 1e-9;
+            collision.perm_crossing = 0.0;
+            collision.bounced_direction = step;
+
             return true;
         }
 
@@ -295,71 +272,39 @@ bool Axon::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &s
         if (is_near_edge && distance <= step_length + barrier_tickness) {
 
             Sphere sphere = spheres[sphere_ids[i]];
-
-            collision.type = Collision::hit;
-            collision.collision_point = pos;
-            collision.obstacle_ind = id;
-            collision.t = distance;
-
             // Compute normal and bounced direction
-            Eigen::Vector3d normal = (collision.collision_point - sphere.P).normalized();
-            Eigen::Vector3d ray = (-collision.t * step).normalized();
+            Eigen::Vector3d normal = (pos - sphere.P).normalized();
+            Eigen::Vector3d ray = (-distance * step).normalized();
             double rn = ray.dot(normal);
 
-            collision.bounced_direction = -ray + 2.0 * normal * rn;
-
             if (rn < -1e-10){
-                
-                if (walker.location == Walker::extra){ 
-                    bool isinside_ = isPosInsideAxon_(walker.pos_v, -EPS_VAL);
-                    if (isinside_){
-                        collision.col_location = Collision::inside;
-                        walker.in_obj_index = id;
-                        walker.in_obj_type = 0;
-                        walker.location = Walker::intra;
-                    }
-                    else{
-                        collision.col_location = Collision::outside;
-                        walker.in_obj_index = -1;
-                        walker.in_obj_type = -1;
-                        walker.location = Walker::extra;
-                    }
-                }
-                else{
-                    collision.col_location = Collision::inside;
-                    walker.in_obj_index = id;
-                    walker.in_obj_type = 0;
-                    walker.location = Walker::intra;
-                }
-            
+                collision.col_location = Collision::inside;  
             }
             //outside
             else if (rn > 1e-10){
-                if (walker.location == Walker::intra){ 
-                    bool isinside_ = isPosInsideAxon_(walker.pos_v, EPS_VAL);
-                    if (!isinside_){
+                
+                if (walker.location == Walker::intra){  
+                    if (!isPosInsideAxon_(walker.pos_v, EPS_VAL)){
                         collision.col_location = Collision::outside;
-                        walker.in_obj_index = -1;
-                        walker.in_obj_type = -1;
-                        walker.location = Walker::extra;
                     }
                     else{
-                        collision.col_location = Collision::inside;
-                        walker.in_obj_index = id;
-                        walker.in_obj_type = 0;
-                        walker.location = Walker::intra;
-                    }
+                        continue;
+                    }  
                 }
                 else{
                     collision.col_location = Collision::outside;
-                    walker.in_obj_index = -1;
-                    walker.in_obj_type = -1;
-                    walker.location = Walker::extra;
-                }
+                } 
             }
             else {
                 collision.col_location = Collision::unknown;
             }
+
+            collision.type = Collision::hit;
+            collision.collision_point = pos;
+            collision.obstacle_ind = id;
+            collision.obstacle_type = 0;
+            collision.t = distance;
+            collision.bounced_direction = -ray + 2.0 * normal * rn;
 
             // Handle permeability
             if (percolation > 0.0) {
@@ -374,6 +319,7 @@ bool Axon::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &s
                     count_perc_crossings++;
                     collision.perm_crossing = dynamic_percolation;
                     collision.bounced_direction = step;
+
                     return true;
                 }
             }
@@ -381,6 +327,7 @@ bool Axon::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &s
             collision.perm_crossing = 0.0;
             return true;
         }
+
     }
 
     collision.type = Collision::null;

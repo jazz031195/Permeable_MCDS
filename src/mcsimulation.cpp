@@ -378,7 +378,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 }
                 // Global permeability - Same for all obstacle
                 else{
-                    perm_ = params.obstacle_permeability;
+                    perm_ = params.axon_obstacle_permeability;
                 }  
                 
                 //cout << "perm_ :"   << perm_ << endl;
@@ -453,6 +453,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
         cout << " Number of particles :" << params.num_walkers << endl;
         cout << "Number of axons :" << dynamicsEngine->axons_list.size() << endl;
+        cout <<"perm_ :" << perm_ << endl;
 
         in.close();
         
@@ -480,15 +481,15 @@ void MCSimulation::addGlialsObstaclesFromFiles()
         }
 
         // Permeability file - if any
-        double perm_ = params.obstacle_permeability;
+        double perm_ = params.glial_obstacle_permeability;
 
         // Diffusion coefficients
         double diff_i = params.diffusivity_intra;
         double diff_e = params.diffusivity_extra;
 
         // Variables to hold data from the file
-        double x, y, z, rout, rin, p, r;
-        int ax_id, sph_id, branch_id;
+        double x, y, z, rout, rin, p, r, branch_id;
+        int ax_id, sph_id;
         std::string type_object;
 
         std::vector<Sphere> processes_;

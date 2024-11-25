@@ -32,6 +32,7 @@ public:
     bool write_hit;                                /*!< flag, write a hit file or not, binary format only                         */
     double concentration;                           /*< concentration of walkers per mm³ */
     bool write_full_c;
+    double step_length;                             /*!< step length for the walkers                                                */
 
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
     bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */

@@ -3,6 +3,7 @@
 #include "constants.h"
 #include <numeric>
 #include <unordered_map>
+#include <map>
 #include <unordered_set>
 
 using namespace Eigen;
@@ -20,52 +21,72 @@ Glial::Glial(const Glial &gl)
     soma = gl.soma;
     processes = gl.processes;
     boxes = gl.boxes;
+    big_box = gl.big_box;
+
+    percolation = gl.percolation;
+    prob_cross_e_i = gl.prob_cross_e_i;
+    prob_cross_i_e = gl.prob_cross_i_e;
+    diffusivity_i = gl.diffusivity_i;
+    diffusivity_e = gl.diffusivity_e;
+    count_perc_crossings = gl.count_perc_crossings;
 
 };
 
-void Glial::set_spheres(const std::vector<Sphere> &spheres_to_add) {
+void Glial::set_spheres(std::vector<Sphere> &spheres_to_add) {
     // Clear existing boxes and initialize variables
     boxes.clear();
-    soma = Sphere();
     processes.clear();
 
-    std::unordered_map<int, Box> branch_boxes; // Map branch_id to Box
+    big_box = {
+        soma.P[0] - soma.radius, soma.P[0] + soma.radius,
+        soma.P[1] - soma.radius, soma.P[1] + soma.radius,
+        soma.P[2] - soma.radius, soma.P[2] + soma.radius
+    };
+
+    boxes.push_back(big_box);
+
+    std::map<int, Box> branch_boxes; // Map branch_id to Box
 
     for (const auto &sphere : spheres_to_add) {
-        if (sphere.branch_id == -1) {
-            // Handle soma
-            soma = sphere;
-            Box soma_box = {
-                sphere.P[0] - sphere.radius, sphere.P[0] + sphere.radius,
-                sphere.P[1] - sphere.radius, sphere.P[1] + sphere.radius,
-                sphere.P[2] - sphere.radius, sphere.P[2] + sphere.radius
+
+        double x_min = sphere.P[0] - sphere.radius;
+        double x_max = sphere.P[0] + sphere.radius;
+        double y_min = sphere.P[1] - sphere.radius;
+        double y_max = sphere.P[1] + sphere.radius;
+        double z_min = sphere.P[2] - sphere.radius;
+        double z_max = sphere.P[2] + sphere.radius;
+
+
+        if (x_min< big_box.x_min) big_box.x_min = x_min;
+        if (x_max> big_box.x_max) big_box.x_max = x_max;
+        if (y_min< big_box.y_min) big_box.y_min = y_min;
+        if (y_max> big_box.y_max) big_box.y_max = y_max;
+        if (z_min< big_box.z_min) big_box.z_min = z_min;
+        if (z_max> big_box.z_max) big_box.z_max = z_max;
+
+        // Handle processes
+        processes.push_back(sphere);
+
+        // Update or create the bounding box for this branch_id
+        if (branch_boxes.find(sphere.branch_id) == branch_boxes.end()) {
+
+            // Create new box
+            branch_boxes[sphere.branch_id] = {
+                x_min, x_max, y_min, y_max, z_min, z_max
             };
-            boxes.push_back(soma_box);
+
         } else {
-            // Handle processes
-            processes.push_back(sphere);
+            // Update existing box
+            Box &box = branch_boxes[sphere.branch_id];
+            if (x_min < box.x_min) box.x_min = x_min;
+            if (x_max > box.x_max) box.x_max = x_max;
+            if (y_min < box.y_min) box.y_min = y_min;
+            if (y_max > box.y_max) box.y_max = y_max;
+            if (z_min < box.z_min) box.z_min = z_min;
+            if (z_max > box.z_max) box.z_max = z_max;
 
-            // Update or create the bounding box for this branch_id
-            if (branch_boxes.find(sphere.branch_id) == branch_boxes.end()) {
-
-                // Create new box
-                branch_boxes[sphere.branch_id] = {
-                    sphere.P[0] - sphere.radius, sphere.P[0] + sphere.radius,
-                    sphere.P[1] - sphere.radius, sphere.P[1] + sphere.radius,
-                    sphere.P[2] - sphere.radius, sphere.P[2] + sphere.radius
-                };
-
-            } else {
-                // Update existing box
-                Box &box = branch_boxes[sphere.branch_id];
-                box.x_min = std::min(box.x_min, sphere.P[0] - sphere.radius);
-                box.x_max = std::max(box.x_max, sphere.P[0] + sphere.radius);
-                box.y_min = std::min(box.y_min, sphere.P[1] - sphere.radius);
-                box.y_max = std::max(box.y_max, sphere.P[1] + sphere.radius);
-                box.z_min = std::min(box.z_min, sphere.P[2] - sphere.radius);
-                box.z_max = std::max(box.z_max, sphere.P[2] + sphere.radius);
-            }
         }
+        
     }
 
     // Add all branch boxes to the final list of boxes
@@ -92,21 +113,41 @@ bool Glial::isInsideBox(const int &i, const Eigen::Vector3d &position, const dou
     return true; // Inside all limits
 }
 
+bool Glial::isInsideBigBox(const Eigen::Vector3d &position, const double &distance_to_be_inside) {
+    // Expand box dimensions by distance_to_be_inside
+    double x_min = big_box.x_min - distance_to_be_inside;
+    double x_max = big_box.x_max + distance_to_be_inside;
+    double y_min = big_box.y_min - distance_to_be_inside;
+    double y_max = big_box.y_max + distance_to_be_inside;
+    double z_min = big_box.z_min - distance_to_be_inside;
+    double z_max = big_box.z_max + distance_to_be_inside;
+
+    // Check if the position is inside the expanded box
+    if (position[0] < x_min || position[0] > x_max) return false; // x-axis
+    if (position[1] < y_min || position[1] > y_max) return false; // y-axis
+    if (position[2] < z_min || position[2] > z_max) return false; // z-axis
+
+    return true; // Inside all limits
+}
+
+
 bool Glial::isNearGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &branches) {
-    // Check if the position is near any box
-    for (int i = 0; i < boxes.size(); ++i) {
-        if (isInsideBox(i, position, distance_to_be_inside)) {
-            branches.push_back(i-1);
+
+    branches.clear();
+    if (isInsideBigBox(position, distance_to_be_inside)) {
+        for (int i = 0; i < boxes.size(); ++i) {
+            if (isInsideBox(i, position, distance_to_be_inside)) {
+                branches.push_back(i-1);
+                //return true; // Near at least one box
+            }
         }
     }
-    if (branches.size() > 0){
-        return true; // Near at least one box
-    }
-    else{
-        return false; // Not near any box
-    }
 
+    if (!branches.empty()) return true;
+
+    return false; // Not near any box
 }
+
 std::vector<int> Glial::checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches) {
     std::vector<int> spheres_id_to_check;
 
@@ -118,8 +159,8 @@ std::vector<int> Glial::checkAxisForCollision(const Eigen::Vector3d &position, d
         const auto &sphere = relevant_spheres[i];
 
         // Check if the sphere's branch_id is in the provided branches
-        if (std::find(branches.begin(), branches.end(), sphere.branch_id) != branches.end() || sphere.branch_id == -1) {
-
+        if (std::find(branches.begin(), branches.end(), sphere.branch_id) != branches.end()) {
+            
             // Check if the position is within the extended bounds of the sphere along the given axis
             double min_i = sphere.P[axis] - sphere.radius;
             double max_i = sphere.P[axis] + sphere.radius;
@@ -128,6 +169,7 @@ std::vector<int> Glial::checkAxisForCollision(const Eigen::Vector3d &position, d
                 spheres_id_to_check.push_back(i);
             }
         }
+        
     }
 
     return spheres_id_to_check;
@@ -184,6 +226,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
     if (!isNearGlialCell(position, distance_to_be_inside, branches)) {
         return false;
     }
+    
 
     // Collect potential sphere IDs from all axes
     std::vector<std::vector<int>> spheres_id_to_check(3);
@@ -204,6 +247,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
         Sphere sphere_to_check = (sphere_id == 0) ? soma : processes[sphere_id - 1];
         if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
             sph_ids.push_back(sphere_id);
+
         }
     }
 
@@ -234,7 +278,7 @@ bool Glial::intersection_sphere_vector(double &t1, double &t2, const Sphere &s, 
     return true;
 }
 
-void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &step_length,
+void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &distance,
                                    std::vector<double> &dist_intersections, std::vector<int> &spheres_ids) {
     dist_intersections.clear();
     spheres_ids.clear();
@@ -243,18 +287,13 @@ void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &
     Eigen::Vector3d pos = walker.pos_v;
 
     // Find spheres the walker is near
-    if (!FindSphereinGlial(pos, 2*step_length, sph_ids_walker_is_inside)) {
+    if (!FindSphereinGlial(pos, distance, sph_ids_walker_is_inside)) {
         return;
     }
 
     // Process each sphere the walker is near
     for (int sphere_id : sph_ids_walker_is_inside) {
         Sphere sphere_to_check = (sphere_id == 0) ? soma : processes[sphere_id - 1];
-
-        // Skip if the sphere is too far
-        if (sphere_to_check.minDistance(pos) > step_length) {
-            continue;
-        }
 
         double t1, t2;
         if (intersection_sphere_vector(t1, t2, sphere_to_check, step, pos)) {
@@ -287,21 +326,21 @@ bool Glial::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &
     std::vector<double> dist_intersections;
     std::vector<int> sphere_ids;
 
-    walker.previous_location = walker.location;
 
     // Find all intersections
     find_all_intersections(walker, step, step_length + barrier_tickness, dist_intersections, sphere_ids);
 
     if (dist_intersections.empty()) {
         // Handle case with no intersections
-        if (walker.location == Walker::intra) {
-            if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)) {
-                collision.col_location = Collision::outside;
-                walker.in_obj_index = -1;
-                walker.in_obj_type = -1;
-                walker.location = Walker::extra;
-                return true;
-            }
+        if (walker.location == Walker::intra && !isPosInsideGlialCell(walker.pos_v, EPS_VAL)) {
+            //cout << "Walker is outside axon" << endl;
+            collision.type = Collision::hit;
+            collision.col_location = Collision::outside;
+            collision.collision_point = walker.pos_v;
+            collision.t = 1e-9;
+            collision.perm_crossing = 0.0;
+            collision.bounced_direction = step;
+            return true;
         }
         collision.type = Collision::null;
         return false;
@@ -327,71 +366,40 @@ bool Glial::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &
             //cout << "is near edge" << endl;
             Sphere sphere = (sphere_ids[i] == 0) ? soma : processes[sphere_ids[i] - 1];
 
-            collision.type = Collision::hit;
-            collision.collision_point = pos;
-            collision.obstacle_ind = id;
-            collision.t = distance;
-
             // Compute normal and bounced direction
-            Eigen::Vector3d normal = (collision.collision_point - sphere.P).normalized();
-            Eigen::Vector3d ray = (-collision.t * step).normalized();
+            Eigen::Vector3d normal = (pos - sphere.P).normalized();
+            Eigen::Vector3d ray = (-distance * step).normalized();
             double rn = ray.dot(normal);
 
-            collision.bounced_direction = -ray + 2.0 * normal * rn;
-
             if (rn < -1e-10){
-                if (walker.location == Walker::extra){ 
-                    bool isinside_ = isPosInsideGlialCell(walker.pos_v, -EPS_VAL);
-                    if (isinside_){
-                        collision.col_location = Collision::inside;
-                        walker.in_obj_index = id;
-                        walker.in_obj_type = 1;
-                        walker.location = Walker::intra;
-                    }
-                    else{
-                        collision.col_location = Collision::outside;
-                        walker.in_obj_index = -1;
-                        walker.in_obj_type = -1;
-                        walker.location = Walker::extra;
-                    }
-                }
-                else{
-                    collision.col_location = Collision::inside;
-                    walker.in_obj_index = id;
-                    walker.in_obj_type = 1;
-                    walker.location = Walker::intra;
-                }
-                
+                collision.col_location = Collision::inside;        
             }
             //outside
             else if (rn > 1e-10){
-                if (walker.location == Walker::intra){ 
-                    bool isinside_ = isPosInsideGlialCell(walker.pos_v, EPS_VAL);
-                    if (!isinside_){
-                        collision.col_location = Collision::outside;
-                        walker.in_obj_index = -1;
-                        walker.in_obj_type = -1;
-                        walker.location = Walker::extra;
 
+                if (walker.location == Walker::intra){  
+                    if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)){
+                        collision.col_location = Collision::outside;
                     }
                     else{
-                        collision.col_location = Collision::inside;
-                        walker.in_obj_index = id;
-                        walker.in_obj_type = 1;
-                        walker.location = Walker::intra;
-                    }
+                        continue;
+                    }  
                 }
                 else{
                     collision.col_location = Collision::outside;
-                    walker.in_obj_index = -1;
-                    walker.in_obj_type = -1;
-                    walker.location = Walker::extra;
-
-                }
+                } 
             }
             else {
                 collision.col_location = Collision::unknown;
             }
+
+            collision.type = Collision::hit;
+            collision.collision_point = pos;
+            collision.obstacle_ind = id;
+            collision.obstacle_type = 1;
+            collision.t = distance;
+            collision.bounced_direction = -ray + 2.0 * normal * rn;
+
 
             // Handle permeability
             if (percolation > 0.0) {
@@ -468,7 +476,15 @@ double Glial::distanceToBox(const int& i, const Eigen::Vector3d& O) {
     double dx = std::max({boxes[i].x_min - O[0], 0.0, O[0] - boxes[i].x_max});
     double dy = std::max({boxes[i].y_min - O[1], 0.0, O[1] - boxes[i].y_max});
     double dz = std::max({boxes[i].z_min - O[2], 0.0, O[2] - boxes[i].z_max});
-    return std::sqrt(dx * dx + dy * dy + dz * dz);
+    return std::sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+
+double Glial::distanceToBigBox(const Eigen::Vector3d& O) {
+    double dx = std::max({big_box.x_min - O[0], 0.0, O[0] - big_box.x_max});
+    double dy = std::max({big_box.y_min - O[1], 0.0, O[1] - big_box.y_max});
+    double dz = std::max({big_box.z_min - O[2], 0.0, O[2] - big_box.z_max});
+    return std::sqrt(dx*dx + dy*dy + dz*dz);
 }
 
 double Glial::minDistance(Walker &w){
@@ -482,14 +498,17 @@ double Glial::minDistance(Walker &w){
     // Get the walker's position
     Vector3d O = w.pos_v;
 
-    double min_distance = std::numeric_limits<double>::max();
+    //double min_distance = std::numeric_limits<double>::max();
     
-    for (int i = 0; i < boxes.size(); ++i) {
-        double dist = distanceToBox(i, O);
-        if (dist < min_distance) {
-            min_distance = dist;
-        }
-    }
+    // Check distance to big box
+    double min_distance = distanceToBigBox(O);
+
+    //for (int i = 0; i < boxes.size(); ++i) {
+    //    double dist = distanceToBox(i, O);
+    //    if (dist < min_distance) {
+    //        min_distance = dist;
+    //    }
+    //}
     
     return min_distance;
 }

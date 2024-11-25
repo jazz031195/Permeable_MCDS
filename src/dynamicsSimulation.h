@@ -58,9 +58,7 @@ public:
     
     std::vector <Axon> axons_list;                  /*!< vector with all the isntances of "Axon" obstacles                       */
     std::vector <Axon> inner_axons_list;            /*!< vector with all the isntances of "Axon" obstacles, in case of myelin                       */
-    
     std::vector<unsigned>  axons_deque;             /*!< deque with the indexes of the axons (used for optmization)             */
-    std::vector<unsigned>  inner_axons_deque;             /*!< deque with the indexes of the axons (used for optmization)             */
     std::vector <Glial> glials_list;                  /*!< vector with all the isntances of "Glial" obstacles                       */
     std::vector<unsigned>  glials_deque;             /*!< deque with the indexes of the glial cells (used for optmization)             */
     int step_nbr;
@@ -70,12 +68,15 @@ public:
     Propagator propagator;                          /*!< Propagator object to compute and save the particles MSD                    */
     double icvf;                                    /*!< Stores the ICVF (1 - Intra-Extra) if needed                                */
     unsigned intra_tries, total_tries;              /*!< Helper variables to compute the estimated ICVF                             */
-
+    int tot_nbr_bounces;                            /*!< Total number of bounces                                                    */
+    int tot_nbr_legal_crossings;                   /*!< Total number of legal crossings                                            */
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
     std::vector<unsigned>  spheres_deque;           /*!< deque with the indexes of the spheres (used for optmization)             */
 
     int nbr_walker_intra;                           /*!< Number of walkers that are inside the intra-cellular space                 */
     int nbr_walker_extra;                           /*!< Number of walkers that are inside the extra-cellular space                 */
+    int nbr_walker_axons;                          /*!< Number of walkers that are inside the axons                 */
+    int nbr_walker_glials;                          /*!< Number of walkers that are inside the glial cells                 */
 
     /******   Auxiliar variables   ********/
     Eigen::Vector3d step;

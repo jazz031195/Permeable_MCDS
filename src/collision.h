@@ -44,6 +44,7 @@ public:
     int triangle_ind;                   /*!< In case of a PLY obstacle saves the triangle index. t
                                         collison distance                                           */
     int obstacle_ind;                   /*!< In case of a generic obstacle saves the obstacle index.*/
+    int obstacle_type;                  /*!< In case of a generic obstacle saves the obstacle type. */
 
     double perm_crossing;                 /*!< Greater than 0 if particle crossed the membrane
 

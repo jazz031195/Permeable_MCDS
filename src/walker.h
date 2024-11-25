@@ -58,8 +58,6 @@ public:
 
     AxonCollisionSphere axons_collision_sphere;                     /*!< Collision sphere for collition against axons                      */
 
-    AxonCollisionSphere inner_axons_collision_sphere;                /*!< Collision sphere for collition against inner axons                      */
-
     GlialCollisionSphere collision_sphere_glials;                     /*!< Collision sphere for collition against glial cells                      */
 
     PLYCollisionSphere collision_sphere_ply;                        /*!< Collision sphere for collition against PLY meshes                      */
@@ -74,11 +72,11 @@ public:
 
     RelativeLocation initial_location, location, previous_location;                    /*!< location on the substrate (if known)                                   */
 
-    Eigen::VectorXi colision_in_log, colision_ext_log;                                   /*!< Vector of colision for logging                                         */
+    Eigen::VectorXi collision_in_log, collision_ext_log;                                   /*!< Vector of collision for logging                                         */
 
     Eigen::VectorXi crossing_in_log, crossing_ext_log;                                   /*!< Vector of crossing for logging                                         */
 
-    unsigned colision_in, colision_ext;                                              /*!< Retains the number of hit per step                                      */ 
+    unsigned collision_in, collision_ext;                                              /*!< Retains the number of hit per step                                      */ 
 
     unsigned crossing_in, crossing_ext;                                              /*!< Retains the number of crossing per step                                */
 

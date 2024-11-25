@@ -36,6 +36,8 @@ Parameters::Parameters()
     gamma_output_configuration=0.0;
     gamma_num_cylinders=0;
     concentration = 0;
+    step_length = 0;
+    num_steps = 0;
 
     gamma_num_axons=0;
 
@@ -78,6 +80,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         }
         else if(str_dist(tmp,"c") == 0){
             in >> concentration;
+        }
+        else if(str_dist(tmp,"s") == 0){
+            in >> step_length;
         }
         else if(str_dist(tmp,"t") == 0){
             in >> num_steps;
@@ -942,20 +947,15 @@ void Parameters::readSphereList(ifstream& in)
     string tmp="";
     while(!(str_dist(tmp,"</spheres_list>") <= 2)){
         in >> tmp;
-        if(!(str_dist(tmp,"permeability") <= 2)){
-        
-            std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
-            if(str_dist(tmp,"global") <= 1){
-                // One permeability for all obstacles
-                in >> obstacle_permeability;
-            }
-            if(str_dist(tmp,"local") <= 1){
-                // One permeability per obstacles
-                string path;
-                in >> path;
-                sphere_permeability_files.push_back(path);
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+        if (str_dist(tmp,"global") <= 2){
+            in >> obstacle_permeability;
+        } 
+        else if (str_dist(tmp,"local") <= 2){
+            string path;
+            in >> path;
+            sphere_permeability_files.push_back(path);
         }
-    }
     } 
 }
 
@@ -967,19 +967,15 @@ void Parameters::readCylinderList(ifstream& in)
 
     string tmp="";
     while(!(str_dist(tmp,"</cylinders_list>") <= 2)){
-        in >> tmp;    
-        if(!(str_dist(tmp,"permeability") <= 2)){
-                    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
-            if(str_dist(tmp,"global") <= 1){
-                // One permeability for all obstacles
-                in >> obstacle_permeability;
-            }
-            if(str_dist(tmp,"local") <= 1){
-                // One permeability per obstacles
-                string path;
-                in >> path;
-                cylinder_permeability_files.push_back(path);
-            }
+        in >> tmp;
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+        if (str_dist(tmp,"global") <= 2){
+            in >> obstacle_permeability;
+        } 
+        else if (str_dist(tmp,"local") <= 2){
+            string path;
+            in >> path;
+            sphere_permeability_files.push_back(path);
         }
     } 
 }
@@ -993,22 +989,18 @@ void Parameters::readAxonList(ifstream& in)
 
     string tmp="";
     while(!(str_dist(tmp,"</axons_list>") <= 2)){
-        in >> tmp;    
-        if(!(str_dist(tmp,"permeability") <= 2)){
-                    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
-            if(str_dist(tmp,"global") <= 1){
-                // One permeability for all obstacles
-                in >> axon_obstacle_permeability;
-        
-            }
-            if(str_dist(tmp,"local") <= 1){
-                // One permeability per obstacles
-                string path;
-                in >> path;
-                axon_permeability_files.push_back(path);
-            }
+        in >> tmp;
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+        if (str_dist(tmp,"global") <= 2){
+            in >> axon_obstacle_permeability;
+        } 
+        else if (str_dist(tmp,"local") <= 2){
+            string path;
+            in >> path;
+            axon_permeability_files.push_back(path);
         }
-    } 
+    }  
+
 }
 
 void Parameters::readGlialList(std::ifstream& in)
@@ -1019,20 +1011,15 @@ void Parameters::readGlialList(std::ifstream& in)
 
     string tmp="";
     while(!(str_dist(tmp,"</glials_list>") <= 2)){
-        in >> tmp;    
-        if(!(str_dist(tmp,"permeability") <= 2)){
-                    std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
-            if(str_dist(tmp,"global") <= 1){
-                // One permeability for all obstacles
-                in >> glial_obstacle_permeability;
-             
-            }
-            if(str_dist(tmp,"local") <= 1){
-                // One permeability per obstacles
-                string path;
-                in >> path;
-                glial_permeability_files.push_back(path);
-            }
+        in >> tmp;
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+        if (str_dist(tmp,"global") <= 2){
+            in >> glial_obstacle_permeability;
+        } 
+        else if (str_dist(tmp,"local") <= 2){
+            string path;
+            in >> path;
+            glial_permeability_files.push_back(path);
         }
-    } 
+    }  
 }

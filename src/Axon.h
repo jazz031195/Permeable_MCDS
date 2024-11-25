@@ -63,7 +63,6 @@ public:
     /*! \fn  set_prob_crossings
      *  \brief sets the probability of crossing for all spheres
      */
-    void set_prob_crossings(double step_length_pref);  
     void find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &step_length, std::vector<double> &dist_intersections, std::vector<int> &spheres_ids);
     bool FindSphereinAxon(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
     double minDistance(Walker &w);
