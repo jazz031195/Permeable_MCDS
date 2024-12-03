@@ -50,3 +50,10 @@ void Obstacle::setDiffusion(double &diffusivity_i_, double &diffusivity_e_){
     diffusivity_i = diffusivity_i_;
     diffusivity_e = diffusivity_e_;
 }
+
+
+void Obstacle::setProbabilities(double &prob_cross_e_i_, double &prob_cross_i_e_)
+{
+    prob_cross_e_i = prob_cross_e_i_;
+    prob_cross_i_e = prob_cross_i_e_;
+}

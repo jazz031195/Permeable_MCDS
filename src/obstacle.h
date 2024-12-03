@@ -59,6 +59,8 @@ public:
 
     void setDiffusion(double& diffusivity_i_, double& diffusivity_e_);
 
+    void setProbabilities(double &prob_cross_e_i_, double &prob_cross_i_e_);
+
 
 };
 

@@ -90,10 +90,10 @@ def assemble_intra_extra(directory, scheme_file):
                             f.write(f"{item}\n")
 
 
-                    MD_extra, AD_extra, RD_extra = dti_from_file(new_file_extra, scheme_file)
+                    _,MD_extra, AD_extra, RD_extra,_,_,_ = dki_from_file(new_file_extra, scheme_file)
                     
 
-                    MD_intra, AD_intra, RD_intra = dti_from_file(new_file_intra, scheme_file)
+                    _,MD_intra, AD_intra, RD_intra,_,_,_ = dki_from_file(new_file_intra, scheme_file)
 
 
                     filename_ = file_extra.split("_DWI")[0]
@@ -113,8 +113,7 @@ def assemble_intra_extra(directory, scheme_file):
 
 def WMTI_from_file(file_path, scheme_file):
 
-
-    MD_extra, AD_extra, RD_extra = dti_from_file(file_path, scheme_file, binary = False)
+    _,MD_extra, AD_extra, RD_extra,_,_,_ = dki_from_file(file_path, scheme_file, binary = False)
     folder = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/DKI_stuff"
     wmti = WMTI_Watson(f"{folder}/parameters_DKI/", params='invivo', nodes=4)
     wmti.fit()
@@ -198,7 +197,7 @@ def calculate_SMI(path_to_DWI, path_scheme):
     save_sigma_map(sigma_map, folder +"/sigmas/")
 
     # Run the SMI calculation using Docker and the sigma map
-    os.system(f"docker run -v /home/localadmin/Documents/MCDS/Permeable_MCDS/output:/data nyudiffusionmri/designer2:main tmi -SMI -echo_time {TEs[0]} -sigma /data/DKI_stuff/sigmas/sigma.nii.gz /data/DKI_stuff/dwi.mif /data/DKI_stuff/parameters_SMI")
+    os.system(f"docker run -v /home/localadmin/Documents/MCDS/Permeable_MCDS/output:/data nyudiffusionmri/designer2:main tmi -SMI -echo_time {TEs[0]} -sigma /data/DKI_stuff/sigmas/sigma.nii.gz /data/DKI_stuff/dwi.mif /data/DKI_stuff/parameters_SMI -compartments EAS,IAS")
 
     # Parse the results
     for file in glob.glob(f"{folder}/parameters_SMI/*"):

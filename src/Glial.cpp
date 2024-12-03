@@ -321,7 +321,7 @@ void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &
     }
 }
 
-bool Glial::checkCollision(Walker &walker, Eigen::Vector3d &step, const double &step_length, Collision &collision) {
+bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const double &step_length, Collision &collision) {
     // Distances to intersections and corresponding sphere IDs
     std::vector<double> dist_intersections;
     std::vector<int> sphere_ids;
@@ -487,7 +487,7 @@ double Glial::distanceToBigBox(const Eigen::Vector3d& O) {
     return std::sqrt(dx*dx + dy*dy + dz*dz);
 }
 
-double Glial::minDistance(Walker &w){
+double Glial::minDistance(const Walker &w){
 
     // Check if there are no boxes
     if (boxes.empty()) {
@@ -498,17 +498,19 @@ double Glial::minDistance(Walker &w){
     // Get the walker's position
     Vector3d O = w.pos_v;
 
-    //double min_distance = std::numeric_limits<double>::max();
+    double min_distance = std::numeric_limits<double>::max();
     
     // Check distance to big box
-    double min_distance = distanceToBigBox(O);
+    //double min_distance = distanceToBigBox(O);
 
-    //for (int i = 0; i < boxes.size(); ++i) {
-    //    double dist = distanceToBox(i, O);
-    //    if (dist < min_distance) {
-    //        min_distance = dist;
-    //    }
-    //}
+    for (int i = 0; i < boxes.size(); ++i) {
+        double dist = distanceToBox(i, O);
+        if (dist < min_distance) {
+            min_distance = dist;
+        }
+    }
     
     return min_distance;
 }
+
+

@@ -339,6 +339,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         Sphere sphere_in;
         bool create_myelin = false;
 
+        double null_perm = 0.0;
+
         int line_num = 0;
 
         int header_size = 10;
@@ -360,6 +362,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             sph_id = int(sph_id_);
             ax_id = int(ax_id_);
             branch_id = int(branch_id_);
+
             //cout << "x :" << x << " y :" << y << " z :" << z << " rin :" << rin << " rout :" << rout << endl;
 
             // if the new line is from a different axon
@@ -383,25 +386,40 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 
                 //cout << "perm_ :"   << perm_ << endl;
                 for (unsigned i = 0; i < spheres_out.size(); i++){
-                    spheres_out[i].setPercolation(perm_);
-                    spheres_in[i].setPercolation(perm_);
+
+                    if (rin != rout){
+                        spheres_out[i].setPercolation(null_perm);
+                        spheres_in[i].setPercolation(null_perm);
+                    }  
+                    else{
+                        spheres_out[i].setPercolation(perm_);
+                        spheres_in[i].setPercolation(perm_);
+                    } 
                     // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
                     diff_i = params.diffusivity_intra; 
                     diff_e = params.diffusivity_extra;
                     spheres_out[i].setDiffusion(diff_i, diff_e);
                     spheres_in[i].setDiffusion(diff_i, diff_e);
                 }
-                ax.setDiffusion(diff_i, diff_e);
-                ax.setPercolation(perm_);
+
                 ax.set_spheres(spheres_out);
+                ax.setDiffusion(diff_i, diff_e);
                 dynamicsEngine->axons_list.push_back(ax);
 
-                ax_in.setDiffusion(diff_i, diff_e);
-                ax_in.setPercolation(perm_);
                 ax_in.set_spheres(spheres_in);
+                ax_in.setDiffusion(diff_i, diff_e);
                 dynamicsEngine->inner_axons_list.push_back(ax_in);
                 spheres_out.clear();
                 spheres_in.clear();
+
+                if (ax.radius != ax_in.radius){
+                    ax_in.setPercolation(null_perm);
+                    ax.setPercolation(null_perm);
+                }
+                else{
+                    ax_in.setPercolation(perm_);
+                    ax.setPercolation(perm_);
+                }
 
             }
             sphere_out = Sphere(sph_id, ax_id, Eigen::Vector3d(x,y,z), rout, 0);
@@ -425,25 +443,39 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             }
 
             for (unsigned i = 0; i < spheres_out.size(); i++){
-                spheres_out[i].setPercolation(perm_);
-                spheres_in[i].setPercolation(perm_);
+                
+                if (rin != rout){
+                    spheres_out[i].setPercolation(null_perm);
+                    spheres_in[i].setPercolation(null_perm);
+                }  
+                else{
+                    spheres_out[i].setPercolation(perm_);
+                    spheres_in[i].setPercolation(perm_);
+                }
                 // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
                 diff_i = params.diffusivity_intra; 
                 diff_e = params.diffusivity_extra;
                 spheres_out[i].setDiffusion(diff_i, diff_e);
                 spheres_in[i].setDiffusion(diff_i, diff_e);
             }
-            ax.setDiffusion(diff_i, diff_e);
-            ax.setPercolation(perm_);
             ax.set_spheres(spheres_out);
+            ax.setDiffusion(diff_i, diff_e);
             dynamicsEngine->axons_list.push_back(ax);
 
-            ax_in.setDiffusion(diff_i, diff_e);
-            ax_in.setPercolation(perm_);
             ax_in.set_spheres(spheres_in);
+            ax_in.setDiffusion(diff_i, diff_e);
             dynamicsEngine->inner_axons_list.push_back(ax_in);
             spheres_out.clear();
             spheres_in.clear();
+
+            if (ax.radius != ax_in.radius){
+                ax_in.setPercolation(null_perm);
+                ax.setPercolation(null_perm);
+            }
+            else{
+                ax_in.setPercolation(perm_);
+                ax.setPercolation(perm_);
+            }
 
 
         }
@@ -454,6 +486,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         cout << " Number of particles :" << params.num_walkers << endl;
         cout << "Number of axons :" << dynamicsEngine->axons_list.size() << endl;
         cout <<"perm_ :" << perm_ << endl;
+        cout <<"inner axons size : " << dynamicsEngine->inner_axons_list.size() << endl;
+
 
         in.close();
         
