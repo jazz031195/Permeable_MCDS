@@ -54,8 +54,8 @@ DynamicsSimulation::DynamicsSimulation() {
     step_lenght_intra = sqrt(6.0*params.diffusivity_intra*params.sim_duration/params.num_steps);
     step_lenght_extra = sqrt(6.0*params.diffusivity_extra*params.sim_duration/params.num_steps);
 
-    cout << "step_lenght_intra: " << step_lenght_intra << endl;
-    cout << "step_lenght_extra: " << step_lenght_extra << endl;
+    //cout << "step_lenght_intra: " << step_lenght_intra << endl;
+    //cout << "step_lenght_extra: " << step_lenght_extra << endl;
 
     params.write_traj = trajectory.write_traj = false;
     params.write_hit = trajectory.write_hit = false;
@@ -1282,7 +1282,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     /*********************   WARNING  **********************/
     unsigned w=0;
 
-    cout << "params.num_walkers :" << params.num_walkers << endl;
+    //cout << "params.num_walkers :" << params.num_walkers << endl;
 
     for (w = 0 ; w < params.num_walkers; w++)
     {
@@ -1292,7 +1292,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     
         back_tracking = false;
 
-        cout << "Progress :" << w << "/" << params.num_walkers << "( " << double(w*100/params.num_walkers) << " %)" << endl;
+        //cout << "Progress :" << w << "/" << params.num_walkers << "( " << double(w*100/params.num_walkers) << " %)" << endl;
 
         walker.setIndex(w);
 

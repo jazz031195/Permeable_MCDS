@@ -48,6 +48,7 @@ The main simulation settings are defined as key-value pairs in the configuration
 - **`write_bin`**: Output DWI data as binary files (`.bfloat`) (`0` for no, `1` for yes).
 - **`write_traj_file`**: Save water molecule trajectories (`0` for no, `1` for yes).
 - **`num_process`**: Number of simulations to run simultaneously. It is recommended to set this to the number of CPU cores available.
+- **`ini_walkers_pos`**: Initial compartment in which the molecules start. Can be : intra or extra. If this is not given, the water molecules can be inside or outside the cells.
 
 Other parameters can be found in /src/parameters.h
 

@@ -484,11 +484,13 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         if (!create_myelin){
             dynamicsEngine->inner_axons_list.clear();
         }
+        /*
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
         cout << " Number of particles :" << params.num_walkers << endl;
         cout << "Number of axons :" << dynamicsEngine->axons_list.size() << endl;
         cout <<"perm_ :" << perm_ << endl;
         cout <<"inner axons size : " << dynamicsEngine->inner_axons_list.size() << endl;
+        */
 
 
         in.close();
@@ -500,7 +502,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 void MCSimulation::addGlialsObstaclesFromFiles()
 {
     for (unsigned i = 0; i < params.glials_files.size(); i++) {
-        cout << "Adding Glials" << endl;
+        //cout << "Adding Glials" << endl;
 
         std::ifstream in(params.glials_files[i]);
 
@@ -573,7 +575,7 @@ void MCSimulation::addGlialsObstaclesFromFiles()
         in.close();
     }
 
-    cout << "Number of glials: " << dynamicsEngine->glials_list.size() << endl;
+    //cout << "Number of glials: " << dynamicsEngine->glials_list.size() << endl;
 }
 
 
