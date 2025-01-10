@@ -87,7 +87,6 @@ void MCSimulation::startSimulation()
     iniObstacles();
     // update number of walkers
     dynamicsEngine->params = params;
-    //cout << " number of walkers : " << params.num_walkers << endl;
 
     if(dataSynth != NULL){
         dynamicsEngine->startSimulation(dataSynth);
@@ -291,7 +290,6 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 {
     
     for(unsigned i = 0; i < params.axons_files.size(); i++){
-        cout << "Adding Axons" << endl;
 
 
         std::ifstream in(params.axons_files[i]);
@@ -404,11 +402,9 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
                 ax.set_spheres(spheres_out);
                 ax.setDiffusion(diff_i, diff_e);
-                dynamicsEngine->axons_list.push_back(ax);
 
                 ax_in.set_spheres(spheres_in);
                 ax_in.setDiffusion(diff_i, diff_e);
-                dynamicsEngine->inner_axons_list.push_back(ax_in);
                 spheres_out.clear();
                 spheres_in.clear();
 
@@ -417,9 +413,13 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                     ax.setPercolation(null_perm);
                 }
                 else{
+ 
                     ax_in.setPercolation(perm_);
                     ax.setPercolation(perm_);
                 }
+
+                dynamicsEngine->inner_axons_list.push_back(ax_in);
+                dynamicsEngine->axons_list.push_back(ax);
 
             }
             sphere_out = Sphere(sph_id, ax_id, Eigen::Vector3d(x,y,z), rout, 0);
@@ -460,11 +460,10 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             }
             ax.set_spheres(spheres_out);
             ax.setDiffusion(diff_i, diff_e);
-            dynamicsEngine->axons_list.push_back(ax);
 
             ax_in.set_spheres(spheres_in);
             ax_in.setDiffusion(diff_i, diff_e);
-            dynamicsEngine->inner_axons_list.push_back(ax_in);
+
             spheres_out.clear();
             spheres_in.clear();
 
@@ -476,6 +475,9 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 ax_in.setPercolation(perm_);
                 ax.setPercolation(perm_);
             }
+
+            dynamicsEngine->axons_list.push_back(ax);
+            dynamicsEngine->inner_axons_list.push_back(ax_in);
 
 
         }

@@ -229,7 +229,7 @@ private:
      *  \return returns true if the collision was a correct bouncing.
      */
     inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision& collision);
-    inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision& collision, unsigned &t);
+    inline bool updateWalkerPositionAndHandleBouncing(Eigen::Vector3d& amended_step, double& tmax, Collision &collision, unsigned &t);
 
     /*! \fn     handleCollisions
      *  \param  collision A given collision with the highest priority so far.
@@ -245,7 +245,7 @@ private:
      *  \brief  If a voxel is given, maps the walker position back into the voxel, assuming a crossing at
      *          the voxel limits.
      */
-    inline void mapWalkerIntoVoxel(Eigen::Vector3d &amended_step, Collision &collision, double barrier_thickness);
+    inline void mapWalkerIntoVoxel(const Eigen::Vector3d &bounced_step, const Collision &collision,const double &barrier_thickness);
 
 
     /*! \fn     mapWalkerIntoVoxel_tortuous

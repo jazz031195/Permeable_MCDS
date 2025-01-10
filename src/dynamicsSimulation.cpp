@@ -63,6 +63,8 @@ DynamicsSimulation::DynamicsSimulation() {
 
     nbr_walker_extra = 0;
     nbr_walker_intra = 0;
+    nbr_walker_glials = 0;
+    nbr_walker_axons = 0;
 
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
@@ -107,6 +109,8 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
 
     nbr_walker_extra = 0;
     nbr_walker_intra = 0;
+    nbr_walker_glials = 0;
+    nbr_walker_axons = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -385,6 +389,7 @@ void DynamicsSimulation::initSimulation()
     // Initialize the walker trajectory log
     walker.setNumberOfSteps(params.num_steps);
 
+
     //time step = dt/T
     time_step = params.sim_duration/double(params.num_steps);
     time_dt =    0;
@@ -617,7 +622,9 @@ void DynamicsSimulation::initWalkerObstacleIndexes()
     walker.collision_sphere_cylinders.setBigSphereSize(outer_col_dist_factor);
     
     // The inner collision sphere has radius l*T*collision_sphere_distance
-    float inner_col_dist_factor = curr_step_lenght*sqrt(params.num_steps)*params.collision_sphere_distance;
+    //float inner_col_dist_factor = curr_step_lenght*sqrt(params.num_steps)*params.collision_sphere_distance;
+    float inner_col_dist_factor = curr_step_lenght*2;
+    
     walker.collision_sphere_cylinders.setSmallSphereSize(inner_col_dist_factor);
 
     // New version Cylinders obstacle selection
@@ -906,6 +913,8 @@ void DynamicsSimulation::updateWalkerObstacleIndexes(unsigned t_)
     
     //Axons obstacle update.
     //cout << "updateWalkerObstacleIndexes" << endl;
+
+    //auto time = std::chrono::high_resolution_clock::now();
     walker.axons_collision_sphere.small_sphere_list_end = 0;
 
     for(unsigned i = 0 ; i < walker.axons_collision_sphere.big_sphere_list_end; i++ )
@@ -924,6 +933,11 @@ void DynamicsSimulation::updateWalkerObstacleIndexes(unsigned t_)
         }
         
     }
+
+    //auto time2 = std::chrono::high_resolution_clock::now();
+    //auto duration = std::chrono::duration_cast<std::chrono::microseconds>( time2 - time ).count();
+    //cout << "Time to update axons: " << duration << endl;
+    //assert(0);
     //cout << "end updateWalkerObstacleIndexes" << endl;
 
     //PLY update obstacle
@@ -1664,7 +1678,7 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         if (walker.location== Walker::intra ){
 
             if (walker.in_obj_type == 0 && walker.in_obj_index != -1){
-       
+                
                 if (inner_axons_list.size() > 0) {
     
                     (inner_axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
@@ -1673,20 +1687,31 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
                     (axons_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 }
                 handleCollisions(collision,collision_tmp,max_collision_distance,walker.in_obj_index);   
+
             }
         }
         // extra walkers or unknown
         else {
             // start counting time
             //cout << "walker.collision_sphere_axons.small_sphere_list_end: " << walker.axons_collision_sphere.small_sphere_list_end << endl;
-            for(unsigned int i = 0 ; i < walker.axons_collision_sphere.small_sphere_list_end; i++ ){
+            //auto start = std::chrono::high_resolution_clock::now();
             //for (unsigned int i = 0 ; i < axons_list.size(); i++ ){
+            for(unsigned int i = 0 ; i < walker.axons_collision_sphere.small_sphere_list_end; i++ ){
                 unsigned index = walker.axons_collision_sphere.collision_list->at(i);
                 //unsigned index = i;
-                //cout << "Checking axon " << i << endl;
+                if (!(axons_list)[index].isNearAxon(walker, tmax + barrier_tickness)){
+                    continue;
+                } 
                 (axons_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);  
             }
+            // stop counting time
+            //auto stop = std::chrono::high_resolution_clock::now();
+            // get the time
+            //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+            //cout << "Time taken by axons: " << duration.count() << " microseconds" << endl;
+  
+
         }
     }
     //For each Glial Obstacle
@@ -1775,7 +1800,7 @@ void DynamicsSimulation::handleCollisions(Collision &collision, Collision &colli
 }
 
 
-void DynamicsSimulation::mapWalkerIntoVoxel(Eigen::Vector3d& bounced_step, Collision &collision,double barrier_thicknes)
+void DynamicsSimulation::mapWalkerIntoVoxel(const Eigen::Vector3d &bounced_step, const Collision &collision,const double &barrier_thickness)
 {
   
     walker.setRealPosition(walker.pos_r + collision.t*bounced_step);
@@ -1958,7 +1983,6 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
 
     if(collision.type == Collision::hit && collision.col_location != Collision::voxel)
     {
-        tot_nbr_bounces++;
    
            //If the collision was really close we can't trust the normal direction;
         if(collision.t < 1e-10 && walker.status != walker.bouncing){
@@ -1968,6 +1992,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             walker.status = Walker::on_object;
             return false;
         }
+        tot_nbr_bounces++;
 
         bounced = true;
         walker.status = Walker::bouncing;
@@ -1977,7 +2002,6 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         // Membrane crossing due to permeability --> Tmax needs to be updated because diffusivity may have changed!
         int crossed = 0, col_loc = collision.col_location;
 
-    
         if (collision.perm_crossing > EPS_VAL){
             
             crossed = 1;

@@ -77,6 +77,7 @@ void Parameters::readSchemeFile(std::string conf_file_path)
 
         if(str_dist(tmp,"n") == 0){
             in >> num_walkers;
+
         }
         else if(str_dist(tmp,"c") == 0){
             in >> concentration;

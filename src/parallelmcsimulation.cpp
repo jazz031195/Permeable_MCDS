@@ -179,6 +179,7 @@ void ParallelMCSimulation::initializeUnitSimulations()
 
         //Parameters for each simulation simulation
         Parameters params_temp       = params;
+
         params_temp.num_walkers      = N_per_sim;
 
         params_temp.output_base_name+= "_"+std::to_string(i);

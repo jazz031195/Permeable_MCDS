@@ -52,7 +52,6 @@ public:
 
     int in_obj_index; 
     int in_obj_type;    
-    
 
     CylinderCollisionSphere collision_sphere_cylinders;             /*!< Collision sphere for collition against cylidners                       */
 

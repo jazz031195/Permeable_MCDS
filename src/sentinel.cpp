@@ -78,7 +78,6 @@ bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY,
     {
         cout << "error for permeability" << endl;
         cout << "walker.is_allowed_to_cross = false : " << (walker.is_allowed_to_cross == false) << endl;
-        assert(0);
         setCrossingError(uint(walker.in_obj_index));
         illegal_count++;
         //cout << "Error: Walker " << walker.index << " crossed the membrane from " << walker.previous_location << " to " << walker.location << endl;
