@@ -43,6 +43,7 @@ useful_functions/waveform.py
 useful_functions/plot_swelling_direction.py
 useful_functions/time_dependence_analysis.py
 useful_functions/SMI.py
+useful_functions/read_trajectories.py
 
 #OUTPUT FOLDERS
 *output*
