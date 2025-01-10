@@ -32,13 +32,21 @@
 *.app
 
 #OUTPUT FILES
-output/*
-
-*vscode*
-
-__pycache__/
 job_curnagl.sh
 job.sh
 run_curnagl.sh
+run.sh
+useful_functions/Watson.py
+useful_functions/DKI.py
+useful_functions/overlapping_spheres_analysis.py
+useful_functions/waveform.py
+useful_functions/plot_swelling_direction.py
+useful_functions/time_dependence_analysis.py
+useful_functions/SMI.py
+
+#OUTPUT FOLDERS
+*output*
+*vscode*
+*__pycache__*
 
 
