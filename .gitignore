@@ -32,8 +32,13 @@
 *.app
 
 #OUTPUT FILES
-OUTPUT/*
+output/*
 
 *vscode*
+
+__pycache__/
+job_curnagl.sh
+job.sh
+run_curnagl.sh
 
 
