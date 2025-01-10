@@ -735,7 +735,7 @@ void MCSimulation::addNeuronsObstaclesFromFiles()
                     glial_cell.Box_branch.clear();
                 } // end neuron
                 // Process dendrite
-                else if (jkr.size() > 3)  
+                else if (jkr.size() > 4)  
                 {
                     neuron_id   = stod(jkr[0]);
                     dendrite_id = stod(jkr[1]);

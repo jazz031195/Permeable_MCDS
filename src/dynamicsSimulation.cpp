@@ -906,7 +906,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
 
         double proba = double(udist(gen));
 
-        if (proba < 0)//params.soma_vf / params.packing_icvf)
+        if (proba < params.soma_vf / params.packing_icvf)
             getAnIntraCellularPosition_soma(intra_pos);
         // In dendrite
         else
