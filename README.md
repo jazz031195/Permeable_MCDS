@@ -48,8 +48,10 @@ The main simulation settings are defined as key-value pairs in the configuration
 - **`write_traj_file`**: Save water molecule trajectories (`0` for no, `1` for yes).
 - **`num_process`**: Number of simulations to run simultaneously. It is recommended to set this to the number of CPU cores available.
 
+Other parameters can be found in /src/parameters.h
+
 ### Cell Configuration
-To include cells in the simulation, specify their properties in the following format:
+To include axons in the simulation, specify their properties in the following format:
 
 ```xml
 <obstacle>
@@ -59,6 +61,35 @@ permeability global desired_permeability
 </axons_list>
 </obstacle>
 ```
+
+To include glial cells or neurons, specify their properties in the following format:
+
+```xml
+<obstacle>
+<glials_list>
+path/to/swc/file
+permeability global desired_permeability
+</glials_list>
+</obstacle>
+```
+
+If you want both glial cells and axons from the same substrate, write : 
+
+```xml
+<obstacle>
+<axons_list>
+path/to/swc/file
+permeability global desired_permeability
+</axons_list>
+<glials_list>
+path/to/swc/file
+permeability global desired_permeability
+</glials_list>
+</obstacle>
+```
+The path/to/swc/file should be the same twice. 
+
+Set desired_permeability to 0 for no permeability.
 
 ### Voxel Size Adjustment
 
