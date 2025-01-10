@@ -2,7 +2,33 @@
 
 ## Introduction
 
-## Configuration Files - README
+Monte Carlo simulations are a powerful computational technique used to model and analyze the diffusion of water molecules in biological tissues, as observed in diffusion-weighted imaging (DWI). These simulations rely on random sampling to approximate the physical and statistical properties of diffusion, making them particularly suitable for exploring complex, heterogeneous environments such as brain tissue.
+
+### What is DWI?
+
+Diffusion-weighted imaging is a magnetic resonance imaging (MRI) technique that measures the diffusion of water molecules within tissues. This diffusion is influenced by the microstructural properties of the tissue, such as cell membranes, axonal fibers, and extracellular spaces. DWI provides insights into tissue structure, integrity, and connectivity, making it essential for studying diseases like stroke, multiple sclerosis, and brain tumors.
+Why Use Monte Carlo Simulations?
+
+### Monte Carlo simulations are employed in DWI to:
+
+- Model Microstructures: Simulate the behavior of water molecules in complex tissue environments, including intracellular, extracellular, and restricted diffusion.
+- Validate Models: Test analytical diffusion models against ground-truth simulations.
+- Predict Signal: Generate synthetic DWI signals for various tissue configurations and experimental parameters.
+
+### How It Works
+
+- Initialization: Define the tissue environment, such as the dimensions of axons, cell membranes, and extracellular spaces. Set physical properties like diffusivity and permeability.
+- Random Walks: Simulate the movement of individual water molecules over time using random walks. Each step accounts for diffusion, collisions with structures, and interactions with barriers.
+- Signal Generation: Apply gradient pulses, as defined by a DWI scheme, and calculate the resulting signal attenuation.
+- Analysis: Aggregate the simulated signals to predict DWI metrics, such as fractional anisotropy (FA), mean diffusivity (MD), and kurtosis.
+
+### Benefits of Monte Carlo Simulations
+
+- Accuracy: Capture the nuances of diffusion in non-ideal, heterogeneous environments.
+- Flexibility: Model various tissue geometries and experimental conditions.
+- Insights: Explore relationships between microstructure and measured DWI signals.
+
+## Configuration Files 
 
 The simulation configuration is managed through `.conf` files located in the `instructions/conf/` directory. These files define the parameters for running simulations and include the following sections:
 
@@ -32,8 +58,9 @@ path/to/swc/file
 permeability global desired_permeability
 </axons_list>
 </obstacle>
+```
 
-## Voxel Size Adjustment
+### Voxel Size Adjustment
 
 To configure the voxel size, specify the minimum and maximum values for each axis (`x`, `y`, `z`) in millimeters. The format is as follows:
 
@@ -42,8 +69,9 @@ To configure the voxel size, specify the minimum and maximum values for each axi
 xmin ymin zmin
 xmax ymax zmax
 </voxel>
+```
 
-## Sampling Area
+### Sampling Area
 
 The sampling area defines the region where the water molecules originate. Specify the minimum and maximum values for each axis as follows:
 
@@ -52,4 +80,49 @@ The sampling area defines the region where the water molecules originate. Specif
 xmin ymin zmin
 xmax ymax zmax
 </sampling_area>
+```
 
+## Scheme Files
+
+Scheme files are located in the `instructions/scheme/` directory. These files are essential for defining the parameters of your PGSE (Pulsed Gradient Spin Echo) sequences. Each line in a scheme file describes a single gradient direction and associated parameters required for the simulation or analysis. The parameters are specified in the following order: X Y Z G Δ δ TE
+
+### Explanation of Parameters
+- **X, Y, Z**: Components of the gradient direction in 3D space.
+- **G**: Gradient amplitude (in millitesla per meter, mT/m).
+- **Δ (big delta)**: Time interval between the diffusion gradients (in seconds).
+- **δ (small delta)**: Duration of the diffusion gradients (in seconds).
+- **TE**: Echo time (in seconds).
+
+### Example Scheme File
+
+```xml
+0 0 1 0.0 0.05 0.0165 0.07
+0 0 1 0.01518807 0.05 0.0165 0.07
+0 0 1 0.02401444 0.05 0.0165 0.07
+0 0 1 0.03396155 0.05 0.0165 0.07
+0 0 1 0.04159423 0.05 0.0165 0.07
+0 0 1 0.04802888 0.05 0.0165 0.07
+0 0 1 0.05369793 0.05 0.0165 0.07
+0 0 1 0.07594033 0.05 0.0165 0.07
+0 0 1 0.08318847 0.05 0.0165 0.07
+0 0 1 0.08985382 0.05 0.0165 0.07
+0 0 1 0.09605777 0.05 0.0165 0.07
+0 0 1 0.10188465 0.05 0.0165 0.07
+0 0 1 0.10739585 0.05 0.0165 0.07
+```
+
+### Generating Isotropic Directions
+
+If isotropic directions are required for your simulation, you can generate them using external tools. One recommended tool is Emmanuel Caruyer’s q-space sampling tool (http://www.emmanuelcaruyer.com/q-space-sampling.php). This tool allows you to produce text files containing isotropic gradient directions.
+
+### Automating Scheme File Creation
+
+Once you have the directional data, you can use the create_pgse_file Python script located in the /useful_functions/ directory to generate a .scheme file with the desired parameters. This script automates the process, ensuring consistency and reducing manual errors.
+
+## Running the MCDS 
+
+Once the configuration and scheme files are created, simply execute :
+
+```xml
+./run_mcds.sh
+```
