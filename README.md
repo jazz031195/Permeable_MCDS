@@ -119,6 +119,10 @@ If isotropic directions are required for your simulation, you can generate them 
 
 Once you have the directional data, you can use the create_pgse_file Python script located in the /useful_functions/ directory to generate a .scheme file with the desired parameters. This script automates the process, ensuring consistency and reducing manual errors.
 
+## SWC files
+
+To run a Monte Carlo simulation on a specific substrate, first create it using the tool of your choice (ex: CATERPillar). The path to the output that has the .swc must be put in the configuration file. An example of such a substrate can be found in /example_swc_files/. Information on this substrate can be found in the .txt file. 
+
 ## Running the MCDS 
 
 Once the configuration and scheme files are created, simply execute :
