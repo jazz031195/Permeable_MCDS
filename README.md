@@ -2,14 +2,15 @@
 
 ## Introduction
 
-Monte Carlo simulations are a powerful computational technique used to model and analyze the diffusion of water molecules in biological tissues, as observed in diffusion-weighted imaging (DWI). These simulations rely on random sampling to approximate the physical and statistical properties of diffusion, making them particularly suitable for exploring complex, heterogeneous environments such as brain tissue.
+Monte Carlo simulations are a powerful computational technique used to model and analyze the diffusion of water molecules in biological tissues, as observed in diffusion-weighted imaging (DWI). These simulations rely on random sampling to approximate the physical and statistical properties of diffusion, making them particularly suitable for exploring complex, heterogeneous environments such as brain tissue. This tool was modified from https://github.com/jonhrafe/MCDC_Simulator_public to enable diffusioin of water molecules through overlapping spheres that model cells.
 
 ### What is DWI?
 
-Diffusion-weighted imaging is a magnetic resonance imaging (MRI) technique that measures the diffusion of water molecules within tissues. This diffusion is influenced by the microstructural properties of the tissue, such as cell membranes, axonal fibers, and extracellular spaces. DWI provides insights into tissue structure, integrity, and connectivity, making it essential for studying diseases like stroke, multiple sclerosis, and brain tumors.
-Why Use Monte Carlo Simulations?
+Diffusion-weighted imaging is a magnetic resonance imaging (MRI) technique that measures the diffusion of water molecules within tissues. This diffusion is influenced by the microstructural properties of the tissue. DWI provides insights into tissue structure, making it essential for studying diseases like stroke, multiple sclerosis, and brain tumors.
 
-### Monte Carlo simulations are employed in DWI to:
+### Why Use Monte Carlo Simulations?
+
+Monte Carlo simulations are employed in DWI to:
 
 - Model Microstructures: Simulate the behavior of water molecules in complex tissue environments, including intracellular, extracellular, and restricted diffusion.
 - Validate Models: Test analytical diffusion models against ground-truth simulations.
