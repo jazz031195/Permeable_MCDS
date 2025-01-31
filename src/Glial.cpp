@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <map>
 #include <unordered_set>
+#include <set>
 
 using namespace Eigen;
 using namespace std;
@@ -64,8 +65,16 @@ void Glial::set_spheres(std::vector<Sphere> &spheres_to_add) {
         if (z_min< big_box.z_min) big_box.z_min = z_min;
         if (z_max> big_box.z_max) big_box.z_max = z_max;
 
+        if (sphere.branch_id == -1) {
+            // Handle soma
+            continue;
+        }
+        else if (sphere.branch_id >= processes.size()) {
+            // Handle new branches
+            processes.resize(sphere.branch_id + 1);
+        }
         // Handle processes
-        processes.push_back(sphere);
+        processes[sphere.branch_id].push_back(sphere);
 
         // Update or create the bounding box for this branch_id
         if (branch_boxes.find(sphere.branch_id) == branch_boxes.end()) {
@@ -148,47 +157,63 @@ bool Glial::isNearGlialCell(const Eigen::Vector3d &position, const double &dista
     return false; // Not near any box
 }
 
-std::vector<int> Glial::checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches) {
-    std::vector<int> spheres_id_to_check;
+std::vector<std::tuple<int, int>> Glial::checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches) {
+    std::vector<std::tuple<int, int>> branch_id_spheres_pos;
 
-    // Collect relevant spheres
-    std::vector<Sphere> relevant_spheres = {soma};
-    relevant_spheres.insert(relevant_spheres.end(), processes.begin(), processes.end());
+    double min_i = soma.P[axis] - soma.radius;
+    double max_i = soma.P[axis] + soma.radius;
 
-    for (int i = 0; i < relevant_spheres.size(); ++i) {
-        const auto &sphere = relevant_spheres[i];
+    if(position[axis] >= min_i - distance_to_be_inside && position[axis] <= max_i + distance_to_be_inside){
+        branch_id_spheres_pos.push_back({-1, 0});
+    }
 
-        // Check if the sphere's branch_id is in the provided branches
-        if (std::find(branches.begin(), branches.end(), sphere.branch_id) != branches.end()) {
-            
+    for (const auto &branch_id : branches) {
+
+        if (branch_id == -1) {
+            continue; // Skip soma
+        }
+
+        for (int i = 0; i < processes[branch_id].size(); ++i) {
+            const auto &sphere = processes[branch_id][i];
+
             // Check if the position is within the extended bounds of the sphere along the given axis
             double min_i = sphere.P[axis] - sphere.radius;
             double max_i = sphere.P[axis] + sphere.radius;
 
             if (position[axis] >= min_i - distance_to_be_inside && position[axis] <= max_i + distance_to_be_inside) {
-                spheres_id_to_check.push_back(i);
+                branch_id_spheres_pos.push_back({branch_id, i});
             }
         }
-        
     }
 
-    return spheres_id_to_check;
+    return branch_id_spheres_pos;
 }
 
 
-std::vector<int> Glial::findCommonIntegers(const std::vector<int>& vec1, const std::vector<int>& vec2, const std::vector<int>& vec3) {
-    std::unordered_set<int> set1(vec1.begin(), vec1.end());
-    std::unordered_set<int> set2(vec2.begin(), vec2.end());
-    std::unordered_set<int> set3(vec3.begin(), vec3.end());
 
-    std::vector<int> result;
-    for (int val : set1) {
-        if (set2.count(val) && set3.count(val)) {
-            result.push_back(val);
-        }
+// Function to find common elements in all three dimensions
+vector<tuple<int, int>> Glial::findCommonIntegers(const vector<vector<tuple<int, int>>>& axisVectors) {
+
+    if (axisVectors.size() != 3) {
+        return {};
     }
-    return result;
+
+    // Convert each vector to a set for efficient lookups
+    set<tuple<int, int>> setX(axisVectors[0].begin(), axisVectors[0].end());
+    set<tuple<int, int>> setY(axisVectors[1].begin(), axisVectors[1].end());
+    set<tuple<int, int>> setZ(axisVectors[2].begin(), axisVectors[2].end());
+
+    // Find intersection of first two sets
+    vector<tuple<int, int>> xyIntersection;
+    set_intersection(setX.begin(), setX.end(), setY.begin(), setY.end(), back_inserter(xyIntersection));
+
+    // Find intersection of the result with the third set
+    vector<tuple<int, int>> xyzIntersection;
+    set_intersection(xyIntersection.begin(), xyIntersection.end(), setZ.begin(), setZ.end(), back_inserter(xyzIntersection));
+
+    return xyzIntersection;
 }
+
 
 bool Glial::isPosInsideGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside) {
     
@@ -198,60 +223,67 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d &position, const double &
     }
 
     // Collect candidate spheres across all axes
-    std::vector<std::vector<int>> spheres_id_to_check(3);
+    std::vector<std::vector<std::tuple<int, int>>> spheres_to_check(3);
     for (int axis = 0; axis < 3; ++axis) {
-        spheres_id_to_check[axis] = checkAxisForCollision(position, distance_to_be_inside, axis, branches);
-        if (spheres_id_to_check[axis].empty()) {
+        spheres_to_check[axis] = checkAxisForCollision(position, distance_to_be_inside, axis, branches);
+        if (spheres_to_check[axis].empty()) {
             return false; // No candidates for this axis
         }
     }
 
     // Find common spheres across all axes
-    std::vector<int> spheres_to_check = findCommonIntegers(spheres_id_to_check[0], spheres_id_to_check[1], spheres_id_to_check[2]);
-    for (int sphere_id : spheres_to_check) {
-        Sphere sphere_to_check = (sphere_id == 0) ? soma : processes[sphere_id - 1];
-        if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
-            return true;
+    std::vector<std::tuple<int, int>> new_spheres_to_check = findCommonIntegers(spheres_to_check);
+    for (auto sphere_tuple : new_spheres_to_check) {
+        if (std::get<0>(sphere_tuple) == -1) {
+            Sphere sphere_to_check = soma;
+            if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
+                return true;
+            }
+        } else {
+            Sphere sphere_to_check = processes[std::get<0>(sphere_tuple)][std::get<1>(sphere_tuple)];
+            if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
+                return true;
+            }
         }
     }
 
     return false;
 }
 
-bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids) {
-    sph_ids.clear();
-
-    // Determine nearby branches
+bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<std::tuple<int, int>> &items) {
+    
+    items.clear();
     std::vector<int> branches;
     if (!isNearGlialCell(position, distance_to_be_inside, branches)) {
-        return false;
+        return false; // Position is outside all bounding boxes
     }
-    
 
-    // Collect potential sphere IDs from all axes
-    std::vector<std::vector<int>> spheres_id_to_check(3);
+    // Collect candidate spheres across all axes
+    std::vector<std::vector<std::tuple<int, int>>> spheres_to_check(3);
     for (int axis = 0; axis < 3; ++axis) {
-        spheres_id_to_check[axis] = checkAxisForCollision(position, distance_to_be_inside, axis, branches);
-        if (spheres_id_to_check[axis].empty()) {
-            return false; // No collisions along this axis
+        spheres_to_check[axis] = checkAxisForCollision(position, distance_to_be_inside, axis, branches);
+        if (spheres_to_check[axis].empty()) {
+            return false; // No candidates for this axis
         }
     }
 
-    // Find common sphere IDs across all axes
-    std::vector<int> spheres_to_check_all_axes = findCommonIntegers(
-        spheres_id_to_check[0], spheres_id_to_check[1], spheres_id_to_check[2]
-    );
-
-    // Check each common sphere for proximity
-    for (int sphere_id : spheres_to_check_all_axes) {
-        Sphere sphere_to_check = (sphere_id == 0) ? soma : processes[sphere_id - 1];
-        if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
-            sph_ids.push_back(sphere_id);
-
+    // Find common spheres across all axes
+    std::vector<std::tuple<int, int>> new_spheres_to_check = findCommonIntegers(spheres_to_check);
+    for (auto sphere_tuple : new_spheres_to_check) {
+        if (std::get<0>(sphere_tuple) == -1) {
+            Sphere sphere_to_check = soma;
+            if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
+                items.push_back(sphere_tuple);
+            }
+        } else {
+            Sphere sphere_to_check = processes[std::get<0>(sphere_tuple)][std::get<1>(sphere_tuple)];
+            if (sphere_to_check.minDistance(position) <= distance_to_be_inside) {
+                items.push_back(sphere_tuple);
+            }
         }
     }
 
-    return !sph_ids.empty();
+    return !items.empty();
 }
 
 
@@ -279,92 +311,103 @@ bool Glial::intersection_sphere_vector(double &t1, double &t2, const Sphere &s, 
 }
 
 void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &distance,
-                                   std::vector<double> &dist_intersections, std::vector<int> &spheres_ids) {
-    dist_intersections.clear();
-    spheres_ids.clear();
+                                   std::vector<std::pair<double, std::tuple<int, int>>> &dist_and_indices) {
+    dist_and_indices.clear();
 
-    std::vector<int> sph_ids_walker_is_inside;
+    std::vector<std::tuple<int, int>> sph_walker_is_inside;
     Eigen::Vector3d pos = walker.pos_v;
 
     // Find spheres the walker is near
-    if (!FindSphereinGlial(pos, distance, sph_ids_walker_is_inside)) {
+    if (!FindSphereinGlial(pos, distance, sph_walker_is_inside)) {
         return;
     }
 
+    dist_and_indices.reserve(sph_walker_is_inside.size());
+
     // Process each sphere the walker is near
-    for (int sphere_id : sph_ids_walker_is_inside) {
-        Sphere sphere_to_check = (sphere_id == 0) ? soma : processes[sphere_id - 1];
+    for (auto sphere_tuple : sph_walker_is_inside) {
+
+        Sphere sphere_to_check;
+        size_t branch_id = std::get<0>(sphere_tuple);
+        if (branch_id == -1) {
+            sphere_to_check = soma;
+        } else {
+            sphere_to_check = processes[branch_id][std::get<1>(sphere_tuple)];
+        }
 
         double t1, t2;
         if (intersection_sphere_vector(t1, t2, sphere_to_check, step, pos)) {
-            // Push valid intersections based on walker status
-            if (walker.status == Walker::bouncing) {
-                if (t1 > EPS_VAL) {
-                    dist_intersections.push_back(t1);
-                    spheres_ids.push_back(sphere_id);
+            // Check both intersections
+            auto check_and_add = [&](double t) {
+                if (t > ((walker.status == Walker::bouncing) ? EPS_VAL : 0)) {
+                    dist_and_indices.emplace_back(t, sphere_tuple);
                 }
-                if (t2 > EPS_VAL) {
-                    dist_intersections.push_back(t2);
-                    spheres_ids.push_back(sphere_id);
-                }
-            } else {
-                if (t1 > 0) {
-                    dist_intersections.push_back(t1);
-                    spheres_ids.push_back(sphere_id);
-                }
-                if (t2 > 0) {
-                    dist_intersections.push_back(t2);
-                    spheres_ids.push_back(sphere_id);
-                }
-            }
+            };
+            check_and_add(t1);
+            check_and_add(t2);
         }
     }
 }
 
 bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const double &step_length, Collision &collision) {
+    
     // Distances to intersections and corresponding sphere IDs
-    std::vector<double> dist_intersections;
-    std::vector<int> sphere_ids;
-
+    std::vector<std::pair<double, std::tuple<int, int>>> dist_and_tuples;
 
     // Find all intersections
-    find_all_intersections(walker, step, step_length + barrier_tickness, dist_intersections, sphere_ids);
+    find_all_intersections(walker, step, step_length + barrier_tickness, dist_and_tuples);
 
-    if (dist_intersections.empty()) {
+    if (dist_and_tuples.empty()) {
         // Handle case with no intersections
-        if (walker.location == Walker::intra && !isPosInsideGlialCell(walker.pos_v, EPS_VAL)) {
-            //cout << "Walker is outside axon" << endl;
-            collision.type = Collision::hit;
-            collision.col_location = Collision::outside;
-            collision.collision_point = walker.pos_v;
-            collision.t = 1e-9;
-            collision.perm_crossing = 0.0;
-            collision.bounced_direction = step;
-            return true;
+        if (walker.location == Walker::intra) {
+            if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)){ 
+                collision.type = Collision::hit;
+                collision.col_location = Collision::outside;
+                collision.collision_point = walker.pos_v;
+                collision.t = 1e-9;
+                collision.perm_crossing = 0.0;
+                collision.bounced_direction = step;
+
+                return true;
+            } 
         }
         collision.type = Collision::null;
         return false;
     }
 
-    // Sort distances and corresponding sphere IDs
-    std::vector<size_t> sorted_indices(dist_intersections.size());
-    std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
-    std::sort(sorted_indices.begin(), sorted_indices.end(), [&dist_intersections](size_t i1, size_t i2) {
-        return dist_intersections[i1] < dist_intersections[i2];
-    });
+    if (walker.location == Walker::intra){
+        std::sort(dist_and_tuples.begin(), dist_and_tuples.end());
+    }
+    else{
+        // Find the closest distance (smallest element)
+        std::nth_element(dist_and_tuples.begin(), dist_and_tuples.begin(), dist_and_tuples.end());
+    }  
     
-    for (size_t i : sorted_indices) {
-        //out << "---" << endl;
-        double distance = dist_intersections[i];
+    for (auto dist_and_tuple : dist_and_tuples) {
+
+        double distance = dist_and_tuple.first;
+        std::tuple<int, int> sphere_tuple = dist_and_tuple.second;
+
+        if (distance > step_length + barrier_tickness) {
+            continue; // Early exit: remaining distances are too far
+        }
+
         //cout << "distance : " << distance << endl;
         Eigen::Vector3d pos = walker.pos_v + distance * step;
 
         // Check if position is near the edge
         bool is_near_edge = (walker.location == Walker::intra) ? !isPosInsideGlialCell(pos, -EPS_VAL) : true;
 
-        if (is_near_edge && distance <= step_length + barrier_tickness) {
+        if (is_near_edge && distance < step_length + barrier_tickness) {
             //cout << "is near edge" << endl;
-            Sphere sphere = (sphere_ids[i] == 0) ? soma : processes[sphere_ids[i] - 1];
+            Sphere sphere;
+            int branch_id = std::get<0>(sphere_tuple);
+            if (branch_id == -1) {
+                sphere = soma;
+            }
+            else{
+                sphere = processes[branch_id][std::get<1>(sphere_tuple)];
+            }
 
             // Compute normal and bounced direction
             Eigen::Vector3d normal = (pos - sphere.P).normalized();
@@ -376,18 +419,21 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
             }
             //outside
             else if (rn > 1e-10){
-
                 if (walker.location == Walker::intra){  
                     if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)){
+                        //cout << " is not inside axon " << id << " pos : " << walker.pos_v << endl;
                         collision.col_location = Collision::outside;
                     }
                     else{
+                        //cout <<"tricky situation (intra)"<< endl;
                         continue;
                     }  
                 }
                 else{
                     collision.col_location = Collision::outside;
                 } 
+                
+                collision.col_location = Collision::outside;
             }
             else {
                 collision.col_location = Collision::unknown;
@@ -399,26 +445,31 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
             collision.obstacle_type = 1;
             collision.t = distance;
             collision.bounced_direction = -ray + 2.0 * normal * rn;
+            collision.perm_crossing = 0.0;
 
 
-            // Handle permeability
-            if (percolation > 0.0) {
-                static std::mt19937 gen_perm(std::random_device{}());
+            if (this->percolation > 0.0) {
+                static std::mt19937 gen_perm(std::random_device{}()); // Random number generator for permeability
                 std::uniform_real_distribution<double> udist(0, 1);
 
                 double dynamic_percolation = (collision.col_location == Collision::inside)
-                                                 ? prob_cross_i_e
-                                                 : prob_cross_e_i;
+                                                 ? this->prob_cross_i_e
+                                                 : this->prob_cross_e_i;
 
-                if (dynamic_percolation > udist(gen_perm)) {
+                double u = udist(gen_perm); 
+
+                if (dynamic_percolation > u) {
+                    collision.t += EPS_VAL;
+                    collision.collision_point = walker.pos_v + collision.t * step;
+
                     count_perc_crossings++;
                     collision.perm_crossing = dynamic_percolation;
                     collision.bounced_direction = step;
+
                     return true;
                 }
             }
 
-            collision.perm_crossing = 0.0;
             return true;
         }
     }
@@ -447,15 +498,16 @@ void Glial::set_prob_crossings(double step_length_pref){
             
     // for all spheres
     for(unsigned i= 0 ; i < processes.size();i++){
-        processes[i].percolation = this->percolation;
+        for (unsigned j = 0; j < processes[i].size(); j++){
+            processes[i][j].percolation = this->percolation;
+            if(processes[i][j].percolation > 0.0){
 
-        if(processes[i].percolation > 0.0){
-            processes[i].prob_cross_e_i = this->prob_cross_e_i;
-            processes[i].prob_cross_i_e = this->prob_cross_i_e;
+                processes[i][j].prob_cross_e_i = this->prob_cross_e_i;
+                processes[i][j].prob_cross_i_e = this->prob_cross_i_e;
 
-            processes[i].diffusivity_e = this->diffusivity_e;
-            processes[i].diffusivity_i = this->diffusivity_i;
-            
+                processes[i][j].diffusivity_e = this->diffusivity_e;
+                processes[i][j].diffusivity_i = this->diffusivity_i;
+            }
         }
     }
 

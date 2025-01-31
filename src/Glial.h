@@ -23,7 +23,7 @@ class Glial : public Obstacle
     public : 
     int id;                                         /*!< ID of glial */
     Sphere soma;                                    /*!< soma of glial */
-    std::vector<Sphere> processes; /*!< ramification spheres of glial */
+    std::vector<std::vector<Sphere>> processes; /*!< ramification spheres of glial */
 
     struct Box {
         double x_min;
@@ -54,13 +54,13 @@ class Glial : public Obstacle
     bool isNearGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &branches);
     void set_spheres(std::vector<Sphere> &spheres_to_add);
     bool isPosInsideGlialCell(const Eigen::Vector3d& position, const double& distance_to_be_inside);
-    std::vector<int> checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches);
+    std::vector<std::tuple<int, int>> checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches);
     bool intersection_sphere_vector(double &t1, double &t2, const Sphere &s, const Eigen::Vector3d &step, const Eigen::Vector3d &pos);
     bool checkCollision(const Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, Collision &collision);
-    std::vector<int> findCommonIntegers(const std::vector<int>& vec1, const std::vector<int>& vec2, const std::vector<int>& vec3);
+    vector<tuple<int, int>> findCommonIntegers(const vector<vector<tuple<int, int>>>& axisVectors);
     void set_prob_crossings(double step_length_pref);
-    void find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &distance, std::vector<double> &dist_intersections, std::vector<int> &spheres_ids);
-    bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &sph_ids);
+    void find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &distance, std::vector<std::pair<double, std::tuple<int, int>>> &dist_and_indices);
+    bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<std::tuple<int, int>> &items);
     double minDistance(const Walker &w);
     bool isInsideBox(const int& i, const Eigen::Vector3d& position, const double &distance_to_be_inside);
     double distanceToBox(const int& i, const Eigen::Vector3d& O);

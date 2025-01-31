@@ -185,7 +185,7 @@ bool Axon::checkCollision(const Walker &walker, Eigen::Vector3d &step, const dou
         // Check if position is near the edge
         bool is_near_edge = (walker.location == Walker::intra) ? !isPosInsideAxon_(pos, -EPS_VAL) : true;
 
-        if (is_near_edge && distance <= step_length + barrier_tickness) {
+        if (is_near_edge && distance < step_length + barrier_tickness) {
 
             Sphere sphere = spheres[i];
 
@@ -229,11 +229,6 @@ bool Axon::checkCollision(const Walker &walker, Eigen::Vector3d &step, const dou
             collision.bounced_direction = -ray + 2.0 * normal * rn;
             collision.perm_crossing = 0.0;
 
-            //cout << "rn : " << rn << endl;
-            //cout <<"distance : " << distance << endl;
-            //cout <<"collision point : " << collision.collision_point << endl;
-            //std::cout << std::fixed << std::setprecision(17) << "collision point inside axon : " << id << " " << isPosInsideAxon_(collision.collision_point, EPS_VAL) << endl;
-
             // Handle permeability
 
             if (this->percolation > 0.0) {
@@ -247,12 +242,8 @@ bool Axon::checkCollision(const Walker &walker, Eigen::Vector3d &step, const dou
                 double u = udist(gen_perm); 
 
                 if (dynamic_percolation > u) {
-                    //cout << "permeability" << endl;
                     collision.t += EPS_VAL;
                     collision.collision_point = walker.pos_v + collision.t * step;
-                    //std::vector<int> sph_ids_pos_is_inside_;
-                    //std::vector<int> sph_ids_pos_is_inside;
-                    //std::cout << std::fixed << std::setprecision(17) << "collision point : " << collision.collision_point << ", is inside (-EPS_VAL) :" << FindSphereinAxon(collision.collision_point, -EPS_VAL, sph_ids_pos_is_inside_) << ", is inside (EPS_VAL) :" << FindSphereinAxon(collision.collision_point, EPS_VAL, sph_ids_pos_is_inside)<< endl;
 
                     count_perc_crossings++;
                     collision.perm_crossing = dynamic_percolation;

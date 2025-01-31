@@ -52,13 +52,13 @@ def parse_direction_file(file_path, b_values):
 
     if (len(b_values) != len(shell_data)):
         raise ValueError("Number of b-values does not match number of shells in text file : ", file_path)
-    
+
     # Consolidate all shells into separate x, y, and z lists
     for shell, values in shell_data.items():
         all_x_vals.extend(values['x_vals'])
         all_y_vals.extend(values['y_vals'])
         all_z_vals.extend(values['z_vals'])
-        all_b_values.extend([b_values[shell]] * len(values['x_vals']))
+        all_b_values.extend([b_values[shell-1]] * len(values['x_vals']))
 
     return all_x_vals, all_y_vals, all_z_vals, all_b_values
 
@@ -138,18 +138,22 @@ def write_combinations_with_fixed_gradients(
             file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
 
 
-if __name__ == "__main__":
-
+def time_dependence_narrow_pulse_dki() :
     directions_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/directions/SMI_directions.txt"
-    output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/test.scheme"
+    output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/time_dependence_narrow_pulse_dki.scheme"
 
     # B values and directions
-    b_values =[500, 1000, 1500, 2000, 2500]
+    b_values =[0, 500, 1000, 2000, 3000]
     x_vals, y_vals, z_vals, b_values = parse_direction_file(directions_path, b_values)
+    print("x_vals: ", len(x_vals))
 
+    delta_values = [0.15758333, 0.11033333, 0.04577778, 0.02633333, 0.01733333, 0.01244444]
     # TE, big_delta, small_delta
-    small_delta_values = [0.004] # narrow pulse
-    delta_values = [0.05]
+    small_delta_values = [0.004]*len(delta_values) # narrow pulse
     te_values = [delta_values[i]+small_delta_values[i]+0.005 for i in range(len(delta_values))]
 
     write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
+
+if __name__ == "__main__":
+
+    time_dependence_narrow_pulse_dki()

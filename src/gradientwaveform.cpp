@@ -90,6 +90,7 @@ void GradientWaveform::readSchemeFile()
 
     in >> this->wave_duration;
     in >> this->wave_bins;
+
     float holder;
     in >> holder;
     this->num_rep = int(holder);

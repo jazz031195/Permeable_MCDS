@@ -217,7 +217,6 @@ void DynamicsSimulation::initObstacleInformation(){
             
             prob_cross_i_e = glials_list[i].percolation * dsi * 2. / 3. / glials_list[i].diffusivity_i;
             prob_cross_e_i = glials_list[i].percolation * dse * 2. / 3. / glials_list[i].diffusivity_e; 
-
             glials_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
             glials_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
         }
@@ -226,8 +225,6 @@ void DynamicsSimulation::initObstacleInformation(){
     walker.collision_sphere_glials.collision_list        = &glials_deque;
     walker.collision_sphere_glials.list_size             = unsigned(glials_deque.size());
     walker.collision_sphere_glials.big_sphere_list_end   = walker.collision_sphere_glials.list_size;
-
-
 
     // PLY index list initialization
     for(unsigned i= 0 ; i < plyObstacles_list.size();i++){
@@ -803,7 +800,6 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
 
         bool isintra = isInIntra(pos_temp, object_id, object_type, -barrier_tickness);
 
-
         if(checkIfPosInsideVoxel(pos_temp) && isintra && (std::find(expected_object_types.begin(), expected_object_types.end(), object_type) != expected_object_types.end()) ){
             
             intra_pos = pos_temp;
@@ -1314,7 +1310,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {         
-            //cout << "t : " << t << endl;
+            cout << "t : " << t << endl;
 
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
