@@ -794,7 +794,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
         if (glials_list.size() > 0){
             expected_object_types.push_back(1);
         }
-        if (inner_cylinders_list.size() > 0){
+        if (cylinders_list.size() > 0){
             expected_object_types.push_back(2);
         }
 
@@ -1001,9 +1001,9 @@ bool DynamicsSimulation::isInsideCylinders(Vector3d &position, int &object_id, d
 
     //track the number of positions checks for intra/extra positions
 
-    for(unsigned i = 0 ; i < inner_cylinders_list.size(); i++){
+    for(unsigned i = 0 ; i < cylinders_list.size(); i++){
 
-        double dis = inner_cylinders_list[i].minDistance(tmp);
+        double dis = cylinders_list[i].minDistance(tmp);
 
         if( dis <= distance_to_be_inside ){
             intra_tries++;
@@ -1170,7 +1170,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
     int ax_id, glial_id, cyl_id;
     bool isinside_axons = false, isinside_glial = false, isinside_cyl = false;
 
-    if(inner_cylinders_list.size()>0){
+    if(cylinders_list.size()>0){
         isinside_cyl= this->isInsideCylinders(position, cyl_id, distance_to_be_intra_ply);
         isIntra|= isinside_cyl;
         if (isinside_cyl){
@@ -1310,7 +1310,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {         
-            cout << "t : " << t << endl;
+            //cout << "t : " << t << endl;
 
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
@@ -1648,22 +1648,12 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         handleCollisions(collision,collision_tmp,max_collision_distance,i);
     }
 
-    if ((cylinders_list).size()>0 && (inner_cylinders_list).size()>0){
-        //For each Cylinder Obstacles
-        if (walker.location== Walker::intra ){
-            if (walker.in_obj_type == 2 && walker.in_obj_index != -1){
-
-                (inner_cylinders_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
-                handleCollisions(collision,collision_tmp,max_collision_distance,walker.in_obj_index);  
-            }
-        }
-        else{
-            for(unsigned int i = 0 ; i < walker.collision_sphere_cylinders.small_sphere_list_end; i++ )
-            {
-                unsigned index = walker.collision_sphere_cylinders.collision_list->at(i);
-                cylinders_list[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
-                handleCollisions(collision,collision_tmp,max_collision_distance,index);
-            }
+    if ((cylinders_list).size()>0){
+        for(unsigned int i = 0 ; i < walker.collision_sphere_cylinders.small_sphere_list_end; i++ )
+        {
+            unsigned index = walker.collision_sphere_cylinders.collision_list->at(i);
+            cylinders_list[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+            handleCollisions(collision,collision_tmp,max_collision_distance,index);
         }
     }
 

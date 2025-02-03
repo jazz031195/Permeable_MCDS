@@ -654,7 +654,6 @@ void MCSimulation::addCylindersObstaclesFromFiles()
                 //cout << "ax_id :" << ax_id << endl;
                 // create the axon with id : last_ax_id
                 Cylinder cyl (last_ax_id, {x,y,0.0}, {x,y,last_z}, rout);
-                Cylinder cyl_in (last_ax_id, {x,y,0.0}, {x,y,last_z}, rin);
 
                 // Local permeability - Different for each obstacle
                 if(in_perm){
@@ -667,11 +666,8 @@ void MCSimulation::addCylindersObstaclesFromFiles()
                 
                 cyl.setDiffusion(diff_i, diff_e);
                 cyl.setPercolation(perm_);
-                cyl_in.setDiffusion(diff_i, diff_e);
-                cyl_in.setPercolation(perm_);
                 dynamicsEngine->cylinders_list.push_back(cyl);
 
-                dynamicsEngine->inner_cylinders_list.push_back(cyl_in);
 
             }
             last_ax_id = ax_id;
@@ -689,10 +685,6 @@ void MCSimulation::addCylindersObstaclesFromFiles()
             cyl.setDiffusion(diff_i, diff_e);
             cyl.setPercolation(perm_);
             dynamicsEngine->cylinders_list.push_back(cyl);
-
-            cyl_in.setDiffusion(diff_i, diff_e);
-            cyl_in.setPercolation(perm_);
-            dynamicsEngine->inner_cylinders_list.push_back(cyl_in);
 
         }
 

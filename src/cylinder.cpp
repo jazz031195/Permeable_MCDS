@@ -135,6 +135,7 @@ inline bool Cylinder::handleCollition(Walker& walker, Collision &colision, Vecto
     }
 
     colision.rn = c;
+    colision.obstacle_type = 2;
 
     if(percolation>0.0){
         if(colision.type == Collision::hit && colision.col_location != Collision::voxel){

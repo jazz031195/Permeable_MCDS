@@ -53,9 +53,7 @@ public:
     std::vector <PLYObstacle> plyObstacles_list;    /*!< vector with all the instances of PLYObstacles                              */
     std::vector <Cylinder> cylinders_list;          /*!< vector with all the isntances of "Cylider" obstacles                       */
     std::vector<unsigned>  cylinders_deque;         /*!< deque with the indexes of the cylinders (used for optmization)             */
-    std::vector <Cylinder> inner_cylinders_list;          /*!< vector with all the isntances of "Cylider" obstacles                       */
-    std::vector<unsigned>  inner_cylinders_deque;         /*!< deque with the indexes of the cylinders (used for optmization)             */
-    
+
     std::vector <Axon> axons_list;                  /*!< vector with all the isntances of "Axon" obstacles                       */
     std::vector <Axon> inner_axons_list;            /*!< vector with all the isntances of "Axon" obstacles, in case of myelin                       */
     std::vector<unsigned>  axons_deque;             /*!< deque with the indexes of the axons (used for optmization)             */
