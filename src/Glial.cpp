@@ -401,7 +401,6 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
 
         double distance = dist_and_tuple.first;
 
-        cout <<"distance : " << distance << endl;
         std::tuple<int, int> sphere_tuple = dist_and_tuple.second;
 
         if (distance > step_length + barrier_tickness) {
