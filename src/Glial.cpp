@@ -38,6 +38,12 @@ void Glial::set_spheres(std::vector<Sphere> &spheres_to_add) {
     boxes.clear();
     processes.clear();
 
+    if (spheres_to_add.empty()) {
+        std::cout << "No spheres to add." << std::endl;
+        return;
+    }
+
+
     big_box = {
         soma.P[0] - soma.radius, soma.P[0] + soma.radius,
         soma.P[1] - soma.radius, soma.P[1] + soma.radius,
@@ -254,6 +260,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
     
     items.clear();
     std::vector<int> branches;
+    
     if (!isNearGlialCell(position, distance_to_be_inside, branches)) {
         return false; // Position is outside all bounding boxes
     }
@@ -265,6 +272,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
         if (spheres_to_check[axis].empty()) {
             return false; // No candidates for this axis
         }
+        
     }
 
     // Find common spheres across all axes
@@ -317,8 +325,10 @@ void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &
     std::vector<std::tuple<int, int>> sph_walker_is_inside;
     Eigen::Vector3d pos = walker.pos_v;
 
+    bool is_near_glial = FindSphereinGlial(pos, distance, sph_walker_is_inside);
+
     // Find spheres the walker is near
-    if (!FindSphereinGlial(pos, distance, sph_walker_is_inside)) {
+    if (!is_near_glial) {
         return;
     }
 
@@ -351,6 +361,9 @@ void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &
 
 bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const double &step_length, Collision &collision) {
     
+    cout <<"*******************" << endl;
+
+    cout <<"processes size : " << processes.size() << endl;
     // Distances to intersections and corresponding sphere IDs
     std::vector<std::pair<double, std::tuple<int, int>>> dist_and_tuples;
 
@@ -360,6 +373,7 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
     if (dist_and_tuples.empty()) {
         // Handle case with no intersections
         if (walker.location == Walker::intra) {
+            cout <<"distances empty" << endl;
             if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)){ 
                 collision.type = Collision::hit;
                 collision.col_location = Collision::outside;
@@ -374,7 +388,7 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
         collision.type = Collision::null;
         return false;
     }
-
+    
     if (walker.location == Walker::intra){
         std::sort(dist_and_tuples.begin(), dist_and_tuples.end());
     }
@@ -382,10 +396,12 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
         // Find the closest distance (smallest element)
         std::nth_element(dist_and_tuples.begin(), dist_and_tuples.begin(), dist_and_tuples.end());
     }  
-    
+
     for (auto dist_and_tuple : dist_and_tuples) {
 
         double distance = dist_and_tuple.first;
+
+        cout <<"distance : " << distance << endl;
         std::tuple<int, int> sphere_tuple = dist_and_tuple.second;
 
         if (distance > step_length + barrier_tickness) {
@@ -420,6 +436,7 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
             //outside
             else if (rn > 1e-10){
                 if (walker.location == Walker::intra){  
+                    cout <<"colliding rn > 1e-10" << endl;
                     if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)){
                         //cout << " is not inside axon " << id << " pos : " << walker.pos_v << endl;
                         collision.col_location = Collision::outside;

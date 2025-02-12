@@ -1678,26 +1678,11 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         }
         // extra walkers or unknown
         else {
-            // start counting time
-            //cout << "walker.collision_sphere_axons.small_sphere_list_end: " << walker.axons_collision_sphere.small_sphere_list_end << endl;
-            //auto start = std::chrono::high_resolution_clock::now();
-            //for (unsigned int i = 0 ; i < axons_list.size(); i++ ){
             for(unsigned int i = 0 ; i < walker.axons_collision_sphere.small_sphere_list_end; i++ ){
                 unsigned index = walker.axons_collision_sphere.collision_list->at(i);
-                //unsigned index = i;
-                if (!(axons_list)[index].isNearAxon(walker, tmax + barrier_tickness)){
-                    continue;
-                } 
                 (axons_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);  
             }
-            // stop counting time
-            //auto stop = std::chrono::high_resolution_clock::now();
-            // get the time
-            //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-            //cout << "Time taken by axons: " << duration.count() << " microseconds" << endl;
-  
-
         }
     }
     //For each Glial Obstacle

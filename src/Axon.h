@@ -12,7 +12,7 @@ class Axon : public Obstacle
 {
 public:
     int id;
-    std::vector<Sphere> spheres; 
+    std::vector<Sphere> spheres;
     double radius;
     Eigen::Vector3d begin;
     Eigen::Vector3d end;

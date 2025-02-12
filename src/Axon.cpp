@@ -28,6 +28,9 @@ Axon::Axon(const Axon &ax)
 
 void Axon::set_spheres(const std::vector<Sphere> &spheres_to_add) {
 
+    boxes.clear();
+    spheres.clear();
+
     if (spheres_to_add.empty()) {
         std::cout << "No spheres to add." << std::endl;
         return;
