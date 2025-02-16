@@ -753,7 +753,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
     std::uniform_real_distribution<double> udist(0,1);
 
 
-    if(axons_list.size() <=0 and cylinders_list.size() <=0 and plyObstacles_list.size() <= 0 and spheres_list.size() <= 0 and glials_list.size() <= 0){
+    if(axons_list.size() <=0 and inner_axons_list.size() <=0 and cylinders_list.size() <=0 and plyObstacles_list.size() <= 0 and spheres_list.size() <= 0 and glials_list.size() <= 0){
         SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate.",std::cout);
         SimErrno::error("There's no defined intra-axonal compartment (missing obstacles?)",std::cout);
         assert(0);
@@ -1179,7 +1179,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
 
     }
 
-    if (axons_list.size()>0){
+    if (inner_axons_list.size()>0){
         isinside_axons = this->isInsideAxons(position, ax_id, distance_to_be_intra_ply);
         isIntra|= isinside_axons;
         if (isinside_axons){
