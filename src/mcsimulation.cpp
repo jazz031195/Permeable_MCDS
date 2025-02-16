@@ -335,7 +335,6 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         std::vector<Sphere> spheres_in ;
         Sphere sphere_out;
         Sphere sphere_in;
-        bool create_myelin = false;
 
         double null_perm = 0.0;
 
@@ -369,9 +368,6 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
                 Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
 
-                if (rin != rout){
-                    create_myelin = true;
-                }
 
                 // Local permeability - Different for each obstacle
                 if(in_perm){
@@ -438,10 +434,6 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
             Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
 
-            if (rin != rout){
-                create_myelin = true;
-            }
-
             for (unsigned i = 0; i < spheres_out.size(); i++){
                 
                 if (rin != rout){
@@ -479,9 +471,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             dynamicsEngine->axons_list.push_back(ax);
             dynamicsEngine->inner_axons_list.push_back(ax_in);
         }
-        if (!create_myelin){
-            dynamicsEngine->inner_axons_list.clear();
-        }
+
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
         if (params.ini_walker_flag == "intra") {
             dynamicsEngine->axons_list.clear();

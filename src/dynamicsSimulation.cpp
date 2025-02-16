@@ -1658,7 +1658,7 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
     }
 
     //For each Axon Obstacle
-    if ((axons_list).size()>0){
+    if ((axons_list).size()>0 || (inner_axons_list).size()>0){
         // intra walkers
  
         if (walker.location== Walker::intra ){
@@ -1685,6 +1685,7 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
             }
         }
     }
+    
     //For each Glial Obstacle
     if ((glials_list).size()>0 ){
 
