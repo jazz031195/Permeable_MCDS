@@ -180,7 +180,7 @@ std::vector<std::tuple<int, int>> Glial::checkAxisForCollision(const Eigen::Vect
         }
 
         for (int i = 0; i < processes[branch_id].size(); ++i) {
-            const auto &sphere = processes[branch_id][i];
+            Sphere sphere = processes[branch_id][i];
 
             // Check if the position is within the extended bounds of the sphere along the given axis
             double min_i = sphere.P[axis] - sphere.radius;
@@ -270,6 +270,7 @@ bool Glial::FindSphereinGlial(const Eigen::Vector3d &position, const double &dis
     for (int axis = 0; axis < 3; ++axis) {
         spheres_to_check[axis] = checkAxisForCollision(position, distance_to_be_inside, axis, branches);
         if (spheres_to_check[axis].empty()) {
+
             return false; // No candidates for this axis
         }
         
@@ -345,6 +346,8 @@ void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &
             sphere_to_check = processes[branch_id][std::get<1>(sphere_tuple)];
         }
 
+        //cout << "   sphere_to_check glial id: " << sphere_to_check.object_id << endl;
+
         double t1, t2;
         if (intersection_sphere_vector(t1, t2, sphere_to_check, step, pos)) {
             // Check both intersections
@@ -361,6 +364,13 @@ void Glial::find_all_intersections(const Walker &walker, const Eigen::Vector3d &
 
 bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const double &step_length, Collision &collision) {
     
+    /*
+    cout <<"-------------------" << endl;
+    cout <<"number of branches : " << processes.size() << endl;
+    std::vector<std::tuple<int, int>> items_;
+    bool is_near_glial_ = FindSphereinGlial(walker.pos_v, step_length, items_);
+    cout <<"is near glial : " << is_near_glial_ << endl;
+    */
 
     // Distances to intersections and corresponding sphere IDs
     std::vector<std::pair<double, std::tuple<int, int>>> dist_and_tuples;
@@ -369,6 +379,7 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
     find_all_intersections(walker, step, step_length + barrier_tickness, dist_and_tuples);
 
     if (dist_and_tuples.empty()) {
+        //cout <<"dist_and_tuples.empty()" << endl;
         // Handle case with no intersections
         if (walker.location == Walker::intra) {
        
@@ -379,7 +390,6 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
                 collision.t = 1e-9;
                 collision.perm_crossing = 0.0;
                 collision.bounced_direction = step;
-
                 return true;
             } 
         }
@@ -393,11 +403,14 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
     else{
         // Find the closest distance (smallest element)
         std::nth_element(dist_and_tuples.begin(), dist_and_tuples.begin(), dist_and_tuples.end());
+        // delete all but first element
+        dist_and_tuples.erase(dist_and_tuples.begin() + 1, dist_and_tuples.end());
     }  
-
+    
     for (auto dist_and_tuple : dist_and_tuples) {
 
         double distance = dist_and_tuple.first;
+        //cout << "   distance : " << distance << endl;
 
         std::tuple<int, int> sphere_tuple = dist_and_tuple.second;
 
@@ -410,6 +423,7 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
 
         // Check if position is near the edge
         bool is_near_edge = (walker.location == Walker::intra) ? !isPosInsideGlialCell(pos, -EPS_VAL) : true;
+
 
         if (is_near_edge && distance < step_length + barrier_tickness) {
             //cout << "is near edge" << endl;
@@ -432,6 +446,7 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
             }
             //outside
             else if (rn > 1e-10){
+    
                 if (walker.location == Walker::intra){  
           
                     if (!isPosInsideGlialCell(walker.pos_v, EPS_VAL)){
@@ -483,11 +498,14 @@ bool Glial::checkCollision(const Walker &walker, Eigen::Vector3d &step, const do
                     return true;
                 }
             }
-
+            //cout << "collision.col_location : " << collision.col_location << endl;
             return true;
         }
+        
+
     }
 
+    //cout <<"no collision" << endl;
     collision.type = Collision::null;
     return false;
 }

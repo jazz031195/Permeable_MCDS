@@ -143,6 +143,8 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
 
     nbr_walker_extra = 0;
     nbr_walker_intra = 0;
+    nbr_walker_glials = 0;
+    nbr_walker_axons = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -543,7 +545,6 @@ void DynamicsSimulation::iniWalkerPosition()
     }
     else if(params.ini_walker_flag.compare("intra")== 0){
         Vector3d intra_pos;
-    
         getAnIntraCellularPosition(intra_pos, object_id, object_type);
         walker.setInitialPosition(intra_pos);
         walker.intra_extra_consensus--;
@@ -745,7 +746,7 @@ void DynamicsSimulation::updateCollitionSphere(unsigned t)
     }
 }
 
-void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &object_id, int& object_type)
+void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &object_id, int &object_type)
 {
 
     std::random_device rd;
@@ -1700,8 +1701,10 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         // extra walkers or unknown
         else {
 
-            for(unsigned int i = 0 ; i < walker.collision_sphere_glials.small_sphere_list_end; i++ ){
-                unsigned index = walker.collision_sphere_glials.collision_list->at(i);
+            //for(unsigned int i = 0 ; i < walker.collision_sphere_glials.small_sphere_list_end; i++ ){
+            for (unsigned int i = 0 ; i < (glials_list).size(); i++ ){
+                //unsigned index = walker.collision_sphere_glials.collision_list->at(i);
+                unsigned index = i;
                 (glials_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);     
             }

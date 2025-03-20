@@ -318,7 +318,7 @@ private:
      * \brief   finds an intra celullar 3d position inside the voxel (needs a voxel initialized).
      * \param   intra_pos vector to save the 3d position.
      */
-    inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &object_id, int& object_type);
+    inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &object_id, int &object_type);
 
     /*!
      * \brief   finds an extra cellular 3d position inside the voxel (needs a voxel initialized).
