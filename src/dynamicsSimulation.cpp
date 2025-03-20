@@ -1405,6 +1405,9 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
                 nbr_walker_glials ++;
             }
         }
+        else{
+            nbr_walker_outside ++;
+        }
 
         //updates the phase shift.
         if(dataSynth)
