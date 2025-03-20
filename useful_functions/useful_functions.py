@@ -266,10 +266,17 @@ def read_scheme(file_path):
     return data
 
 def get_total_icvf(file_path):
+    total_icvf = 0
+    total_ecvf = 0
+    myelin_icvf = 0
     with open(file_path, 'r') as file:
         for line in file:
             if line.startswith("Total icvf"):
                 # Extract the value after the label
                 total_icvf = float(line.split()[-1])
-                return total_icvf
-    return None  # Return None if "Total icvf" not found
+            elif line.startswith("Myelin icvf"):
+                # Extract the value after the label
+                myelin_icvf = float(line.split()[-1])
+
+    total_ecvf = 1- (total_icvf + myelin_icvf)
+    return total_icvf, total_ecvf
