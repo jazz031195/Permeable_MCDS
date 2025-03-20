@@ -368,17 +368,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
                 Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
 
-
-                // Local permeability - Different for each obstacle
-                if(in_perm){
-                    in_perm >> perm_;
-                }
-                // Global permeability - Same for all obstacle
-                else{
-                    perm_ = params.axon_obstacle_permeability;
-                }  
+                perm_ = params.axon_obstacle_permeability;
                 
-                //cout << "perm_ :"   << perm_ << endl;
                 for (unsigned i = 0; i < spheres_out.size(); i++){
 
                     if (rin != rout){
@@ -409,13 +400,13 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                     ax.setPercolation(null_perm);
                 }
                 else{
- 
                     ax_in.setPercolation(perm_);
                     ax.setPercolation(perm_);
                 }
 
                 dynamicsEngine->inner_axons_list.push_back(ax_in);
                 dynamicsEngine->axons_list.push_back(ax);
+                
 
             }
             sphere_out = Sphere(sph_id, ax_id, Eigen::Vector3d(x,y,z), rout, 0);
@@ -430,7 +421,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         }
         
         if (str_dist(last_type,"axon") <= 1) {
-            // add last sphere
+            // add last sphere on last axon
             Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
             Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
 
@@ -470,9 +461,9 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
             dynamicsEngine->axons_list.push_back(ax);
             dynamicsEngine->inner_axons_list.push_back(ax_in);
+
         }
 
-        cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
         if (params.ini_walker_flag == "intra") {
             dynamicsEngine->axons_list.clear();
         }
@@ -481,11 +472,14 @@ void MCSimulation::addAxonsObstaclesFromFiles()
         }
         /*
         cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
+        cout <<"percolation first axon : " << dynamicsEngine->inner_axons_list[dynamicsEngine->inner_axons_list.size()-1].percolation << endl;
+        cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
         cout << " Number of particles :" << params.num_walkers << endl;
         cout << "Number of axons :" << dynamicsEngine->axons_list.size() << endl;
         cout <<"perm_ :" << perm_ << endl;
         cout <<"inner axons size : " << dynamicsEngine->inner_axons_list.size() << endl;
         */
+        
         
         in.close();
         

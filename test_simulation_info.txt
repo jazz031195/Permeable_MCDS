@@ -1,0 +1,45 @@
+/***********************   MC/DC Simulation Info:   *************************/
+[INFO]    Software Version:      ---------------------------------1.43.001
+[INFO]    Number of particles:   ---------------------------------------10
+[INFO]    Number of steps:       -----------------------------------115500
+[INFO]    Number of cores:       ----------------------------------------1
+[INFO]    Intra Diffusivity:           ------------------------2.500000e-9 m^2/s
+[INFO]    Extra Diffusivity:           ------------------------1.500000e-9 m^2/s
+[INFO]    Particle dynamics duration: ----------------------- 77.000000 ms
+[INFO]    PLY obstacles:         ----------------------------------- false
+[INFO]    Cylinder obstacles:    ----------------------------------- false
+[INFO]    Write trajfile:        ----------------------------------- false
+[INFO]    Write to binary:       ------------------------------------ true
+[INFO]    Write to txt:          ----------------------------------- false
+[INFO]    Standard units:        ------------------------------------ true
+[INFO]    Permeability:          ----------------------------------- false
+[INFO]    Custom seed:           ----------------------------------- false
+[INFO]    Write phase shift histogram: ----------------------------- false
+[INFO]    Write propagator file: ----------------------------------- false
+[INFO]    Walker initial position file: ---------------------------- false
+[INFO]    Save fixed walker positions: ----------------------------- false
+[INFO]    Initial delta position: ---------------------------------- false
+[INFO]    Walkers initial position: -------------------------------- intra
+[INFO]    Number of voxels:      --------------------------------------- 1
+[INFO]    Custom spawning area:  ------------------------------------ true
+[INFO]    Border Patrol          -------------------------------------- On
+[INFO]    Discard stuck spins    -------------------------------------- On
+[INFO]    Scheme file name:      ------------------------------ SMI.scheme
+[INFO]    Date and Time:         ------------------- 20-03-2025 (16:04:25)
+
+[INFO]     All 1 simulations ended after: 4 seconds in average
+[INFO]     Number of particles labeled as stuck: 0
+[INFO]     Number of particles eliminated due crossings: 0
+[INFO]     Number of intracellular particles : 10
+[INFO]     Number of extracellular particles : 0
+[INFO]     Number of walkers in axons : 0
+[INFO]     Number of walkers in glial cells : 0
+[INFO]     Total number of bounces: 3735
+[INFO]     Total number of legal crossings: 10
+[INFO]     Mean simulation speed: 288750 steps/second
+[INFO]     Voxel limits:
+( 0 0 0 )
+( 0.15 0.15 0.15 )
+[INFO]     Custom sampled area (mm):
+( 0.0299999993 0.0299999993 0.0299999993 )
+( 0.1199999973 0.1199999973 0.1199999973 )

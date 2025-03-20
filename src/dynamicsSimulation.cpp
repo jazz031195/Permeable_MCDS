@@ -200,11 +200,25 @@ void DynamicsSimulation::initObstacleInformation(){
             prob_cross_i_e = axons_list[i].percolation * dsi * 2. / 3. / axons_list[i].diffusivity_i;
             prob_cross_e_i = axons_list[i].percolation * dse * 2. / 3. / axons_list[i].diffusivity_e; 
             axons_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
-            axons_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e)); 
+            axons_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+ 
         }
     
     }
 
+    for(unsigned i= 0 ; i < inner_axons_list.size();i++){
+
+        if(inner_axons_list[i].percolation > 0.0){
+
+            dse = sqrt(step_length_pref*inner_axons_list[i].diffusivity_e);
+            dsi = sqrt(step_length_pref*inner_axons_list[i].diffusivity_i);
+
+            prob_cross_i_e = inner_axons_list[i].percolation * dsi * 2. / 3. / inner_axons_list[i].diffusivity_i;
+            prob_cross_e_i = inner_axons_list[i].percolation * dse * 2. / 3. / inner_axons_list[i].diffusivity_e; 
+            inner_axons_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
+            inner_axons_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e)); 
+        }
+    }
 
     walker.axons_collision_sphere.collision_list        = &axons_deque;
     walker.axons_collision_sphere.list_size             = unsigned(axons_deque.size());
@@ -1382,16 +1396,12 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         if(back_tracking){
             continue;
         }
-        if (walker.location == Walker::intra){
-            if (walker.in_obj_type == 0){
-                nbr_walker_axons ++;
-            }
-            else if (walker.in_obj_type == 1){
-                nbr_walker_glials ++;
-            }
+
+        if (walker.in_obj_type == 0){
+            nbr_walker_axons ++;
         }
-        else if (walker.location == Walker::extra){
-            nbr_walker_outside ++;
+        else if (walker.in_obj_type == 1){
+            nbr_walker_glials ++;
         }
 
         //updates the phase shift.
