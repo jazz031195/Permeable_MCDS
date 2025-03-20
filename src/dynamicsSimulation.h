@@ -75,6 +75,7 @@ public:
     int nbr_walker_extra;                           /*!< Number of walkers that are inside the extra-cellular space                 */
     int nbr_walker_axons;                          /*!< Number of walkers that are inside the axons                 */
     int nbr_walker_glials;                          /*!< Number of walkers that are inside the glial cells                 */
+    int nbr_walker_outside;                          /*!< Number of walkers that are inside the extra-cellular space                  */
 
     /******   Auxiliar variables   ********/
     Eigen::Vector3d step;

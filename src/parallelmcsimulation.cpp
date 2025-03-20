@@ -103,6 +103,7 @@ void ParallelMCSimulation::startSimulation()
     int tot_nbr_walker_intra = 0;
     int tot_nbr_walker_axons = 0;
     int tot_nbr_walker_glials = 0;
+    int tot_nbr_walker_outside = 0;
     int tot_nbr_bounces = 0;
     int tot_nbr_legal_crossings = 0;
     for (unsigned i = 0; i < simulations.size(); i++){
@@ -110,14 +111,16 @@ void ParallelMCSimulation::startSimulation()
         tot_nbr_walker_intra += simulations[i]->dynamicsEngine->nbr_walker_intra;
         tot_nbr_walker_axons += simulations[i]->dynamicsEngine->nbr_walker_axons;
         tot_nbr_walker_glials += simulations[i]->dynamicsEngine->nbr_walker_glials;
+        tot_nbr_walker_outside += simulations[i]->dynamicsEngine->nbr_walker_outside;
         tot_nbr_bounces += simulations[i]->dynamicsEngine->tot_nbr_bounces;
         tot_nbr_legal_crossings += simulations[i]->dynamicsEngine->tot_nbr_legal_crossings;
 
     }
-    SimErrno::info("Number of intracellular particles : "+ to_string(tot_nbr_walker_intra),out,false);
-    SimErrno::info("Number of extracellular particles : "+ to_string(tot_nbr_walker_extra),out,false);
-    SimErrno::info("Number of walkers in axons : "+ to_string(tot_nbr_walker_axons),out,false);
-    SimErrno::info("Number of walkers in glial cells : "+ to_string(tot_nbr_walker_glials),out,false);
+    SimErrno::info("Number of intracellular particles at the start : "+ to_string(tot_nbr_walker_intra),out,false);
+    SimErrno::info("Number of extracellular particles at the start : "+ to_string(tot_nbr_walker_extra),out,false);
+    SimErrno::info("Number of walkers in axons at the end : "+ to_string(tot_nbr_walker_axons),out,false);
+    SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials),out,false);
+    SimErrno::info("Number of walkers in extracellular space at the end : "+ to_string(tot_nbr_walker_outside),out,false);
     SimErrno::info("Total number of bounces: "                     + to_string(tot_nbr_bounces),out,false);
     SimErrno::info("Total number of legal crossings: "             + to_string(tot_nbr_legal_crossings),out,false);
     

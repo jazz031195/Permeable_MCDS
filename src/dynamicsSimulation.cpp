@@ -65,6 +65,7 @@ DynamicsSimulation::DynamicsSimulation() {
     nbr_walker_intra = 0;
     nbr_walker_glials = 0;
     nbr_walker_axons = 0;
+    nbr_walker_outside = 0;
 
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
@@ -1386,6 +1387,9 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             else if (walker.in_obj_type == 1){
                 nbr_walker_glials ++;
             }
+        else if (walker.location == Walker::extra){
+             nbr_walker_outside ++;
+             }
         }
 
         //updates the phase shift.
