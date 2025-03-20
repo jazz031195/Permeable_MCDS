@@ -65,6 +65,7 @@ DynamicsSimulation::DynamicsSimulation() {
     nbr_walker_intra = 0;
     nbr_walker_glials = 0;
     nbr_walker_axons = 0;
+    nbr_walker_outside = 0;
 
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
@@ -111,6 +112,7 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
     nbr_walker_intra = 0;
     nbr_walker_glials = 0;
     nbr_walker_axons = 0;
+    nbr_walker_outside = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -145,6 +147,7 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
     nbr_walker_intra = 0;
     nbr_walker_glials = 0;
     nbr_walker_axons = 0;
+    nbr_walker_outside = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -1386,6 +1389,9 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             else if (walker.in_obj_type == 1){
                 nbr_walker_glials ++;
             }
+        }
+        else if (walker.location == Walker::extra){
+            nbr_walker_outside ++;
         }
 
         //updates the phase shift.
