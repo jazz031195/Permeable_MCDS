@@ -1379,12 +1379,13 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         if(back_tracking){
             continue;
         }
-
-        if (walker.in_obj_type == 0){
-            nbr_walker_axons ++;
-        }
-        else if (walker.in_obj_type == 1){
-            nbr_walker_glials ++;
+        if (walker.location == Walker::intra){
+            if (walker.in_obj_type == 0){
+                nbr_walker_axons ++;
+            }
+            else if (walker.in_obj_type == 1){
+                nbr_walker_glials ++;
+            }
         }
 
         //updates the phase shift.
