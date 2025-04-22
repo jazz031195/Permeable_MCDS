@@ -19,6 +19,7 @@ def create_job(exp_path, number_of_rep, exec_type, conf_path):
     """
 
     with open (exp_path / 'job.sh', 'w') as file:  
+        print(f"Create {exp_path / 'job.sh'}")
         file.write('#!/bin/bash -l\n')
         file.write('#SBATCH --job-name=sim_job\n')
         file.write('#SBATCH --nodes=1\n')
@@ -32,14 +33,14 @@ def create_job(exp_path, number_of_rep, exec_type, conf_path):
 
         file.write('\n')
 
-        file.write(f'for ((i=1;i<={number_of_rep};i++));\n')
-        file.write('do\n')
-        file.write('\t echo "Starting creation of substrate ..."\n')
-        file.write('\t echo " N : $n"\n')
-        file.write('\t echo " T : $t"\n')
-        file.write(f'\t chmod u+x ./build/MC-DC_Simulator_{exec_type}\n')
-        file.write(f'\t ./build/MC-DC_Simulator_{exec_type} {conf_path}\n')
-        file.write(f'done \n')
+        # file.write(f'for ((i=1;i<={number_of_rep};i++));\n')
+        # file.write('do\n')
+        file.write('echo "Starting creation of substrate ..."\n')
+        file.write('echo " N : $n"\n')
+        file.write('echo " T : $t"\n')
+        file.write(f'chmod u+x ./build/MC-DC_Simulator_{exec_type}\n')
+        file.write(f'./build/MC-DC_Simulator_{exec_type} {conf_path}\n')
+        # file.write(f'done \n')
 
     
 
@@ -73,6 +74,7 @@ def create_conf(exp_path, N, T):
     # TODO [ines] : add ini_walkers_file
 
     with open (exp_path / Path_to_conf, 'w') as file:  
+        print(f"Create file {exp_path / Path_to_conf}")
         file.write(f'N {N}\n')
         file.write(f'T {T}\n')
         file.write(f'duration {duration}\n')
@@ -158,23 +160,25 @@ Ts             = data.get("T")
 
 # For all simulations
 for simu in simu_to_launch:
-    for i in range(number_of_rep):
-        for N in Ns:
-            for T in Ts:
+    # for i in range(number_of_rep):
+    #     for N in Ns:
+    #         for T in Ts:
                 # os.system(f"mkdir {simu}/N_{N}_T_{T}")
                 # os.system(f"cp {simu}/params.json {simu}/N_{N}_T_{T}")
+                # print(f"cp /home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/PGSE_21_dir_12_b_6_td.scheme {simu}/PGSE_21_dir_12.scheme")
+                # os.system(f"cp /home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/PGSE_21_dir_12_b_6_td.scheme {simu}/PGSE_21_dir_12_b.scheme")
                 # os.system(f"cp {simu}/PGSE_21_dir_12_b.scheme {simu}/N_{N}_T_{T}")
-                # # Create the conf file
-                # create_conf(Path(f"{simu}/N_{N}_T_{T}"), N, T)
-                # # Create the job.sh to be launched
-                # create_job(Path(f"{simu}/N_{N}_T_{T}"), number_of_rep, simu_type, Path(f"{simu}/N_{N}_T_{T}") / "neurons.conf")
+                # Create the conf file
+                # create_conf(Path(simu), N, T)
+                # Create the job.sh to be launched
+                # create_job(Path(simu), number_of_rep, simu_type, Path(simu) / "neurons.conf")
 
                 # Launch the job.sh on the cluster
-                # os.system(f"sbatch {simu}/N_{N}_T_{T}/job.sh")
+                os.system(f"sbatch {simu}/job.sh")
 
-                os.system("chmod u+x ./build/MC-DC_Simulator_release")
+                # os.system("chmod u+x ./build/MC-DC_Simulator_release")
                 # print(f"{simu}/N_{N}_T_{T}/neurons.conf")
-                os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
+                # os.system(f"./build/MC-DC_Simulator_release {simu}/N_{N}_T_{T}/neurons.conf")
 
     # "N": [5000, 10000, 25000, 50000, 75000, 100000, 125000, 150000],
     # "T": [5000, 10000, 15000, 20000]
