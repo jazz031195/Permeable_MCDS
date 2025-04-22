@@ -47,5 +47,7 @@ const double INFINITY_VALUE = std::numeric_limits<double>::infinity();  /*!< num
 /*!< inner collision sphere relative size                                                                       */
 const double inner_col_dist_factor      = 0.25;
 
+/*! Needed for mac */
+typedef unsigned long ulong;
 
 #endif // CONSTANTS_H
