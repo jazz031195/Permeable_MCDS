@@ -35,6 +35,7 @@ void Scheme::readSchemeFile(string scheme_file_,bool scale_from_stu)
     std::size_t found = header.find("STEJSKALTANNER");
     std::size_t found_APGSE = header.find("APGSE");
     std::size_t found_waveForm = header.find("WAVEFORM");
+    std::size_t found_interval_pgse = header.find("PGSE_INTERVALS");
 
     if (found!=std::string::npos){
         type = "PGSE";
@@ -45,6 +46,9 @@ void Scheme::readSchemeFile(string scheme_file_,bool scale_from_stu)
     else if (found_waveForm!=std::string::npos){
         type = "WAVEFORM";
     }
+    else if (found_interval_pgse!=std::string::npos){
+        type = "PGSE_INTERVALS";
+    }
     else{
         cout << "Sequence type not valid\n\nAborting" << endl;
         type = "Unknown";
@@ -54,6 +58,9 @@ void Scheme::readSchemeFile(string scheme_file_,bool scale_from_stu)
     if(type == "PGSE"){
         readPGSE(in,scale_from_stu);
     }
+    else if (type == "PGSE_INTERVALS"){
+        readPGSEIntervals(in,scale_from_stu);
+    }
     else if (type == "APGSE"){
         readAPGSE(in,scale_from_stu);
     }
@@ -62,6 +69,34 @@ void Scheme::readSchemeFile(string scheme_file_,bool scale_from_stu)
     }
 
     // cout << "[Satus] Scheme file successfully loaded"<< endl;
+}
+
+void Scheme::readPGSEIntervals(ifstream& in, bool scale_from_stu)
+{
+    vector<double> scheme_line;
+    double tmp;
+
+    num_rep = 0;
+    while( in >> tmp){
+        scheme_line.push_back(tmp);
+        num_rep++;
+        for(int i = 0 ; i < 7; i++){
+            in >> tmp;
+            scheme_line.push_back(tmp);
+        }
+        scheme.push_back(scheme_line);
+        scheme_line.clear();
+    }
+
+    if(scale_from_stu)
+        for(unsigned i = 0; i < scheme.size(); i++){
+            scheme[i][3]/=m_to_mm; // G (T/m) to (T/mm)
+            scheme[i][4]*=s_to_ms; // Delta (s) to (ms)
+            scheme[i][5]*=s_to_ms; // delta (s) to (ms)
+            scheme[i][6]*=s_to_ms; // TE    (s) to (ms)
+        }
+
+    in.close();
 }
 
 void Scheme::readPGSE(ifstream& in, bool scale_from_stu)

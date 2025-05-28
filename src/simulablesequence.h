@@ -44,6 +44,14 @@ public:
 
     std::vector<Subdivision> subdivisions;      /*!< saves the actual positions of the subdivision to compute the signal        */
 
+    std::vector<std::vector<double>> DWI_intervals; /*!< auxiliar DWI for signal computations.  */
+
+    std::vector<std::vector<double>> DWIi_intervals; /*!< auxiliar DWI for signal computations.  */
+
+    std::vector<std::vector<double>> phase_shift_intervals; /*!< auxiliar phase shift for signal computations.  */
+    
+    std::string type;        /*!< Sequence type (PGSE only so far)      */
+
     SimulableSequence(){}
 
     virtual ~SimulableSequence(){}

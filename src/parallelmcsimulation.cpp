@@ -252,63 +252,108 @@ void ParallelMCSimulation::jointResults()
             dwii_bout.open(boutDWIi,std::ofstream::binary);       //img part  (binary)
         }
 
-
-
-
-        for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI.size(); i++ )
-        {
-            double DWI   = 0;
-            double DWIi  = 0;
-
-            std::vector<int> phase(3600, 0);
-            for(unsigned p = 0; p < params.num_proc; p++)
+        if (simulations[0]->dataSynth->type != "PGSE_INTERVALS"){
+            for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI.size(); i++ )
             {
-                DWI+=  simulations[p]->dataSynth->DWI[i];       //real part
-                DWIi+= simulations[p]->dataSynth->DWIi[i];      //img  part
+                double DWI   = 0;
+                double DWIi  = 0;
 
-                // for each histogram bin, 36000 fixed size
-                for(unsigned h = 0; h < 3600; h++)
+                std::vector<int> phase(3600, 0);
+                for(unsigned p = 0; p < params.num_proc; p++)
                 {
-                    phase[h]+=simulations[p]->dataSynth->phase_shift_distribution(i,h);
-                }
+                    DWI+=  simulations[p]->dataSynth->DWI[i];       //real part
+                    DWIi+= simulations[p]->dataSynth->DWIi[i];      //img  part
 
-            }
-
-
-            if(params.write_txt){
-                dwi_out  << DWI << std::endl;
-                dwii_out << DWIi << std::endl;
-            }
-
-            if(params.write_bin){
-                float holder = float(DWI);
-                dwi_bout.write(reinterpret_cast<char *>(&holder), sizeof(float));
-                holder = float(DWIi);
-                dwii_bout.write(reinterpret_cast<char *>(&holder), sizeof(float));
-            }
-
-            if(params.log_phase_shift){
-
-                if(params.write_txt){
-                    //write the full histogram for the gradient i
+                    // for each histogram bin, 36000 fixed size
                     for(unsigned h = 0; h < 3600; h++)
                     {
-                        phase_out << phase[h];
-                        if(h < 3600-1)
-                            phase_out << " ";
-                        else
-                            phase_out << endl;
+                        phase[h]+=simulations[p]->dataSynth->phase_shift_distribution(i,h);
                     }
+
+                }
+
+
+                if(params.write_txt){
+                    dwi_out  << DWI << std::endl;
+                    dwii_out << DWIi << std::endl;
                 }
 
                 if(params.write_bin){
-                    //write the full histogram for the gradient i
-                    for(unsigned h = 0; h < 3600; h++)
-                    {
-                        float holder = phase[h];
-                        phase_bout.write(reinterpret_cast<char *>(&holder), sizeof(float));
+                    float holder = float(DWI);
+                    dwi_bout.write(reinterpret_cast<char *>(&holder), sizeof(float));
+                    holder = float(DWIi);
+                    dwii_bout.write(reinterpret_cast<char *>(&holder), sizeof(float));
+                }
+
+                if(params.log_phase_shift){
+
+                    if(params.write_txt){
+                        //write the full histogram for the gradient i
+                        for(unsigned h = 0; h < 3600; h++)
+                        {
+                            phase_out << phase[h];
+                            if(h < 3600-1)
+                                phase_out << " ";
+                            else
+                                phase_out << endl;
+                        }
+                    }
+
+                    if(params.write_bin){
+                        //write the full histogram for the gradient i
+                        for(unsigned h = 0; h < 3600; h++)
+                        {
+                            float holder = phase[h];
+                            phase_bout.write(reinterpret_cast<char *>(&holder), sizeof(float));
+                        }
                     }
                 }
+            }
+        }
+        else{
+
+            for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI_intervals.size(); i++ )
+            {
+                std::vector<double> DWI (simulations[0]->dataSynth->DWI_intervals[i].size(), 0);
+                std::vector<double> DWIi(simulations[0]->dataSynth->DWIi_intervals[i].size(), 0);
+
+                for (unsigned j = 0 ; j < simulations[0]->dataSynth->DWI_intervals[i].size(); j++ )
+                {
+
+                    std::vector<int> phase(3600, 0);
+                    for(unsigned p = 0; p < params.num_proc; p++)
+                    {
+                        DWI[j]+=  simulations[p]->dataSynth->DWI_intervals[i][j];       //real part
+                        DWIi[j]+= simulations[p]->dataSynth->DWIi_intervals[i][j];      //img  part
+
+                    }
+
+                    if(params.write_txt){
+                        dwi_out  << DWI[j] << " ";
+                        dwii_out << DWIi[j] << " ";
+                    }
+                }
+
+                if(params.write_txt){
+                    dwi_out  << std::endl;
+                    dwii_out << std::endl;
+                }
+
+                if(params.write_bin){
+                    std::vector<float> DWI_float(DWI.size());
+                    std::transform(DWI.begin(), DWI.end(), DWI_float.begin(),
+                                [](double val) { return static_cast<float>(val); });
+
+                    dwi_bout.write(reinterpret_cast<const char *>(DWI_float.data()), DWI_float.size() * sizeof(float));
+
+                    std::vector<float> DWI_floati(DWIi.size());
+                    std::transform(DWIi.begin(), DWIi.end(), DWI_floati.begin(),
+                                [](double val) { return static_cast<float>(val); });
+
+                    dwii_bout.write(reinterpret_cast<const char *>(DWI_floati.data()), DWI_floati.size() * sizeof(float));
+
+                }
+
             }
         }
 
@@ -323,6 +368,7 @@ void ParallelMCSimulation::jointResults()
 
         if(params.log_phase_shift)
             phase_out.close();
+        
     }
 
     stuck_count = illegal_count = 0;

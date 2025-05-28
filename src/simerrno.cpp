@@ -207,19 +207,23 @@ bool SimErrno::checkSchemeFile(Parameters &params)
     }
 
     string header;
-    in >> header;
-    in >> header;
+    in >> header; // VERSION: 
+    in >> header; // STEJSKALTANNER, APGSE, WAVEFORM, PGSE_INTERVALS
 
     std::size_t found = header.find("STEJSKALTANNER");
     std::size_t found_APGSE = header.find("APGSE");
     std::size_t found_waveForm = header.find("WAVEFORM");
-    if(found!=std::string::npos){
+    std::size_t found_interval_pgse = header.find("PGSE_INTERVALS");
+
+    cout << header << endl;
+
+    if(found!=std::string::npos || found_interval_pgse!=std::string::npos){
         vector<double> sample_vector;
 
         unsigned counter = 0;
         double tmp = 0;
         while( in >> tmp){
-            if (counter < 7)
+            if (counter < 8)
                 sample_vector.push_back(tmp);
             counter++;
         }
@@ -235,7 +239,7 @@ bool SimErrno::checkSchemeFile(Parameters &params)
             }
         }
 
-        if(counter%7 != 0){
+        if(counter%8 != 0 && counter%7 != 0){
             error("Scheme file has inconsistent format. PGSE Format ERROR.",cout);
             assert(0);
         }

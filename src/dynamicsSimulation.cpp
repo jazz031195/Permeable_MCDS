@@ -1167,7 +1167,6 @@ bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id
 {
 
     for (unsigned i = 0; i < glials_list.size() ; i++){
-        
         bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside);
         if (isinside){
             object_id = glials_list[i].id;
@@ -1375,7 +1374,6 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             walker.steps_count++;
             walker.rejection_count = 0;
 
-
         }// end for t
 
         // stop timer
@@ -1409,14 +1407,8 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             nbr_walker_outside ++;
         }
 
-        //updates the phase shift.
-        if(dataSynth)
-            dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);
-
-        //Update de DWI signal
-        if(dataSynth)
-            dataSynth->update_DWI_signal(walker);
-
+        dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);
+        dataSynth->update_DWI_signal(walker);
         //Write the positions.
         trajectory.writePosition(walker.pos_r_log, walker.collision_in_log, walker.collision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
 

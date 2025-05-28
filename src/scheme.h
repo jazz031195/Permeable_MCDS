@@ -49,6 +49,7 @@ private:
     void readPGSE(std::ifstream &in,bool scale_from_stu);
     void readAPGSE(std::ifstream &in,bool scale_from_stu);
     void readWaveForm(std::ifstream &in,bool scale_from_stu);
+    void readPGSEIntervals(std::ifstream& in, bool scale_from_stu);
 
 };
 

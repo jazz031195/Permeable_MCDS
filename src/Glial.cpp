@@ -34,15 +34,10 @@ Glial::Glial(const Glial &gl)
 };
 
 void Glial::set_spheres(std::vector<Sphere> &spheres_to_add) {
+
     // Clear existing boxes and initialize variables
     boxes.clear();
     processes.clear();
-
-    if (spheres_to_add.empty()) {
-        std::cout << "No spheres to add." << std::endl;
-        return;
-    }
-
 
     big_box = {
         soma.P[0] - soma.radius, soma.P[0] + soma.radius,
@@ -51,6 +46,10 @@ void Glial::set_spheres(std::vector<Sphere> &spheres_to_add) {
     };
 
     boxes.push_back(big_box);
+
+    if (spheres_to_add.empty()) {
+        return;
+    }
 
     std::map<int, Box> branch_boxes; // Map branch_id to Box
 
@@ -226,6 +225,11 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d &position, const double &
     std::vector<int> branches;
     if (!isNearGlialCell(position, distance_to_be_inside, branches)) {
         return false; // Position is outside all bounding boxes
+    }
+
+    // if inside soma, return true
+    if (soma.minDistance(position) <= distance_to_be_inside) {
+        return true; // Inside soma
     }
 
     // Collect candidate spheres across all axes
