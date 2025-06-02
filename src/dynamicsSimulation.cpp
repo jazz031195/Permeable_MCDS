@@ -1409,6 +1409,8 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         //Write the positions.
         trajectory.writePosition(walker.pos_r_log, walker.colision_in_log, walker.colision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
+        trajectory.writeIdx(walker.pos_r_log);
+        trajectory.writeDisplacement(walker.pos_r_log);
 
 
 
