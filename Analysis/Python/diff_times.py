@@ -206,6 +206,8 @@ print("soma fraction {:e}".format(soma_fraction))
 delta     = np.array([0.0165])# in [s]
 D0        = 2.5e-9 # [m²/s]
 bvals     = np.linspace(1, 10, 100) * 1e9 # in [s/m²]
+np.array([0.6446, 0.515386, 0.41371])
+np.array([0.579155, 0.514542, 0.459714])
 for td in deltas:
     # Analytical solutions
     Delta = np.array([td])  # in [s]

@@ -66,6 +66,7 @@ print("soma volume {:e}".format((volume_soma*1e18)))
 print("neurites volume {:e}".format((volume_neurites*1e18)))
 print("neuron {:e}".format((volume_neuron*1e18)))
 print("soma fraction {:e}".format(soma_fraction))
+print("neurite fraction {:e}".format(neurite_fraction))
 
 analytical_df = pd.DataFrame()
 bvals     = np.linspace(1, 10, 10) * 1e9 # in [s/m²]
