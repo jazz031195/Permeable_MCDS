@@ -571,6 +571,9 @@ void MCSimulation::readNeurons_fromSWC(int const& neurons_files_id)
     for( std::string line; getline( in, line ); ){
         std::vector<std::string> jkr = split(line,' ');
         int ax_id = 0;
+
+        if(jkr.size() == 0)
+            break;
         l = stod(jkr[0]);
         x = stod(jkr[2]);
         y = stod(jkr[3]);
