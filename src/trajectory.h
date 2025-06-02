@@ -27,7 +27,7 @@ public:
     FILE* inhit, *in_headerhit;         /*!< Files to be written using the previous names           */
 
     /*!< binary out, text out, binary header, text header */
-    std::ofstream bout,tout,bheaderout,theaderout, bouthit, bheaderouthit, boutfull_loc, boutfull_cross;
+    std::ofstream bout,tout,bheaderout,theaderout, bouthit, bheaderouthit, boutfull_loc, boutfull_cross, boutIdx, boutDispl;
 
 
     unsigned N,T;                         /*!< number of walkers, total time;                       */
@@ -119,6 +119,8 @@ public:
     void writePositionBinary(Eigen::Vector3d&);
 
     void writePosition(Eigen::Matrix3Xd&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
+    void writeIdx(Eigen::Matrix3Xd&);
+    void writeDisplacement(Eigen::Matrix3Xd &pos);
     void writePositionText(Eigen::Matrix3Xd&);
     void writePositionBinary(Eigen::Matrix3Xd&);
     void writePositionHit(Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);

@@ -128,17 +128,17 @@ def write_combinations_with_fixed_gradients(
 
 def time_dependence_narrow_pulse_dki() :
     directions_path = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/PGSE_21_dir.txt"
-    output_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/PGSE_21_dir_12_b_6_td.scheme"
+    output_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/PGSE_21_dir_12_b_9_td.scheme"
 
     # B values and directions
-    b_values =[0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
+    b_values =[0, 200, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
     x_vals, y_vals, z_vals, b_values = parse_direction_file(directions_path, b_values)
     print("x_vals: ", len(x_vals))
 
-    delta_values = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07]
+    delta_values = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
     # TE, big_delta, small_delta
     small_delta_values = [0.0165]*len(delta_values) # narrow pulse
-    te_values = [0.087]*len(delta_values)
+    te_values = [0.117]*len(delta_values)
 
     write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
 

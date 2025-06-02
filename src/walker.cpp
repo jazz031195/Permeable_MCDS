@@ -196,8 +196,16 @@ void Walker::setVoxPosLog(double x, double y, double z, unsigned t)
     this->pos_v_log(2,t)=z;
 }
 
+void Walker::setIdxPosLog(unsigned t)
+{
+    this->pos_idx(0,t)=in_soma_index;
+    this->pos_idx(1,t)=in_dendrite_index;
+    this->pos_idx(2,t)=in_subbranch_index;
+}
+
 void Walker::setNumberOfSteps(unsigned T)
 {
+    pos_idx             = Eigen::Matrix3Xd::Zero(3,T+1);
     pos_r_log           = Eigen::Matrix3Xd::Zero(3,T+1);
     pos_v_log           = Eigen::Matrix3Xd::Zero(3,T+1);
     colision_in_log     = Eigen::VectorXi::Zero(T+1);

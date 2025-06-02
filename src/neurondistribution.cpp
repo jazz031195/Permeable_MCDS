@@ -144,7 +144,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
     {   
         cout << "dendrite " << i << endl;
         int tries = 0;
-        int nb_branching = 3;//generateNbBranching();
+        int nb_branching = 1;//generateNbBranching();
         // Radius of each dendrite sphere [mm]
         double sphere_radius = 0.5e-3;
         // Don't initiate dendrite too close from the borders
@@ -717,24 +717,29 @@ void NeuronDistribution::printSubstrate_swc(ostream &out) const
             << line - 1                 << endl; 
             line++;
 
-            vector<vector<int>> paths = find_tree_paths(new Neuron(neurons[i]), dendrite_id);
-            vector<int> order = order_tree_idx(paths);
-
-            for(size_t subbranch_id=0; subbranch_id < order.size(); ++subbranch_id)
+            if((neurons[i]).dendrites[dendrite_id].subbranches.size() > 1)
             {
-                auto spheres     = (neurons[i]).dendrites[dendrite_id].subbranches[order[subbranch_id]].spheres;
-                auto sphere_node = spheres[spheres.size() - 1];
-                
-                // SampleID TypeID x y z r ParentID
-                out << line                 << " " 
-                << 3                        << " "
-                << sphere_node.center[0]    << " "
-                << sphere_node.center[1]    << " "
-                << sphere_node.center[2]    << " "
-                << sphere_node.radius       << " "
-                << line_node[subbranch_id] + dendrite_id * 8 << endl; 
-                line++;
+
+                vector<vector<int>> paths = find_tree_paths(new Neuron(neurons[i]), dendrite_id);
+                vector<int> order = order_tree_idx(paths);
+    
+                for(size_t subbranch_id=0; subbranch_id < order.size(); ++subbranch_id)
+                {
+                    auto spheres     = (neurons[i]).dendrites[dendrite_id].subbranches[order[subbranch_id]].spheres;
+                    auto sphere_node = spheres[spheres.size() - 1];
+                    
+                    // SampleID TypeID x y z r ParentID
+                    out << line                 << " " 
+                    << 3                        << " "
+                    << sphere_node.center[0]    << " "
+                    << sphere_node.center[1]    << " "
+                    << sphere_node.center[2]    << " "
+                    << sphere_node.radius       << " "
+                    << line_node[subbranch_id] + dendrite_id * 8 << endl; 
+                    line++;
+                }
             }
+            
         }
     }
 }

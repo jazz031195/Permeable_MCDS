@@ -46,6 +46,8 @@ public:
 
     Eigen::Vector3d next_direction;                                 /*!< Auxiliar vector for special states cases, decides the next direction   */
 
+    Eigen::Matrix3Xd pos_idx;                                      /*!< log of the idx spin position (soma id, dendrites id, subbranch id)         */
+    
     Eigen::Matrix3Xd pos_r_log;                                     /*!< log of the real spin position, used to compute the phase shift         */
 
     Eigen::Matrix3Xd pos_v_log;                                     /*!< log of the voxel position, used for collision location and bouncing    */
@@ -155,6 +157,7 @@ public:
     void setRealPosLog(double x, double y, double z, unsigned t);
     void setVoxPosLog(const Eigen::Vector3d &pos,unsigned t);
     void setVoxPosLog(double x, double y, double z, unsigned t);
+    void setIdxPosLog(unsigned t);
 
 
     void setNumberOfSteps(unsigned T);

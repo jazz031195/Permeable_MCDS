@@ -1370,6 +1370,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             // Saves the final particle position after bouncing in the time t.
             walker.setRealPosLog(walker.pos_r,t);
             walker.setVoxPosLog (walker.pos_v,t);
+            walker.setIdxPosLog(t);
 
 
             // Save the colision 
@@ -1421,8 +1422,8 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         //Write the positions.
         trajectory.writePosition(walker.pos_r_log, walker.colision_in_log, walker.colision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
-
-
+        trajectory.writeIdx(walker.pos_idx);
+        trajectory.writeDisplacement(walker.pos_r_log);
 
         if(params.log_propagator){
             //Update Propagator

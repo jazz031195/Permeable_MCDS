@@ -79,6 +79,25 @@ void Trajectory::initTrajWriter()
         }
     }
 
+    if(boutIdx)
+        boutIdx.close();
+
+    boutIdx.open((trajfile + ".idx").c_str(), std::ofstream::binary);
+
+    if(!boutIdx){
+        std::cout << "Cannot open " << (trajfile + ".idx").c_str() << std::endl;
+        return;
+    }
+
+    if(boutDispl)
+        boutDispl.close();
+
+    boutDispl.open((trajfile + ".displ").c_str(), std::ofstream::binary);
+
+    if(!boutDispl){
+        std::cout << "Cannot open " << (trajfile + ".displ").c_str() << std::endl;
+        return;
+    }
 }
 
 
@@ -335,6 +354,29 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
     if(write_hit)
         writePositionHit(col_in, col_ext, cross_in, cross_ext);
     
+}
+
+void Trajectory::writeDisplacement(Eigen::Matrix3Xd &pos)
+{
+
+    Eigen::Vector3d start = {pos(0,0), pos(1,0), pos(2,0)};
+    size_t last_idx       = pos.cols() - 1;
+    Eigen::Vector3d stop  =  {float(pos(0,last_idx)), float(pos(1,last_idx)), float(pos(2,last_idx))};
+    double displacement   = pow((stop - start).norm(), 2);
+    boutDispl.write(reinterpret_cast<char *>(&displacement), sizeof(float));
+    // boutDispl << std::setprecision(6) << displacement << std::endl;
+
+}
+
+void Trajectory::writeIdx(Eigen::Matrix3Xd &idx)
+{
+
+    for(unsigned  i = 1; i <= T; i++ ){      
+        float idx0 = float(idx(0,i)),idx1 = float(idx(1,i)),idx2 = float(idx(2,i));
+        boutIdx.write(reinterpret_cast<char *>(&idx0), sizeof(float));
+        boutIdx.write(reinterpret_cast<char *>(&idx1), sizeof(float));
+        boutIdx.write(reinterpret_cast<char *>(&idx2), sizeof(float));
+    }  
 }
 
 void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int &loc, unsigned &t, unsigned &id_)
