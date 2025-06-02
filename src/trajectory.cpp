@@ -372,8 +372,8 @@ void Trajectory::writeDisplacement(Eigen::Matrix3Xd &pos)
     size_t last_idx       = pos.cols() - 1;
     Eigen::Vector3d stop  =  {float(pos(0,last_idx)), float(pos(1,last_idx)), float(pos(2,last_idx))};
     double displacement   = pow((stop - start).norm(), 2);
-    boutDispl.write(reinterpret_cast<char *>(&displacement), sizeof(float));
-    // boutDispl << std::setprecision(6) << displacement << std::endl;
+    // boutDispl.write(reinterpret_cast<char *>(&displacement), sizeof(float));
+    boutDispl << std::setprecision(6) << displacement << std::endl;
 
 }
 
