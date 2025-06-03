@@ -79,6 +79,25 @@ void Trajectory::initTrajWriter()
         }
     }
 
+    if(boutIdx)
+        boutIdx.close();
+
+    boutIdx.open((trajfile + ".idx").c_str(), std::ofstream::binary);
+
+    if(!boutIdx){
+        std::cout << "Cannot open " << (trajfile + ".idx").c_str() << std::endl;
+        return;
+    }
+
+    if(boutDispl)
+        boutDispl.close();
+
+    boutDispl.open((trajfile + ".displ").c_str(), std::ofstream::binary);
+
+    if(!boutDispl){
+        std::cout << "Cannot open " << (trajfile + ".displ").c_str() << std::endl;
+        return;
+    }
 }
 
 
@@ -367,7 +386,7 @@ void Trajectory::writeIdx(Eigen::Matrix3Xd &idx)
 
 void Trajectory::writeDisplacement(Eigen::Matrix3Xd &pos)
 {
-
+    cout << "write displ" << endl;
     Eigen::Vector3d start = {pos(0,0), pos(1,0), pos(2,0)};
     size_t last_idx       = pos.cols() - 1;
     Eigen::Vector3d stop  =  {float(pos(0,last_idx)), float(pos(1,last_idx)), float(pos(2,last_idx))};
