@@ -783,14 +783,14 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ax
         double proba = double(udist(gen));
         bool random_pos = true;
         // In soma
-        if (proba < 1)//volume_soma_dendrite[0]/VolumeNeuron)
+        if (proba < 0)//volume_soma_dendrite[0]/VolumeNeuron)
             intra_pos = getAnIntraCellularPosition_soma(random_pos);
         // In dendrite
         else
             intra_pos = getAnIntraCellularPosition_dendrite(random_pos);
         
         // std::ofstream out;
-        // out.open("instructions/ISMRM24/ini_pos_file_n5.txt", std::ios::app);
+        // out.open("results/branches_single_neuron/straight/overlap4/dendrites/n3/ini_pos_file_n3.txt", std::ios::app);
         // // out << intra_pos[0] - 0.5 << " " << intra_pos[1] - 0.5 << " " << intra_pos[2] - 0.5 << endl;
         // out << intra_pos[0] << " " << intra_pos[1] << " " << intra_pos[2] << endl;
     }
@@ -1409,7 +1409,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         //Write the positions.
         trajectory.writePosition(walker.pos_r_log, walker.colision_in_log, walker.colision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
-        trajectory.writeIdx(walker.pos_r_log);
+        // trajectory.writeIdx(walker.pos_r_log);
         trajectory.writeDisplacement(walker.pos_r_log);
 
 
