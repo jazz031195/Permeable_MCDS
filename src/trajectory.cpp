@@ -79,25 +79,25 @@ void Trajectory::initTrajWriter()
         }
     }
 
-    if(boutIdx)
-        boutIdx.close();
+    // if(boutIdx)
+    //     boutIdx.close();
 
-    boutIdx.open((trajfile + ".idx").c_str(), std::ofstream::binary);
+    // boutIdx.open((trajfile + ".idx").c_str(), std::ofstream::binary);
 
-    if(!boutIdx){
-        std::cout << "Cannot open " << (trajfile + ".idx").c_str() << std::endl;
-        return;
-    }
+    // if(!boutIdx){
+    //     std::cout << "Cannot open " << (trajfile + ".idx").c_str() << std::endl;
+    //     return;
+    // }
 
-    if(boutDispl)
-        boutDispl.close();
+    // if(boutDispl)
+    //     boutDispl.close();
 
-    boutDispl.open((trajfile + ".displ").c_str(), std::ofstream::binary);
+    // boutDispl.open((trajfile + ".displ").c_str(), std::ofstream::binary);
 
-    if(!boutDispl){
-        std::cout << "Cannot open " << (trajfile + ".displ").c_str() << std::endl;
-        return;
-    }
+    // if(!boutDispl){
+    //     std::cout << "Cannot open " << (trajfile + ".displ").c_str() << std::endl;
+    //     return;
+    // }
 }
 
 

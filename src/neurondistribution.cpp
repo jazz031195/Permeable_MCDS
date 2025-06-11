@@ -68,14 +68,14 @@ void NeuronDistribution::createSubstrate()
                 unsigned stuck = 0;
                 while(++stuck <= 10000){
                     double t = udist(gen);
-                    double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
-                    t        = udist(gen);
-                    double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
-                    t        = udist(gen);
-                    double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
-                    // double x = (max_limits_vx[0] - min_limits_vx[0])/2;
-                    // double y = (max_limits_vx[1] - min_limits_vx[1])/2;
-                    // double z = (max_limits_vx[2] - min_limits_vx[2])/2;
+                    // double x = (t*max_limits_vx[0] + (1-t)*min_limits_vx[0]);
+                    // t        = udist(gen);
+                    // double y = (t*max_limits_vx[1] + (1-t)*min_limits_vx[1]);
+                    // t        = udist(gen);
+                    // double z = (t*max_limits_vx[2] + (1-t)*min_limits_vx[2]);
+                    double x = (max_limits_vx[0] - min_limits_vx[0])/2;
+                    double y = (max_limits_vx[1] - min_limits_vx[1])/2;
+                    double z = (max_limits_vx[2] - min_limits_vx[2])/2;
 
                     Eigen::Vector3d soma_center = {x, y, z};
                    
