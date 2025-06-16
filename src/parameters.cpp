@@ -3,7 +3,24 @@
 #include <iostream>
 #include "constants.h"
 #include "simerrno.h"
+
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+
 using namespace std;
+
+std::string getDateTimeString() {
+    // Get current time as time_t
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+
+    // Format it as YYYY-MM-DD_HH-MM-SS
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_c), "%Y-%m-%d_%H-%M-%S");
+    return ss.str();
+}
 
 Parameters::Parameters()
 {
@@ -99,7 +116,7 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if( (str_dist(tmp,"out_traj_file_index") <= 2) or (str_dist(tmp,"exp_prefix") <= 2)) {
             in >> traj_file;
             hit_file= traj_file;
-            output_base_name = traj_file;
+            output_base_name = traj_file + "_" + getDateTimeString();
         }
         else if( str_dist(tmp,"ini_walkers_file") <= 3){
             in >> ini_walkers_file;
