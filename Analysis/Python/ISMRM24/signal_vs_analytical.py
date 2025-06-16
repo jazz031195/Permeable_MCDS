@@ -1,8 +1,8 @@
 """
-    File to compare the funnel vs no funnel data
+    File that plots the signal
 """
+
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import os
 import sys
@@ -13,12 +13,11 @@ import seaborn as sns
 from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
-import statannot
 from utils import get_bvals, get_bvectors, calculate_DKI, get_dwi, get_psge, create_data, analytical_solutions
-import json
+
 
 cur_path    = os.getcwd()
-scheme_file = cur_path + "/results/funnel/overlap_4/n1/PGSE_21_dir_12_b.scheme"
+scheme_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/docs/scheme_files/PGSE_21_dir_12_b.scheme"
 giro        = 2.6751525e8 # Gyromagnetic radio [rad/(s*T)]
 
 def create_df_all(DWI_folder, scheme_file_path):
@@ -46,11 +45,12 @@ def create_df_all(DWI_folder, scheme_file_path):
                         for subdir in os.listdir(DWI_folder / overlap / subcase / neuron):
                             if os.path.isdir(DWI_folder / overlap / subcase / neuron / subdir):
                                 for filename in os.listdir(DWI_folder / overlap / subcase / neuron / subdir):
+
                                     # Read the simulation_info.txt to have crossings information
                                     if "simu" in filename:
                                         N = int(subdir.split('_')[1])
                                         T = int(subdir.split('_')[3])
-                                        with open(DWI_folder / overlap / subcase / neuron / subdir / filename, 'r') as file:
+                                        with open(DWI_folder / overlap / subcase /neuron / subdir /filename, 'r') as file:
                                             # Read the file line by line
                                             for line in file:
                                                 # Check if the line contains the relevant information
@@ -74,14 +74,6 @@ def create_df_all(DWI_folder, scheme_file_path):
                                         extension    = filename.split('_')[-1].split('.')[-1]
                                         SNR          = np.inf
                                         data_one_exp = create_data(DWI_folder / overlap / subcase / neuron / subdir, SNR, name, extension, scheme_file_path)
-                                        FA = data_one_exp["FA"][0]
-                                        MD = data_one_exp["MD"][0]
-                                        AD = data_one_exp["AD"][0]
-                                        RD = data_one_exp["RD"][0]
-                                        MK = data_one_exp["MK"][0]
-                                        AK = data_one_exp["AK"][0]
-                                        RK = data_one_exp["RK"][0]
-
                                         # For each b, iterate over all directions, store the data, and average them (powder-average)
                                         nb_b   = len(data_one_exp["b [ms/um²]"].unique())
                                         nb_dir = int(len(data_one_exp["x"].values) / nb_b)
@@ -98,11 +90,14 @@ def create_df_all(DWI_folder, scheme_file_path):
                                             # Powder-average ADC
                                             mean_adc = np.mean(adc)
                                             d = {'loc': "intra", 'N': N, 'T': T, 'Sb/So': mean, 
-                                                'b [ms/um²]': bval, 'neuron': neuron, 'funnel': subcase}
+                                                'b [ms/um²]': bval, 'neuron': neuron, 'case': subcase}
                                             df_avg_data = pd.DataFrame(d, index=[i])
                                             df_all_data = pd.concat([df_all_data, df_avg_data])
 
     return df_all_data, df_crossings
+
+
+branching = "branching"
 
 log  = False
 
@@ -111,7 +106,7 @@ if log:
     y_lim_max = 0.1
 else:
     y_lim_min = 0.
-    y_lim_max = 1
+    y_lim_max = 1.1
 
 MEDIUM_SIZE = 19
 BIGGER_SIZE = 19
@@ -124,60 +119,33 @@ plt.rc('ytick', labelsize=MEDIUM_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-DWI_folder = Path("results/ISMRM24/funnel")
+DWI_folder = Path("results/ISMRM24/exch")
+# df_all_data, df_crossings = create_df_all(DWI_folder, scheme_file)
 
-# Adjacent spheres are distant of R/overlap from each other
-overlap = 4
-df_dwi, df_crossings_no_funnel = create_df_all(DWI_folder, scheme_file)
+# df_all_data.to_csv(DWI_folder / "data.csv")
+df_all_data = pd.read_csv(DWI_folder / "data.csv")
+b_labels    = df_all_data["b [ms/um²]"].unique()
 
-df_all = df_dwi
+df_all_data = df_all_data[~df_all_data["case"].str.contains("mesh")]
+means       = df_all_data[(df_all_data['b [ms/um²]'] > 0)].groupby(['b [ms/um²]', 'case'])['Sb/So'].mean().reset_index()
 
-T        = df_all['T'].unique()[0]
-N        = df_all['N'].unique()[0]
-b_labels = df_all["b [ms/um²]"].unique()
-
-fig, ax = plt.subplots(1, 1, figsize=(10, 8))
-sns.violinplot(data=df_all[df_all['b [ms/um²]'] > 0], 
-               x='b [ms/um²]', 
-               y='Sb/So', 
-               hue='funnel', 
-               ax=ax)
-ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
+fig, ax = plt.subplots(1, 1, figsize=(15,15))
+g = sns.scatterplot(data=means, x='b [ms/um²]', y='Sb/So', hue='case', hue_order=['soma', 'dendrites', 'soma_dendrites', 'soma_dendrites_ex'], ax=ax, style='case', s=200, palette=['b', 'orange', 'g', 'g'])
+# ax.set_xticklabels([f'{float(blab):.1f}' for blab in b_labels[1:]])
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles, ['no funnel', 'funnel'], loc='upper right', title='')
-if log:
-    ax.set_ylabel("ln(S/S0)")
-else:
-    ax.set_ylabel("S/S0")
+ax.legend(handles, ['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)'], loc='upper right', title='Intra signal', markerscale=2.5)
 
-couples = []
-couples_end = []
-for b in df_all[df_all['b [ms/um²]'] > 0]['b [ms/um²]'].unique():
-    for i, branch in enumerate(df_all['funnel'].unique()):
-        couples.append((b, branch))    
+# replace labels
+# new_labels = [['Soma', 'Dendrites', 'Soma-Dendrites (disconnected)', 'Soma-Dendrites (connected)']]
+# for t, l in zip(g._legend.texts, new_labels):
+#     t.set_text(l)
 
-for i in range(1, len(couples) + 1):
-    if i % 2 == 0:
-        couples_end.append((couples[i-2], couples[i-1]))
 
-statannot.add_stat_annotation(
-    ax,
-    data=df_all[df_all['b [ms/um²]'] > 0],
-    y='Sb/So', 
-    x='b [ms/um²]',
-    hue='funnel',
-    box_pairs=couples_end,
-    test="Mann-Whitney",
-    text_format="star",
-    loc="inside"
-    )
-
-# Analytical solutions & Mesh
+# Analytical solutions
 Delta     = np.array([0.05])  # in [s]
 delta     = np.array([0.0165])# in [s]
 D0        = 2.5e-9 # [m²/s]
 bvals     = np.linspace(0.2, 10, 100) * 1e9 # in [s/m²]
-TE        = 0.067 # [s]
 
 r_soma           = 10e-6 # [m]
 volume_neurites  = 8784.68 # 11368.4 # 0.57um dendrite # 8784.68 # in [um³] (3 branching)
@@ -194,12 +162,15 @@ print("soma fraction {:e}".format(soma_fraction))
 soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
 
 ax2 = ax.twinx()
-ax2.plot(bvals*1e-9, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
+b_plot = (bvals*1e-9).round(2)
+ax2.plot(b_plot, soma_signal, label=f"Soma", color='b', linestyle="dotted")
+ax2.plot(b_plot, neurites_signal, label=f"Dendrites", color='orange', linestyle="dotted")
+ax2.plot(b_plot, both_signal, label=f"Soma & dendrites", color='g', linestyle="dotted")
 if log:
-    sns.lineplot(bvals*1e-9, -bvals*D0, label="D = 2.5 [ms/um²]")
+    ax2.plot(b_plot -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
+
 ax2.legend(title='Analytical solution', loc=3)
 ax2.set_yticklabels([])
-ax2.set_yticks([])
 ax2.set_ylim([y_lim_min, y_lim_max])
 ax.set_ylim([y_lim_min, y_lim_max])
 

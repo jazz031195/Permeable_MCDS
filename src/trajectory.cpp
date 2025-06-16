@@ -89,15 +89,15 @@ void Trajectory::initTrajWriter()
     //     return;
     // }
 
-    if(boutDispl)
-        boutDispl.close();
+    // if(boutDispl)
+    //     boutDispl.close();
 
-    boutDispl.open((trajfile + ".displ").c_str(), std::ofstream::binary);
+    // boutDispl.open((trajfile + ".displ").c_str(), std::ofstream::binary);
 
-    if(!boutDispl){
-        std::cout << "Cannot open " << (trajfile + ".displ").c_str() << std::endl;
-        return;
-    }
+    // if(!boutDispl){
+    //     std::cout << "Cannot open " << (trajfile + ".displ").c_str() << std::endl;
+    //     return;
+    // }
 }
 
 
