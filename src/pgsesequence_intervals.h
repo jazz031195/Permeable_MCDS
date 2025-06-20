@@ -40,9 +40,17 @@ public:
 
     Trajectory trajectory;    /*!< If the signal is computed from a .trajfile   */
 
-    std::vector<std::vector<std::vector<double>>> sub_DWI_intervals; /*!< auxiliar DWI for signal computations.  */
+    std::vector<std::vector<std::vector<double>>> sub_DWI_intervals_intra; /*!< auxiliar DWI for signal computations.  */
 
-    std::vector<std::vector<std::vector<double>>> sub_DWIi_intervals; /*!< auxiliar DWI for signal computations.  */
+    std::vector<std::vector<std::vector<double>>> sub_DWI_intervals_extra; /*!< auxiliar DWI for signal computations.  */
+
+    std::vector<std::vector<std::vector<double>>> sub_DWIi_intervals_intra; /*!< auxiliar DWI for signal computations.  */
+
+    std::vector<std::vector<std::vector<double>>> sub_DWIi_intervals_extra; /*!< auxiliar DWI for signal computations.  */
+
+    bool update_DWI;
+
+    int interval_nbr;
 
     //constructors
 
@@ -143,9 +151,6 @@ public:
 
     void SetTimingsIntervals();
 
-    void writeResultingData(std::string output_base_name);
-
-    void initializeSubdivisionSignals();
 
 private:
     virtual void readSchemeParameters(Scheme scheme_);

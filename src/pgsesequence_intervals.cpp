@@ -20,6 +20,7 @@ PGSESequence_Intervals::PGSESequence_Intervals()
     percent_steps_in = -1;
     T = 0;
     SetTimingsIntervals();
+    update_DWI = false;
 }
 
 
@@ -32,6 +33,7 @@ PGSESequence_Intervals::PGSESequence_Intervals(Scheme scheme_)
     phase_shift_distribution.resize(num_rep,3600);
     phase_shift_distribution = Eigen::ArrayXXf::Zero(num_rep,3600);
     SetTimingsIntervals();
+    update_DWI = false;
 
 }
 
@@ -48,6 +50,7 @@ PGSESequence_Intervals::PGSESequence_Intervals(Scheme scheme_, const char *traj_
     phase_shift_distribution.resize(scheme_.num_rep,3600);
     phase_shift_distribution = Eigen::ArrayXXf::Zero(num_rep,3600);
     SetTimingsIntervals();
+    update_DWI = false;
 
 }
 
@@ -63,6 +66,7 @@ PGSESequence_Intervals::PGSESequence_Intervals(const char *scheme_file_name)
     phase_shift_distribution = Eigen::ArrayXXf::Zero(num_rep,3600);
     T = 10; //dummy number
     SetTimingsIntervals();
+    update_DWI = false;
 
 }
 
@@ -80,6 +84,7 @@ PGSESequence_Intervals::PGSESequence_Intervals(const char *scheme_file_name, con
     phase_shift_distribution.resize(num_rep,3600);
     phase_shift_distribution = Eigen::ArrayXXf::Zero(num_rep,3600);
     SetTimingsIntervals();
+    update_DWI = false;
 }
 
 PGSESequence_Intervals::~PGSESequence_Intervals()
@@ -87,21 +92,31 @@ PGSESequence_Intervals::~PGSESequence_Intervals()
 }
 
 void PGSESequence_Intervals::SetTimingsIntervals(){
-    DWI_intervals.resize(num_rep);
-    DWIi_intervals.resize(num_rep);
+
+    interval_nbr = -1;
+    DWI_intervals_intra.resize(num_rep);
+    DWIi_intervals_intra.resize(num_rep);
+    DWI_intervals_extra.resize(num_rep);
+    DWIi_intervals_extra.resize(num_rep);
     phase_shift_intervals.resize(num_rep);
     t_intervals.resize(num_rep);
 
-    for (int s = 0; s < num_rep; ++s) {
-        int nbr_inter = nbr_intervals[s];  // safer indexing
-        DWI_intervals[s].resize(nbr_inter, 0.0);
-        DWIi_intervals[s].resize(nbr_inter, 0.0);
+    for (int s = 0; s < num_rep; ++s) { // for each different line in the scheme file
+        int nbr_inter = nbr_intervals[s];  // nbr_inter is number of steps to save DWI 
+        DWI_intervals_intra[s].resize(nbr_inter, 0.0);
+        DWIi_intervals_intra[s].resize(nbr_inter, 0.0);
+        DWI_intervals_extra[s].resize(nbr_inter, 0.0);
+        DWIi_intervals_extra[s].resize(nbr_inter, 0.0);
         phase_shift_intervals[s].resize(nbr_inter, 0.0);
         t_intervals[s].resize(nbr_inter, 0.0);
         for (int j = 0; j < nbr_inter; ++j) {
             t_intervals[s][j] = dyn_duration * (j + 1) / nbr_inter;
         }
+        for (int j = 0; j < t_intervals[s].size(); ++j) {
+            cout << "t_intervals[" << s << "][" << j << "] = " << t_intervals[s][j] << endl;
+        }
     }
+
     assert(nbr_intervals.size() == num_rep);
     std::cout << "[DEBUG] SetTimingsIntervals() called: num_rep = " << num_rep << std::endl;
 }
@@ -248,62 +263,14 @@ void PGSESequence_Intervals::readSchemeFile()
     in.close();
 }
 
-void PGSESequence_Intervals::update_phase_shift(double dt, double dt_last, Walker walker)
-{
-    Eigen::Vector3d xt;
-    Eigen::Vector3d Gdt;
-
-    // Displacement from initial position
-    xt[0] = walker.pos_r[0] - walker.ini_pos[0];
-    xt[1] = walker.pos_r[1] - walker.ini_pos[1];
-    xt[2] = walker.pos_r[2] - walker.ini_pos[2];
-
-    const double dos_pi = 2.0 * M_PI;
-
-    // Initialize phase_shift_intervals if not already done
-    if (phase_shift_intervals.size() != num_rep)
-        phase_shift_intervals = std::vector<std::vector<double>>(num_rep);
-
-    if (phase_shift.size() != num_rep)
-        phase_shift = std::vector<double>(num_rep, 0.0);
-
-    // Track saving indices and stopping flags (initialize once if needed)
-    static std::vector<int> indices(num_rep, 0);
-    static std::vector<bool> stop_flags(num_rep, false);
-
-    for (int s = 0; s < num_rep; ++s) {
-        if (stop_flags[s]) continue;
-
-        getGradImpulse(s, dt, dt_last, Gdt);
-        double val = giro * Gdt.dot(xt);
-        val = fmod(val, dos_pi);
-        phase_shift[s] = fmod(phase_shift[s] + val, dos_pi);
-
-        // Save phase shift at specific intervals
-        if (indices[s] < t_intervals[s].size()) {
-            double t_target = t_intervals[s][indices[s]];
-            //cout << "t_target: " << t_target << " t_now: " << t_now << endl;
-               
-            if (std::abs(dt - t_target) < 1e-3) {
-                phase_shift_intervals[s][indices[s]] = phase_shift[s];
-                indices[s]++;
-                if (indices[s] >= t_intervals[s].size()) {
-                    stop_flags[s] = true;
-                }
-            }
-        }
-        cout <<"phase_shift_intervals["<<s<<"] : " << phase_shift_intervals[s].size() << endl;
-    }
-
-
-}
-
-
 void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3Xd trajectory)
 {
     Eigen::Vector3d xt;
     Eigen::Vector3d Gdt;
     double dt, dt_last;
+
+    update_DWI = false;
+    bool update_interval_nbr = false;
 
     const double dos_pi = 2.0 * M_PI;
 
@@ -329,10 +296,12 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
 
             getGradImpulse(s, dt, dt_last, Gdt);
             double val = giro * (Gdt.dot(xt));
+            //cout <<"val : " << val << endl;
             val = fmod(val, dos_pi);
             phase_shift[s] = fmod(phase_shift[s] + val, dos_pi);
             //cout <<"phase_shift_intervals["<<s<<"] : " << phase_shift_intervals[s].size() << endl;
             //cout << "t_intervals["<<s<<"] : " << t_intervals[s].size() << endl;
+            //cout <<"    phase shift["<<s<<"]: " << phase_shift[s] << endl;
 
             // Check if we should save this time point
             if (indices[s] < t_intervals[s].size()) {
@@ -341,19 +310,31 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
                 if (std::abs(dt - t_interval) < 1e-3) {
                     //cout <<"dt: " << dt << " t_intervals["<<s<<"]["<<indices[s]<<"]: " << t_interval<< endl;
                     phase_shift_intervals[s][indices[s]] = phase_shift[s];
+                    //cout << "Saving phase shift for repetition " << s << " at index " << indices[s] << ": " << phase_shift[s] << endl;
                     indices[s]++;
+                    update_DWI = true; // Set flag to update DWI after all steps
+                    if (!update_interval_nbr){
+                        interval_nbr += 1;
+                        update_interval_nbr = true;
+                    }
+
                     if (indices[s] >= t_intervals[s].size()) {
                         stop_flags[s] = true;
                     }
+
                 }
+
             }
         }
     }
 
 }
 
+
 void PGSESequence_Intervals::update_DWI_signal(Walker& walker)
 {
+    // occurs after all steps are travelled by walker
+    bool isintra = (walker.location == Walker::intra);
     for(uint s=0; s< uint(num_rep); s++){
 
         double cos_phase_shift = cos(phase_shift[s]);
@@ -361,15 +342,22 @@ void PGSESequence_Intervals::update_DWI_signal(Walker& walker)
 
         DWI[s] += cos_phase_shift; // Real part
         DWIi[s]+= sin_phase_shift; // Img part
-
-        for (int i = 0; i < phase_shift_intervals[s].size(); i++) {
+        
+        for (int i = 0; i < phase_shift_intervals[s].size(); i++) { // number of interval steps
             cos_phase_shift = cos(phase_shift_intervals[s][i]);
             sin_phase_shift = sin(phase_shift_intervals[s][i]);
             //cout << "phase_shift_intervals[" << s << "][" << i << "] : " << phase_shift_intervals[s][i] << endl;
-            this->DWI_intervals[s][i] += cos_phase_shift; // Real part
-            this->DWIi_intervals[s][i] += sin_phase_shift; // Img part
+            if (isintra){
+                this->DWI_intervals_intra[s][i] += cos_phase_shift; // Real part
+                this->DWIi_intervals_intra[s][i] += sin_phase_shift; // Img part
+            }
+            else{
+                this->DWI_intervals_extra[s][i] += cos_phase_shift; // Real part
+                this->DWIi_intervals_extra[s][i] += sin_phase_shift; // Img part
+            }
             //cout << "DWI_intervals[" << s << "][" << i << "] : " << DWI_intervals[s][i] << endl;
         }
+        
 
         if(save_phase_shift){
             //Index between 0 and 3600, this give us a histogram with 3600 bins
@@ -377,21 +365,6 @@ void PGSESequence_Intervals::update_DWI_signal(Walker& walker)
             phase_shift_distribution(s,index)+=1;
         }
 
-        if(subdivision_flag){
-            for(uint i = 0 ; i < subdivisions.size(); i++){
-
-                if( subdivisions[i].isInside(walker.pos_v)){
-                    sub_DWI[i][s] += cos_phase_shift; // Real part
-                    sub_DWIi[i][s]+= sin_phase_shift; // Img part
-
-                    if (phase_shift_intervals[s].size() > sub_DWI_intervals[i][s].size()) {
-                        sub_DWI_intervals[i][s].push_back(sub_DWI[i][s]);
-                        sub_DWIi_intervals[i][s].push_back(sub_DWIi[i][s]);
-                    }
-                    break;  //WARNING this break means that the subdivision are mutally exclusive
-                }
-            }
-        }
         phase_shift[s] = 0;
     } //s
 
@@ -595,7 +568,7 @@ double PGSESequence_Intervals::get_adt(int grad_index, double t, double tLast){
 
     //    printf("%d - %.25f - %.25f \n",grad_index,t,tLast);
 
-    double pad = (te - Delta - delta)/2.0;
+    double pad= (te - Delta - delta)/2;
     if ( (t < pad) || (t > te-pad)){
         return 0;
     }
@@ -653,68 +626,4 @@ double PGSESequence_Intervals::get_adt(int grad_index, double t, double tLast){
     return sgn*(t-tLast);
 }
 
-void PGSESequence_Intervals::writeResultingData(std::string output_base_name)
-{
-    string outDWI   = output_base_name + "_DWI.txt";
-    string outDWIi  = output_base_name + "_DWI_img.txt";
 
-    ofstream dwi_out(outDWI,std::ofstream::out);
-    ofstream dwii_out(outDWIi,std::ofstream::out);
-
-    for (unsigned i = 0 ; i < this->DWI_intervals.size(); i++ ){
-        for (uint j = 0; j < this->DWI_intervals[i].size(); j++){
-            dwi_out  << this->DWI_intervals[i][j]  << " ";
-            dwii_out << this->DWIi_intervals[i][j] << " ";
-            cout << this->DWI_intervals[i][j]<< " ";
-        }
-        cout <<endl;
-        dwi_out << endl;
-        dwii_out << endl;
-    }
-
-    dwi_out.close();
-    dwii_out.close();
-
-    if(this->subdivision_flag){
-        string out_sub_DWI   = output_base_name + "_voxels_DWI.txt";
-        string out_sub_DWIi  = output_base_name + "_voxels_DWI_img.txt";
-
-        ofstream sub_dwi_out (out_sub_DWI,std::ofstream::out);
-        ofstream sub_dwii_out(out_sub_DWIi,std::ofstream::out);
-
-        //## HEADER
-        // #Num_voxels
-        sub_dwi_out  << subdivisions.size() << endl;
-        sub_dwii_out << subdivisions.size() << endl;
-        // #Size_DWI
-        sub_dwi_out  << this->DWI.size() << endl;
-        sub_dwii_out << this->DWI.size() << endl;
-
-        for(uint s = 0; s < this->subdivisions.size(); s++ ){
-            for (uint i = 0 ; i < this->sub_DWI_intervals[s].size(); i++ ){
-                for (uint j = 0; j < this->sub_DWI_intervals[s][i].size(); j++){
-                    sub_dwi_out  << this->sub_DWI_intervals[s][i][j]  << " ";
-                    sub_dwii_out << this->sub_DWIi_intervals[s][i][j] << " ";
-                }
-                sub_dwi_out << endl;
-                sub_dwii_out << endl;
-            }
-        }
-        sub_dwi_out.close();
-        sub_dwii_out.close();
-    }//END subdivision_flag
-
-}
-
-void PGSESequence_Intervals::initializeSubdivisionSignals(){
-    for(uint s = 0; s < subdivisions.size(); s++){
-        vector<double> tmp_DWI(num_rep,0);
-        vector<double> tmp_DWIi(num_rep,0);
-        this->sub_DWI.push_back(tmp_DWI);
-        this->sub_DWIi.push_back(tmp_DWIi);
-        vector<vector<double>> tmp_DWI_intervals(num_rep);
-        vector<vector<double>> tmp_DWIi_intervals(num_rep);
-        this->sub_DWI_intervals.push_back(tmp_DWI_intervals);
-        this->sub_DWIi_intervals.push_back(tmp_DWIi_intervals);
-    }
-}

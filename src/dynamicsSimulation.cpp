@@ -1288,6 +1288,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     bool back_tracking;
     int num_crossed = 0;
 
+    list_walkers_intra = std::vector<int>(params.num_steps,0);
+    list_walkers_extra = std::vector<int>(params.num_steps,0);
+
+
     /*********************   WARNING  **********************/
     /*                                                     */
     /*                 DYNAMIC SIMULATION CORE             */
@@ -1373,6 +1377,14 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
             walker.steps_count++;
             walker.rejection_count = 0;
+            
+            if (walker.location == Walker::intra){
+                list_walkers_intra[t-1]+= 1;
+            }
+            else{
+                list_walkers_extra[t-1]+= 1;
+            }
+
 
         }// end for t
 

@@ -77,6 +77,9 @@ public:
     int nbr_walker_glials;                          /*!< Number of walkers that are inside the glial cells                 */
     int nbr_walker_outside;                          /*!< Number of walkers that are inside the extra-cellular space                  */
 
+    std::vector <int> list_walkers_intra;            /*!< vector with the number of the walkers that are inside the intra-cellular space */
+    std::vector <int> list_walkers_extra;            /*!< vector with the number of the walkers that are inside the extra-cellular space */
+
     /******   Auxiliar variables   ********/
     Eigen::Vector3d step;
 

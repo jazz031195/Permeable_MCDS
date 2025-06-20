@@ -152,7 +152,7 @@ def read_and_extract_dwi(file_path, binary = True):
 
         except FileNotFoundError:
             print(f"File not found: {file_path}")
-    
+
     return np.array(column)
 
 def get_csv_files_from_folder(folder_path):
@@ -245,13 +245,13 @@ def read_scheme(file_path):
         if len(line) == 0:
             continue
 
-        xs.append(line[0])
-        ys.append(line[1])
-        zs.append(line[2])
-        Gs.append(line[3])
-        Deltas.append(line[4])
-        deltas.append(line[5])
-        TEs.append(line[6])
+        xs.append(float(line[0]))
+        ys.append(float(line[1]))
+        zs.append(float(line[2]))
+        Gs.append(float(line[3]))
+        Deltas.append(float(line[4]))
+        deltas.append(float(line[5]))
+        TEs.append(float(line[6]))
 
     # dataset
     data = {'x': xs,
@@ -280,3 +280,19 @@ def get_total_icvf(file_path):
 
     total_ecvf = 1- (total_icvf + myelin_icvf)
     return total_icvf, total_ecvf
+
+
+def powder_avg (scheme_file_path, dwi_file_path):
+
+
+    giro = 2.6751525e5
+
+    scheme = read_scheme(scheme_file_path)
+    dwi = read_binary_file(dwi_file_path)
+    
+    data = scheme
+    data["DWI"] = dwi
+
+    data["b_value"] = (data["G"]*data["delta"]*giro)*(data["G"]*data["delta"]*giro) * ((data["Delta"] - data["delta"]/3))
+    
+    return data
