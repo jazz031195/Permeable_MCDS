@@ -279,8 +279,7 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
     std::vector<bool> stop_flags(num_rep, false);
 
     for (uint t = 1; t < this->T; t++) {
-        // Displacement from t=0
-        xt = trajectory.col(t) - trajectory.col(0);
+        // Displacement from t=0        xt = trajectory.col(t) - trajectory.col(0);
 
         // Time step management
         if (this->dynamic) {

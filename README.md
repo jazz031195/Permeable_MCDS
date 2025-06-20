@@ -119,29 +119,42 @@ xmax ymax zmax
 
 Scheme files are located in the `instructions/scheme/` directory. These files are essential for defining the parameters of your PGSE (Pulsed Gradient Spin Echo) sequences. Each line in a scheme file describes a single gradient direction and associated parameters required for the simulation or analysis. The parameters are specified in the following order: X Y Z G Δ δ TE
 
-### Explanation of Parameters
-- **X, Y, Z**: Components of the gradient direction in 3D space.
+### Explanation of PGSE Parameters
+- **X, Y, Z**: Components of the gradient direction in 3D space (mm).
 - **G**: Gradient amplitude (in millitesla per meter, mT/m).
 - **Δ (big delta)**: Time interval between the diffusion gradients (in seconds).
 - **δ (small delta)**: Duration of the diffusion gradients (in seconds).
 - **TE**: Echo time (in seconds).
+If you want multiple DWI values during the PGSE sequence, add an additional parameter:
+- **num_intervals**: Number of DWI values you wish to obtain during sequence.
 
-### Example Scheme File
+### Example PGSE Scheme File
 
 ```xml
+VERSION: STEJSKALTANNER 
 0 0 1 0.0 0.05 0.0165 0.07
 0 0 1 0.01518807 0.05 0.0165 0.07
 0 0 1 0.02401444 0.05 0.0165 0.07
-0 0 1 0.03396155 0.05 0.0165 0.07
-0 0 1 0.04159423 0.05 0.0165 0.07
-0 0 1 0.04802888 0.05 0.0165 0.07
-0 0 1 0.05369793 0.05 0.0165 0.07
-0 0 1 0.07594033 0.05 0.0165 0.07
-0 0 1 0.08318847 0.05 0.0165 0.07
-0 0 1 0.08985382 0.05 0.0165 0.07
-0 0 1 0.09605777 0.05 0.0165 0.07
-0 0 1 0.10188465 0.05 0.0165 0.07
-0 0 1 0.10739585 0.05 0.0165 0.07
+```
+### Example if you want DWI outputs during PGSE sequence 
+```xml
+VERSION: PGSE_INTERVALS
+0 0 1 0.0 0.05 0.0165 0.07 1000
+0 0 1 0.01518807 0.05 0.0165 0.07 1000
+0 0 1 0.02401444 0.05 0.0165 0.07 1000
+```
+
+### Example for waveforms
+```xml
+VERSION: WAVEFORM
+0.06696
+6697
+11
+0.0 0.0 0.0
+0.0 0.0 0.0003316466017446737
+0.0 0.0 0.0006632932034893485
+0.0 0.0 0.00099493980523402
+0.0 0.0 0.0013265864069786936
 ```
 
 ### Generating Isotropic Directions
