@@ -125,6 +125,7 @@ Scheme files are located in the `instructions/scheme/` directory. These files ar
 - **Δ (big delta)**: Time interval between the diffusion gradients (in seconds).
 - **δ (small delta)**: Duration of the diffusion gradients (in seconds).
 - **TE**: Echo time (in seconds).
+
 If you want multiple DWI values during the PGSE sequence, add an additional parameter:
 - **num_intervals**: Number of DWI values you wish to obtain during sequence.
 
