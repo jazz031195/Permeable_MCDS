@@ -184,6 +184,14 @@ public:
     Eigen::Vector3d findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal);
 
     bool isOutsideCylinders(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside);
+
+    double r1, r2; /*!< Useful for mixed_compartment_diffusivities */
+
+    double alpha; /*!< Useful for mixed_compartment_diffusivities */
+
+    double beta; /*!< Useful for mixed_compartment_diffusivities */
+
+
 private:    
     /*! \fn     generateStep
      *  \param  step stores the computed step.
@@ -310,7 +318,8 @@ private:
      * \param   curr_step_lenght step length
      * \param   curr_diffusivity Diffusivity of the medium
      */
-    inline void updateStepLength(double &l);
+    inline void updateStepLength(double &l, const int &t);
+
 
     /*!
      * \brief   Updates the list of indexes inside the inner and outher collision spheres.

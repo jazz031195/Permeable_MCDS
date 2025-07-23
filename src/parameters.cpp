@@ -16,6 +16,7 @@ Parameters::Parameters()
     write_full_c        = false;
     write_txt           = false;
     write_bin           =  true;
+    mix_compartment_diffusivities = false;
 
     hex_packing = false;
     hex_packing_radius      = 0;
@@ -99,6 +100,15 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         }
         else if(str_dist(tmp,"diffusivity_extra") <= 1){
             in >> diffusivity_extra;
+        }
+        else if(str_dist(tmp,"mix_compartment_diffusivities") <= 1){
+            in >> mix_compartment_diffusivities;
+        }
+        else if(str_dist(tmp,"t_ex") <= 1){
+            in >> t_ex;
+        }
+        else if(str_dist(tmp,"f") <= 1){
+            in >> f;
         }
         else if( (str_dist(tmp,"out_traj_file_index") <= 2) or (str_dist(tmp,"exp_prefix") <= 2)) {
             in >> traj_file;

@@ -29,11 +29,14 @@ public:
     double diffusivity_extra;                       /*!< De, extra-cellular diffusivity constant                                    */
     double sim_duration;                            /*!< simulation total time                                                      */
     bool write_traj;                                /*!< flag, write a traj file or not, binary format only                         */
-    bool write_hit;                                /*!< flag, write a hit file or not, binary format only                         */
+    bool write_hit;                                 /*!< flag, write a hit file or not, binary format only                         */
     double concentration;                           /*< concentration of walkers per mm³ */
     bool write_full_c;
     double step_length;                             /*!< step length for the walkers                                                */
-
+    bool mix_compartment_diffusivities;             /*!< flag, true if the intra and extra diffusivities are mixed in the same compartment */
+    double t_ex;                                    /*!< exchange time between compartments */
+    double f; /*!< Useful for mixed_compartment_diffusivities */
+    
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
     bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */
     bool scale_from_stu;                            /*!< flag, true if the scheme file is in standar units m,s                      */

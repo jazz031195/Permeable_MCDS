@@ -90,7 +90,7 @@ def write_b_value_combinations(
 
 
 def write_combined_directions_with_b_values(
-    x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file
+    x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file, intervals = None
 ):
     """
     Generate combinations of directions and b-values.
@@ -102,7 +102,10 @@ def write_combined_directions_with_b_values(
         output_file (str): Path to the output file.
     """
     with open(output_file, 'w') as file:
-        file.write("VERSION: STEJSKALTANNER\n")
+        if intervals is not None:
+            file.write("VERSION: PGSE_INTERVALS\n")
+        else:
+            file.write("VERSION: STEJSKALTANNER\n")
         for (x, y, z, b_value), (Delta, TE, delta) in itertools.product(
             zip(x_vals, y_vals, z_vals, b_values), zip(delta_values, te_values, small_delta_values)
         ):
@@ -112,7 +115,41 @@ def write_combined_directions_with_b_values(
             Delta, TE, delta = map(round, [Delta, TE, delta], [8, 8, 8])
 
             # Write to file
-            file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
+            if intervals is not None:
+                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE} {intervals}\n")
+            else:
+                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
+
+
+
+def write_scheme_file(
+    x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file, intervals = None
+):
+    """
+    Generate combinations of directions and b-values.
+
+    Args:
+        x_vals, y_vals, z_vals (list): Directional components.
+        b_values (list): b-values.
+        delta_values, te_values, small_delta_values (list): Timing parameters.
+        output_file (str): Path to the output file.
+    """
+    with open(output_file, 'w') as file:
+        if intervals is not None:
+            file.write("VERSION: PGSE_INTERVALS\n")
+        else:
+            file.write("VERSION: STEJSKALTANNER\n")
+        for (x, y, z, b_value, Delta, TE, delta) in zip(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values):
+            # Compute the gradient strength G
+            G = (math.sqrt(b_value / (Delta - (delta / 3)))) / (delta * GYROMAGNETIC_RATIO)
+            G = round(G, 8)
+            Delta, TE, delta = map(round, [Delta, TE, delta], [8, 8, 8])
+
+            # Write to file
+            if intervals is not None:
+                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE} {intervals}\n")
+            else:
+                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
 
 
 def write_combinations_with_fixed_gradients(
@@ -154,6 +191,30 @@ def time_dependence_narrow_pulse_dki() :
 
     write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
 
+
+def fixed_direction() :
+    output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/quentins_exp_d_20.scheme"
+
+    # B values and directions
+    direction = [0.0, 0.0, 1.0]
+    b_value =[0, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
+    delta = [0.08]
+    small_delta = 0.0165
+
+    nbr_combinations = len(b_value) * len(delta)
+    x_vals = [direction[0]] * nbr_combinations
+    y_vals = [direction[1]] * nbr_combinations
+    z_vals = [direction[2]] * nbr_combinations
+    b_values = list(itertools.chain.from_iterable([[b] * len(delta) for b in b_value]))
+    print(b_values)
+    delta_values = [delta]*len(b_values)
+    #flatten delta_values
+    delta_values = list(itertools.chain.from_iterable(delta_values))
+    print(delta_values)
+    small_delta_values = [small_delta] * len(delta_values)
+    te_values = [delta_values[i]+small_delta_values[i]+0.005 for i in range(len(delta_values))]
+    write_scheme_file(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file, intervals = 1000)
+
 if __name__ == "__main__":
 
-    time_dependence_narrow_pulse_dki()
+    fixed_direction()

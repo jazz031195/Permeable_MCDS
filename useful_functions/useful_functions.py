@@ -49,16 +49,20 @@ def extract_simulation_info(file_path):
     # Regular expressions to extract the number of particles and steps
     particles_pattern = r'Number of particles:\s*-+\s*(\d+)'
     steps_pattern = r'Number of steps:\s*-+\s*(\d+)'
+    duration = r'Particle dynamics duration:\s*-+\s*(\d+)'
 
     # Find the matches
     particles_match = re.search(particles_pattern, content)
     steps_match = re.search(steps_pattern, content)
+    duration_match = re.search(duration, content)
 
     # Extract the values
     number_of_particles = int(particles_match.group(1)) if particles_match else None
     number_of_steps = int(steps_match.group(1)) if steps_match else None
+    duration = int(duration_match.group(1)) if duration_match else None
 
-    return number_of_particles, number_of_steps
+    return number_of_particles, number_of_steps, duration
+
 
 def get_scheme_info_iso(path_to_info):
     with open(path_to_info, "r") as f:

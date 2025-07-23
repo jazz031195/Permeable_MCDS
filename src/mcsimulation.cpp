@@ -573,8 +573,6 @@ void MCSimulation::addGlialsObstaclesFromFiles()
         in.close();
     }
 
-    cout << "Number of glials: " << dynamicsEngine->glials_list.size() << endl;
-
 }
 
 
@@ -584,7 +582,6 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
    
     for(unsigned i = 0; i < params.cylinders_files.size(); i++){
-        cout << "Adding Cylinders" << endl;
 
 
         std::ifstream in(params.cylinders_files[i]);
@@ -687,11 +684,6 @@ void MCSimulation::addCylindersObstaclesFromFiles()
 
         }
 
-        cout << "params.ini_walker_flag :" << params.ini_walker_flag << endl;
-        
-        //cout << " ICVF :" << icvf<< endl;
-        cout << " Number of particles :" << params.num_walkers << endl;
-        cout << "Number of cylinders :" << dynamicsEngine->cylinders_list.size() << endl;
 
         in.close();
     }

@@ -416,12 +416,25 @@ void DynamicsSimulation::initSimulation()
     step_lenght_intra = sqrt(step_length_pref*params.diffusivity_intra);
     step_lenght_extra = sqrt(step_length_pref*params.diffusivity_extra);
 
-    cout << "step_lenght_intra: " << step_lenght_intra << endl;
-    cout << "step_lenght_extra: " << step_lenght_extra << endl;
+    //cout << "step_lenght_intra: " << step_lenght_intra << endl;
+    //cout << "step_lenght_extra: " << step_lenght_extra << endl;
 
     curr_step_lenght  = step_lenght_intra;
     curr_diffusivity  = params.diffusivity_intra;
 
+    if (params.mix_compartment_diffusivities) {
+
+        params.t_ex= params.t_ex*1e3;
+
+        r1 = (1-params.f)/params.t_ex;
+        r2 = params.f/params.t_ex;
+
+        alpha = 1-exp(-r1*time_step);
+        beta  = 1-exp(-r2*time_step);
+
+    }
+
+    cout << " time_step = " << time_step << endl;
 
     //to predict time
     time(&start);
@@ -734,18 +747,71 @@ void DynamicsSimulation::initWalkerObstacleIndexes()
     }
 }
 
-void DynamicsSimulation::updateStepLength(double &l){
-   
-    if (walker.location == Walker::intra){
-        l                = step_lenght_intra;
-        curr_step_lenght = step_lenght_intra;
-        curr_diffusivity = params.diffusivity_intra;
+void DynamicsSimulation::updateStepLength(double &l, const int &t){
+
+    if (params.mix_compartment_diffusivities){
+        if (t == 0){
+            std::uniform_real_distribution<double> udist(0,1);
+            double p = udist(mt);
+
+            if (p < params.f){
+                curr_step_lenght = step_lenght_intra;
+                curr_diffusivity = params.diffusivity_intra;
+            }
+            else {
+                curr_step_lenght = step_lenght_extra;
+                curr_diffusivity = params.diffusivity_extra;
+            }
+            l = curr_step_lenght;
+        }
+
+        else{
+
+            if (curr_step_lenght == step_lenght_intra){
+                double prob_intra_to_extra = alpha;
+                std::uniform_real_distribution<double> udist(0,1);
+                double p = udist(mt);
+                if (p < prob_intra_to_extra){
+                    curr_step_lenght = step_lenght_extra;
+                    curr_diffusivity = params.diffusivity_extra;
+                    //cout <<" Switching to extra-cellular step length, time : " <<t << endl;
+                }
+                else{
+                    curr_step_lenght = step_lenght_intra;
+                    curr_diffusivity = params.diffusivity_intra;
+                }
+            }
+            else if (curr_step_lenght == step_lenght_extra){
+                double prob_extra_to_intra = beta;
+                std::uniform_real_distribution<double> udist(0,1);
+                double p = udist(mt);
+                if (p < prob_extra_to_intra){
+                    curr_step_lenght = step_lenght_intra;
+                    curr_diffusivity = params.diffusivity_intra;
+                    //cout <<" Switching to intra-cellular step length, time : " <<t << endl;
+                }
+                else{
+                    curr_step_lenght = step_lenght_extra;
+                    curr_diffusivity = params.diffusivity_extra;
+                }
+            }
+            l = curr_step_lenght;
+        }
     }
-    else if (walker.location == Walker::extra){
-        l                = step_lenght_extra;
-        curr_step_lenght = step_lenght_extra;
-        curr_diffusivity = params.diffusivity_extra;
-    } 
+    
+    else{
+
+        if (walker.location == Walker::intra){
+            l                = step_lenght_intra;
+            curr_step_lenght = step_lenght_intra;
+            curr_diffusivity = params.diffusivity_intra;
+        }
+        else if (walker.location == Walker::extra){
+            l                = step_lenght_extra;
+            curr_step_lenght = step_lenght_extra;
+            curr_diffusivity = params.diffusivity_extra;
+        } 
+    }
 }
 
 void DynamicsSimulation::updateCollitionSphere(unsigned t)
@@ -1315,12 +1381,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         walker.normal = {0,0,0};
   
-
         // Initialize the walker initial position
         iniWalkerPosition();
 
         // Update step length based on the walker initial position in space
-        updateStepLength(l);
+        updateStepLength(l, 0);
 
         // Selects only obstacles that are close enough to collide and the ones inside a collision sphere
         initWalkerObstacleIndexes();
@@ -1369,7 +1434,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             walker.setColision(walker.collision_in, walker.collision_ext, walker.crossing_in, walker.crossing_ext, t);           
 
             // Update step length and current diffusivity based on the walker position in space
-            updateStepLength(l);
+            updateStepLength(l, t);
 
             if (walker.location != Walker::intra){
                 updateCollitionSphere(t);
