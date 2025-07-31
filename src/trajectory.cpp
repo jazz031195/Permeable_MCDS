@@ -1,9 +1,13 @@
 #include "trajectory.h"
 #include <iomanip>      // std::setprecision
+#include "Eigen/src/Core/ArithmeticSequence.h"
+#include "Eigen/src/Core/util/IndexedViewHelper.h"
+#include "Eigen/src/Core/util/Macros.h"
 #include "simerrno.h"
 #include <fstream>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <iostream>
 using namespace std;
 
 
@@ -52,6 +56,7 @@ void Trajectory::initTrajectory(Parameters params)
     write_bin    = params.write_bin;
     write_hit    = params.write_hit;
     write_full_c = params.write_full_c;
+    write_every_nth_step = params.write_every_nth_step;
 
     trajfile     = params.output_base_name;
     hitfile      = params.output_base_name;
@@ -172,7 +177,7 @@ void Trajectory::initTrajWriterText()
 
 void Trajectory::writePosition(Eigen::Vector3d &pos)
 {
-
+    cout << "We use the vector function, caution, subsampling not implemented!" ;
     cout << "traj"  << write_traj << endl;
     if(write_traj){
         if(write_bin){
@@ -311,7 +316,6 @@ void Trajectory::writePositionText(Eigen::Vector3d &pos)
 }
 
 void Trajectory::writePositionBinary(Eigen::Vector3d &pos)
-
 {
     float pos0 = float(pos(0)),pos1 = float(pos(1)),pos2 = float(pos(2));
     bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
@@ -322,20 +326,25 @@ void Trajectory::writePositionBinary(Eigen::Vector3d &pos)
 
 void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, Eigen::VectorXi &col_ext, Eigen::VectorXi &cross_in, Eigen::VectorXi &cross_ext)
 {
-
     if(write_traj)
     {
-        if(write_traj)
-            writePositionBinary(pos);
+        unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step);
+        Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
+
+        for (int c = 0; c < number_of_subsampled_columns; ++c) {
+            pos_subsampled.col(c) = pos.col(c * write_every_nth_step);
+        }
+
+        if(write_bin)
+            writePositionBinary(pos_subsampled);
 
         if(write_txt)
-            writePositionText(pos);
+            writePositionText(pos_subsampled);
     }
 
     if(write_hit)
     {
         writePositionHit(col_in, col_ext, cross_in, cross_ext);
-
     }    
     
 }
@@ -361,10 +370,11 @@ void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int 
 
 void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
 {
+    
     if(steps_subset)
     {
         unsigned index = 0;
-        for(unsigned i = 0; i < T+1; i++ )
+        for(unsigned i = 0; i < pos.cols(); i++ )
             if(i == pos_times[index]){
                 tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;;
                 index++;                        // Update the index
@@ -376,7 +386,7 @@ void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
     }
     else
     {
-        for(unsigned i = 0; i < T+1; i++ )
+        for(unsigned i = 0; i < pos.cols(); i++ )
             tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;;
     }
 }
@@ -386,7 +396,7 @@ void Trajectory::writePositionBinary(Eigen::Matrix3Xd &pos)
     if(steps_subset)
     {
         unsigned index = 0;
-        for(unsigned i = 0; i < T+1; i++ )
+        for(unsigned i = 0; i < pos.cols(); i++ )
             if(i == pos_times[index]){
         
                 float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
@@ -402,7 +412,7 @@ void Trajectory::writePositionBinary(Eigen::Matrix3Xd &pos)
     }
     else
     {
-        for(unsigned  i = 0; i < T+1; i++ ){      
+        for(unsigned  i = 0; i < pos.cols(); i++ ){      
             float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
             bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
             bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));

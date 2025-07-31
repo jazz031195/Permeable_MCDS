@@ -117,6 +117,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if(str_dist(tmp,"write_traj_file") <= 2){
             in >> write_traj;
         }
+        else if(str_dist(tmp,"write_every_nth_step") <= 7){
+            in >> write_every_nth_step;
+        }
         else if(str_dist(tmp,"write_hit_file") <= 2){
             in >> write_hit;
         }

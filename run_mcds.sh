@@ -1,3 +1,3 @@
 #!/bin/bash -l
 ./compile.sh
-./MC-DC_Simulator "path/to/conf/file"
+./MC-DC_Simulator "instructions/conf/model.conf"
