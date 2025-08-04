@@ -99,28 +99,40 @@ void ParallelMCSimulation::startSimulation()
                    + " in average",out,false);
     SimErrno::info("Number of particles labeled as stuck: "        + to_string(stuck_count)  ,out,false);
     SimErrno::info("Number of particles eliminated due crossings: "+ to_string(illegal_count),out,false);
-    int tot_nbr_walker_extra = 0;
-    int tot_nbr_walker_intra = 0;
-    int tot_nbr_walker_axons = 0;
-    int tot_nbr_walker_glials = 0;
-    int tot_nbr_walker_outside = 0;
+    int tot_nbr_walker_extra_ini = 0;
+    int tot_nbr_walker_intra_ini  = 0;
+    int tot_nbr_walker_axons_ini  = 0;
+    int tot_nbr_walker_glials_ini  = 0;
+    int tot_nbr_walker_extra_final = 0;
+    int tot_nbr_walker_intra_final  = 0;
+    int tot_nbr_walker_axons_final  = 0;
+    int tot_nbr_walker_glials_final  = 0;
+
     int tot_nbr_bounces = 0;
     int tot_nbr_legal_crossings = 0;
     for (unsigned i = 0; i < simulations.size(); i++){
-        tot_nbr_walker_extra += simulations[i]->dynamicsEngine->nbr_walker_extra;
-        tot_nbr_walker_intra += simulations[i]->dynamicsEngine->nbr_walker_intra;
-        tot_nbr_walker_axons += simulations[i]->dynamicsEngine->nbr_walker_axons;
-        tot_nbr_walker_glials += simulations[i]->dynamicsEngine->nbr_walker_glials;
-        tot_nbr_walker_outside += simulations[i]->dynamicsEngine->nbr_walker_outside;
+        tot_nbr_walker_extra_ini += simulations[i]->dynamicsEngine->nbr_walker_extra_ini;
+        tot_nbr_walker_intra_ini += simulations[i]->dynamicsEngine->nbr_walker_intra_ini;
+        tot_nbr_walker_axons_ini += simulations[i]->dynamicsEngine->nbr_walker_axons_ini;
+        tot_nbr_walker_glials_ini += simulations[i]->dynamicsEngine->nbr_walker_glials_ini;
+        tot_nbr_walker_extra_final += simulations[i]->dynamicsEngine->nbr_walker_extra_final;
+        tot_nbr_walker_intra_final += simulations[i]->dynamicsEngine->nbr_walker_intra_final;
+        tot_nbr_walker_axons_final += simulations[i]->dynamicsEngine->nbr_walker_axons_final;
+        tot_nbr_walker_glials_final += simulations[i]->dynamicsEngine->nbr_walker_glials_final;
+
         tot_nbr_bounces += simulations[i]->dynamicsEngine->tot_nbr_bounces;
         tot_nbr_legal_crossings += simulations[i]->dynamicsEngine->tot_nbr_legal_crossings;
 
     }
-    SimErrno::info("Number of intracellular particles at the start : "+ to_string(tot_nbr_walker_intra),out,false);
-    SimErrno::info("Number of extracellular particles at the start : "+ to_string(tot_nbr_walker_extra),out,false);
-    SimErrno::info("Number of walkers in axons at the end : "+ to_string(tot_nbr_walker_axons),out,false);
-    SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials),out,false);
-    SimErrno::info("Number of walkers in extracellular space at the end : "+ to_string(tot_nbr_walker_outside),out,false);
+    SimErrno::info("Number of intracellular particles at the start : "+ to_string(tot_nbr_walker_intra_ini),out,false);
+    SimErrno::info("Number of extracellular particles at the start : "+ to_string(tot_nbr_walker_extra_ini),out,false);
+    SimErrno::info("Number of axonal particles at the start : "+ to_string(tot_nbr_walker_axons_ini),out,false);
+    SimErrno::info("Number of glial particles at the start : "+ to_string(tot_nbr_walker_glials_ini),out,false);
+    SimErrno::info("Number of intracellular particles at the end : "+ to_string(tot_nbr_walker_intra_final),out,false);
+    SimErrno::info("Number of extracellular particles at the end : "+ to_string(tot_nbr_walker_extra_final),out,false);
+    SimErrno::info("Number of walkers in axons at the end : "+ to_string(tot_nbr_walker_axons_final),out,false);
+    SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials_final),out,false);
+
     SimErrno::info("Total number of bounces: "                     + to_string(tot_nbr_bounces),out,false);
     SimErrno::info("Total number of legal crossings: "             + to_string(tot_nbr_legal_crossings),out,false);
     

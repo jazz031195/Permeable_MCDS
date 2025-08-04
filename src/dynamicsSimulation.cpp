@@ -61,11 +61,14 @@ DynamicsSimulation::DynamicsSimulation() {
     params.write_hit = trajectory.write_hit = false;
     params.write_txt = trajectory.write_txt   = false;
 
-    nbr_walker_extra = 0;
-    nbr_walker_intra = 0;
-    nbr_walker_glials = 0;
-    nbr_walker_axons = 0;
-    nbr_walker_outside = 0;
+    nbr_walker_extra_ini = 0;
+    nbr_walker_intra_ini = 0;
+    nbr_walker_glials_ini = 0;
+    nbr_walker_axons_ini = 0;
+    nbr_walker_extra_final = 0;
+    nbr_walker_intra_final = 0;
+    nbr_walker_glials_final = 0;
+    nbr_walker_axons_final = 0;
 
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
@@ -108,11 +111,14 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
     total_tries=0;
     step_nbr = 0;
 
-    nbr_walker_extra = 0;
-    nbr_walker_intra = 0;
-    nbr_walker_glials = 0;
-    nbr_walker_axons = 0;
-    nbr_walker_outside = 0;
+    nbr_walker_extra_ini = 0;
+    nbr_walker_intra_ini = 0;
+    nbr_walker_glials_ini = 0;
+    nbr_walker_axons_ini = 0;
+    nbr_walker_extra_final = 0;
+    nbr_walker_intra_final = 0;
+    nbr_walker_glials_final = 0;
+    nbr_walker_axons_final = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -143,11 +149,14 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
     total_tries=0;
     step_nbr = 0;
 
-    nbr_walker_extra = 0;
-    nbr_walker_intra = 0;
-    nbr_walker_glials = 0;
-    nbr_walker_axons = 0;
-    nbr_walker_outside = 0;
+    nbr_walker_extra_ini = 0;
+    nbr_walker_intra_ini = 0;
+    nbr_walker_glials_ini = 0;
+    nbr_walker_axons_ini = 0;
+    nbr_walker_extra_final = 0;
+    nbr_walker_intra_final = 0;
+    nbr_walker_glials_final = 0;
+    nbr_walker_axons_final = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -583,7 +592,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.previous_location = Walker::intra;
         walker.in_obj_index = object_id;
         walker.in_obj_type = object_type;
-        nbr_walker_intra++;
+        nbr_walker_intra_ini++;
 
     }
     else if(params.ini_walker_flag.compare("extra")== 0){
@@ -596,7 +605,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.location = Walker::extra;
         walker.in_obj_index = -1;
         walker.in_obj_type = -1;
-        nbr_walker_extra++;
+        nbr_walker_extra_ini++;
     }
     else if(voxels_list.size() > 0 or params.custom_sampling_area){
 
@@ -619,7 +628,13 @@ void DynamicsSimulation::iniWalkerPosition()
             walker.previous_location = Walker::intra;
             walker.in_obj_index = object_id;
             walker.in_obj_type = object_type;
-            nbr_walker_intra++;
+            nbr_walker_intra_ini++;
+            if (object_type == 0){
+                nbr_walker_axons_ini++;
+            }
+            else if (object_type == 1){
+                nbr_walker_glials_ini++;
+            }
         }
         else {
             walker.initial_location = Walker::extra;
@@ -627,7 +642,7 @@ void DynamicsSimulation::iniWalkerPosition()
             walker.previous_location = Walker::extra;
             walker.in_obj_index = -1;
             walker.in_obj_type = -1;
-            nbr_walker_extra++;
+            nbr_walker_extra_ini++;
         }
 
         if(params.computeVolume){
@@ -1473,15 +1488,16 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         }
 
         if (walker.location == Walker::intra){
+            nbr_walker_intra_final ++;
             if (walker.in_obj_type == 0){
-                nbr_walker_axons ++;
+                nbr_walker_axons_final ++;
             }
             else if (walker.in_obj_type == 1){
-                nbr_walker_glials ++;
+                nbr_walker_glials_final ++;
             }
         }
         else{
-            nbr_walker_outside ++;
+            nbr_walker_extra_final ++;
         }
 
         dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);

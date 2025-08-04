@@ -71,11 +71,15 @@ public:
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
     std::vector<unsigned>  spheres_deque;           /*!< deque with the indexes of the spheres (used for optmization)             */
 
-    int nbr_walker_intra;                           /*!< Number of walkers that are inside the intra-cellular space                 */
-    int nbr_walker_extra;                           /*!< Number of walkers that are inside the extra-cellular space                 */
-    int nbr_walker_axons;                          /*!< Number of walkers that are inside the axons                 */
-    int nbr_walker_glials;                          /*!< Number of walkers that are inside the glial cells                 */
-    int nbr_walker_outside;                          /*!< Number of walkers that are inside the extra-cellular space                  */
+    int nbr_walker_intra_ini;                           /*!< Number of walkers that are inside the intra-cellular space                 */
+    int nbr_walker_extra_ini;                           /*!< Number of walkers that are inside the extra-cellular space                 */
+    int nbr_walker_axons_ini;                          /*!< Number of walkers that are inside the axons                 */
+    int nbr_walker_glials_ini;                          /*!< Number of walkers that are inside the glial cells                 */
+    
+    int nbr_walker_intra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
+    int nbr_walker_extra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
+    int nbr_walker_axons_final;                         /*!< Number of walkers that are inside the axons                 */
+    int nbr_walker_glials_final;                         /*!< Number of walkers that are inside the glial cells                 */
 
     std::vector <int> list_walkers_intra;            /*!< vector with the number of the walkers that are inside the intra-cellular space */
     std::vector <int> list_walkers_extra;            /*!< vector with the number of the walkers that are inside the extra-cellular space */
