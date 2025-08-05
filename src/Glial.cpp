@@ -223,13 +223,14 @@ vector<tuple<int, int>> Glial::findCommonIntegers(const vector<vector<tuple<int,
 bool Glial::isPosInsideGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside) {
     
     std::vector<int> branches;
-    if (!isNearGlialCell(position, distance_to_be_inside, branches)) {
-        return false; // Position is outside all bounding boxes
-    }
 
-    // if inside soma, return true
+        // if inside soma, return true
     if (soma.minDistance(position) <= distance_to_be_inside) {
         return true; // Inside soma
+    }
+    
+    if (!isNearGlialCell(position, distance_to_be_inside, branches)) {
+        return false; // Position is outside all bounding boxes
     }
 
     // Collect candidate spheres across all axes

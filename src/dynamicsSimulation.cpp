@@ -585,6 +585,12 @@ void DynamicsSimulation::iniWalkerPosition()
     else if(params.ini_walker_flag.compare("intra")== 0){
         Vector3d intra_pos;
         getAnIntraCellularPosition(intra_pos, object_id, object_type);
+        if (object_type == 0){
+            nbr_walker_axons_ini++;
+        }
+        else if (object_type == 1){
+            nbr_walker_glials_ini++;
+        }
         walker.setInitialPosition(intra_pos);
         walker.intra_extra_consensus--;
         walker.initial_location = Walker::intra;

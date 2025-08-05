@@ -493,87 +493,84 @@ void MCSimulation::addAxonsObstaclesFromFiles()
     }
 }
 
-
 void MCSimulation::addGlialsObstaclesFromFiles()
 {
     for (unsigned i = 0; i < params.glials_files.size(); i++) {
-        //cout << "Adding Glials" << endl;
 
         std::ifstream in(params.glials_files[i]);
 
-        dynamicsEngine->glials_list = {};
+        dynamicsEngine->glials_list.clear();
 
         if (!in) {
-            cerr << "Failed to open file: " << params.glials_files[i] << endl;
+            std::cerr << "Failed to open file: " << params.glials_files[i] << std::endl;
             return;
         }
 
-        // Skip the header
-        for (int j = 0; j < 10; j++) {
+        // Skip header lines
+        for (int j = 0; j < 10; ++j) {
             std::string header;
             in >> header;
         }
 
-        // Permeability file - if any
         double perm_ = params.glial_obstacle_permeability;
-
-        // Diffusion coefficients
         double diff_i = params.diffusivity_intra;
         double diff_e = params.diffusivity_extra;
 
-        // Variables to hold data from the file
+        // Variables to hold parsed data
         double x, y, z, rout, rin, p, r, branch_id, ax_id, sph_id;
         std::string type_object;
 
-        std::vector<Sphere> processes_;
-        Glial glial_cell;
+        Glial current_glial;
+        std::vector<Sphere> current_processes;
+        bool glial_initialized = false;
 
         while (in >> ax_id >> sph_id >> branch_id >> type_object >> x >> y >> z >> rin >> rout >> p) {
-            // Normalize coordinates and radius
+            // Convert units to micrometers
             x /= 1000.0;
             y /= 1000.0;
             z /= 1000.0;
             r = rout / 1000.0;
 
-            int id_glial_cell = dynamicsEngine->glials_list.size();
             if (type_object.find("CellSoma") != std::string::npos) {
-                
-                if (id_glial_cell != 0){
-                    // Save the previous glial cell
-                    glial_cell.setDiffusion(diff_i, diff_e);
-                    glial_cell.setPercolation(perm_);
-                    glial_cell.set_spheres(processes_);
-                    dynamicsEngine->glials_list.push_back(glial_cell);
-                    id_glial_cell = dynamicsEngine->glials_list.size();
-                    processes_.clear();
+                // Save previous glial cell if it exists
+                if (glial_initialized) {
+                    current_glial.setDiffusion(diff_i, diff_e);
+                    current_glial.setPercolation(perm_);
+                    current_glial.set_spheres(current_processes);
+                    dynamicsEngine->glials_list.push_back(current_glial);
+                    current_processes.clear();
                 }
 
-                // Create new glial cell
+                int id_glial_cell = dynamicsEngine->glials_list.size();
                 Sphere soma(int(sph_id), id_glial_cell, Eigen::Vector3d(x, y, z), r, 1, int(branch_id));
                 soma.setDiffusion(diff_i, diff_e);
                 soma.setPercolation(perm_);
-                glial_cell = Glial(id_glial_cell, soma);
-                glial_cell.processes = {};
-            } else if (type_object.find("Process") != std::string::npos) {
-                // Add a new process to the current glial cell
-                Sphere process(int(sph_id), id_glial_cell, Eigen::Vector3d(x, y, z), r, 1, int(branch_id));
+                current_glial = Glial(id_glial_cell, soma);
+                current_glial.processes.clear();
+                glial_initialized = true;
+            } 
+            else if (type_object.find("Process") != std::string::npos) {
+                Sphere process(int(sph_id), current_glial.id, Eigen::Vector3d(x, y, z), r, 1, int(branch_id));
                 process.setDiffusion(diff_i, diff_e);
                 process.setPercolation(perm_);
-                processes_.push_back(process);
+                current_processes.push_back(process);
             }
         }
 
-        // Save the last glial cell
-
-        glial_cell.setDiffusion(diff_i, diff_e);
-        glial_cell.setPercolation(perm_);
-        glial_cell.set_spheres(processes_);
-        dynamicsEngine->glials_list.push_back(glial_cell);
+        // Save the last glial cell, if any
+        if (glial_initialized) {
+            current_glial.setDiffusion(diff_i, diff_e);
+            current_glial.setPercolation(perm_);
+            current_glial.set_spheres(current_processes);
+            dynamicsEngine->glials_list.push_back(current_glial);
+        }
 
         in.close();
     }
 
+    std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
 }
+
 
 
 
