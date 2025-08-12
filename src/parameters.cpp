@@ -118,6 +118,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if( str_dist(tmp,"ini_walkers_file") <= 3){
             in >> ini_walkers_file;
         }
+        else if(str_dist(tmp,"write_every_nth_step") <= 7){
+            in >> write_every_nth_step;
+        }
         else if(str_dist(tmp,"write_txt") <= 1){
             in >> write_txt;
         }

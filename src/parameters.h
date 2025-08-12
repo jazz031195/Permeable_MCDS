@@ -30,6 +30,7 @@ public:
     double sim_duration;                            /*!< simulation total time                                                      */
     bool write_traj;                                /*!< flag, write a traj file or not, binary format only                         */
     bool write_hit;                                 /*!< flag, write a hit file or not, binary format only                         */
+    unsigned write_every_nth_step = 1; /*!< write every Nth step to scale down trajectory to relevant time scale for dMRI */
     double concentration;                           /*< concentration of walkers per mm³ */
     bool write_full_c;
     double step_length;                             /*!< step length for the walkers                                                */

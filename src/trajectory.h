@@ -42,6 +42,7 @@ public:
     bool write_hit;                     /*!< flag if we want to write a hit file                    */
     bool write_txt;                     /*!< flag if we want to write a text traj file              */
     bool write_bin;                     /*!< flag if we want to write a binary traj file            */
+    unsigned write_every_nth_step; /*!< write every nth step to save memory when saving traj */
 
     bool write_full_c;
 
