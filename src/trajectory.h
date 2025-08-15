@@ -121,7 +121,7 @@ public:
 
     void writePosition(Eigen::Matrix3Xd&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
     void writePositionText(Eigen::Matrix3Xd&);
-    void writePositionBinary(Eigen::Matrix3Xd&);
+    void writePositionBinary(const Eigen::Matrix3Xd&);
     void writePositionHit(Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
 
     void writeFullCollision(Eigen::Vector3d&, int&, int&, unsigned&, unsigned&);

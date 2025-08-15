@@ -187,6 +187,7 @@ void Trajectory::writePosition(Eigen::Vector3d &pos)
             writePositionText(pos);
         }
     }
+
 }
 
 void Trajectory::writeTrajectoryHeaderBinary()
@@ -349,6 +350,7 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
         writePositionHit(col_in, col_ext, cross_in, cross_ext);
     }    
 
+
 }  
     
 
@@ -409,35 +411,62 @@ void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
 
 }
 
-void Trajectory::writePositionBinary(Eigen::Matrix3Xd &pos)
+// Prefer a const reference and Eigen::Index for indexing
+void Trajectory::writePositionBinary(const Eigen::Matrix3Xd& pos)
 {
-    if(steps_subset)
-    {
-        unsigned index = 0;
-        for(unsigned i = 0; i < T+1; i++ )
-            if(i == pos_times[index]){
-        
-                float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
-                bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
-                bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
-                bout.write(reinterpret_cast<char *>(&pos2), sizeof(float));
-                index++;                        // Update the index
+    assert(pos.rows() == 3);
 
-                if(index >= pos_times.size()){
-                    break;
-                }
-            }
-    }
-    else
+    if (pos.cols() == 0) return;  // nothing to write
+
+    auto write_col = [&](Eigen::Index c)
     {
-        for(unsigned  i = 0; i < T+1; i++ ){      
-            float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
-            bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
-            bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
-            bout.write(reinterpret_cast<char *>(&pos2), sizeof(float));
+        // c must be valid
+        assert(c >= 0 && c < pos.cols());
+        const Eigen::Vector3f p = pos.col(c).cast<float>();
+        bout.write(reinterpret_cast<const char*>(p.data()), 3 * sizeof(float));
+    };
+
+    if (!steps_subset) {
+        // ✅ NEVER use T here — write exactly what's in the matrix
+        for (Eigen::Index c = 0; c < pos.cols(); ++c)
+            write_col(c);
+        return;
+    }
+
+    // steps_subset == true
+    if (pos_times.empty()) return;
+
+    // Optional sanity: ensure non-negative and (usually) sorted
+    // assert(std::is_sorted(pos_times.begin(), pos_times.end()));
+
+    // Decide whether 'pos' stores all timesteps (full) or only the kept ones (compressed)
+    const bool full_layout = (pos.cols() == static_cast<Eigen::Index>(T + 1));
+
+    if (full_layout) {
+        // Use actual timestep as column
+        for (size_t k = 0; k < pos_times.size(); ++k) {
+            const long t = static_cast<long>(pos_times[k]);  // 0-based expected
+            if (t < 0 || t >= pos.cols()) {
+                // out-of-range timestep in config; skip or throw
+                // std::cerr << "Warning: timestep " << t << " >= pos.cols()=" << pos.cols() << '\n';
+                continue;
+            }
+            write_col(static_cast<Eigen::Index>(t));
+        }
+    } else {
+        // Compressed layout: kth kept time is at column k
+        const Eigen::Index want = static_cast<Eigen::Index>(pos_times.size());
+        if (pos.cols() != want) {
+            // Layout mismatch; write the common part without crashing
+            const Eigen::Index n = std::min(pos.cols(), want);
+            // std::cerr << "Warning: pos.cols()=" << pos.cols() << " != pos_times.size()=" << want << '\n';
+            for (Eigen::Index c = 0; c < n; ++c) write_col(c);
+        } else {
+            for (Eigen::Index c = 0; c < pos.cols(); ++c) write_col(c);
         }
     }
 }
+
 
 
 void Trajectory::writePositionHit(Eigen::VectorXi &col_in, Eigen::VectorXi &col_ext, Eigen::VectorXi &cross_in, Eigen::VectorXi &cross_ext)

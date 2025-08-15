@@ -49,6 +49,7 @@ The main simulation settings are defined as key-value pairs in the configuration
 - **`write_traj_file`**: Save water molecule trajectories (`0` for no, `1` for yes).
 - **`num_process`**: Number of simulations to run simultaneously. It is recommended to set this to the number of CPU cores available.
 - **`ini_walkers_pos`**: Initial compartment in which the molecules start. Can be : intra or extra. If this is not given, the water molecules can be inside or outside the cells.
+- **`write_every_nth_step`**: If you want to save trajctories but not every single step taken by walkers (as this makes the saved files very heavy), you can save lighter trajectories with the positions for every N steps.
 
 Other parameters can be found in /src/parameters.h
 
@@ -91,7 +92,7 @@ permeability global desired_permeability
 ```
 The path/to/swc/file should be the same twice. 
 
-Set desired_permeability to 0 for no permeability.
+Set desired_permeability to 0 for no permeability. Permeability is in m/s.
 
 ### Voxel Size Adjustment
 
