@@ -178,3 +178,10 @@ Once the configuration and scheme files are created, simply execute :
 ```xml
 ./run_mcds.sh
 ```
+## Citation
+
+If you use this tool, please cite the following works:
+
+- Nguyen-Duc JK, Brammerloh M, Cherchali M, De Riedmatten I, Perot JB, Rafael-Patino J, Jelescu IO, CATERPillar: A Flexible Framework for Generating White Matter Numerical Substrates with incorporated Glial Cells, bioRxiv 2025
+
+- Rafael-Patino Jonathan, Romascano David, Ramirez-Manzanares Alonso, Canales-Rodríguez Erick Jorge, Girard Gabriel, Thiran Jean-Philippe TITLE=Robust Monte-Carlo Simulations in Diffusion-MRI: Effect of the Substrate Complexity and Parameter Choice on the Reproducibility of Results, Frontiers in Neuroinformatics, 2020
