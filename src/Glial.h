@@ -13,6 +13,7 @@
 #include "sphere.h"
 #include "obstacle.h"
 #include <vector>
+#include <unordered_map>
 
 
 using namespace std;
@@ -33,9 +34,23 @@ class Glial : public Obstacle
         double z_min;
         double z_max;
     };
+    inline Box make_empty_box() {
+        const double inf = std::numeric_limits<double>::infinity();
+        return {+inf, -inf, +inf, -inf, +inf, -inf};
+    }
 
-    std::vector<Box> boxes; /*!< boxes around soma and processes */
-    Box big_box; /*!< big box around soma and processes */
+    struct HashGrid {
+        double cell = 1.0;
+        Eigen::Vector3d origin = Eigen::Vector3d::Zero();
+        std::vector<std::pair<int,int>> objs;     // (branch_id, cell_id)  ✅
+        std::unordered_map<uint64_t, std::vector<int>> buckets;
+        Box big_box;
+        double max_radius_plus_pad = 0.0;   // in world units
+        int    max_r_cells         = 1;     // ceil(max_radius_plus_pad / cell)
+        double build_pad           = 0.0;   // the pad used when building
+    };
+
+    HashGrid grid; /*!< grid for fast access to processes */
 
     Glial();
 
@@ -46,26 +61,34 @@ class Glial : public Obstacle
         id = id_;
         soma = soma_;
         processes = {};
-        boxes = {};
 
     }
 
     Glial(Glial const &gl);
-    bool isNearGlialCell(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<int> &branches);
     void set_spheres(std::vector<Sphere> &spheres_to_add);
-    bool isPosInsideGlialCell(const Eigen::Vector3d& position, const double& distance_to_be_inside);
-    std::vector<std::tuple<int, int>> checkAxisForCollision(const Eigen::Vector3d &position, double distance_to_be_inside, int axis, const std::vector<int> &branches);
-    bool intersection_sphere_vector(double &t1, double &t2, const Sphere &s, const Eigen::Vector3d &step, const Eigen::Vector3d &pos);
     bool checkCollision(const Walker &walker,  Eigen::Vector3d &step, const double& step_lenght, Collision &collision);
-    vector<tuple<int, int>> findCommonIntegers(const vector<vector<tuple<int, int>>>& axisVectors);
     void set_prob_crossings(double step_length_pref);
-    void find_all_intersections(const Walker &walker, const Eigen::Vector3d &step, const double &distance, std::vector<std::pair<double, std::tuple<int, int>>> &dist_and_indices);
-    bool FindSphereinGlial(const Eigen::Vector3d &position, const double &distance_to_be_inside, std::vector<std::tuple<int, int>> &items);
-    double minDistance(const Walker &w);
-    bool isInsideBox(const int& i, const Eigen::Vector3d& position, const double &distance_to_be_inside);
-    double distanceToBox(const int& i, const Eigen::Vector3d& O);
-    double distanceToBigBox(const Eigen::Vector3d& O);
-    bool isInsideBigBox(const Eigen::Vector3d &position, const double &distance_to_be_inside);
+    double minDistance(const Walker &w) const;
+    void build_glia_grid_processes(const std::vector<std::vector<Sphere>>& processes, double cell_size, double pad);
+    void set_up_glialcell(std::vector<Sphere> &spheres_to_add);
+    bool is_point_near_glia(const Eigen::Vector3d& p, double d);
+    inline bool raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit);
+    void gather_candidates_DDA(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, double L, std::vector<int>& out_ids);
+    inline bool segment_aabb_intersect(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1, const Box& box, double& tEnter, double& tExit);
+    inline void extend(Box& b, const Eigen::Vector3d& p);
+    inline bool is_empty(const Box& b);
+    bool isPosInsideGlialCell(const Eigen::Vector3d& p, double margin) const;
+    inline bool point_in_inflated_aabb(const Eigen::Vector3d& p, double d);
+    int occupancy_at_point(const Eigen::Vector3d& p,double radius_pad) const;
+    double signed_distance_to_union(const Eigen::Vector3d& p, double margin) const;
+    bool ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
+                                           const Eigen::Vector3d& dir_unit,
+                                           bool start_inside,
+                                           double pad,      // use grid.build_pad
+                                           double cell,     // grid.cell
+                                           double& t_hit,   // in/out
+                                           int max_iter = 30);
+
 
 };
 

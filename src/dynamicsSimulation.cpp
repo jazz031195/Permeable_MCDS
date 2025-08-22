@@ -443,7 +443,7 @@ void DynamicsSimulation::initSimulation()
 
     }
 
-    cout << " time_step = " << time_step << endl;
+    //cout << " time_step = " << time_step << endl;
 
     //to predict time
     time(&start);
@@ -1391,12 +1391,13 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     for (w = 0 ; w < params.num_walkers; w++)
     {
         // start timer 
-        //auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         //flag in case there was any error with the particle.
     
         back_tracking = false;
 
-        //cout << "Progress :" << w << "/" << params.num_walkers << "( " << double(w*100/params.num_walkers) << " %)" << endl;
+        cout << "Progress :" << w << "/" << params.num_walkers << "( " << double(w*100/params.num_walkers) << " %)" << endl;
+        
 
         walker.setIndex(w);
 
@@ -1475,11 +1476,11 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         }// end for t
 
         // stop timer
-        //auto stop = std::chrono::high_resolution_clock::now();
+        auto stop = std::chrono::high_resolution_clock::now();
 
         // get the time
-        //auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
-        //cout << "Time taken by walker: " << duration.count() << " seconds" << endl;
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
+        cout << "Time taken by walker: " << duration.count() << " seconds" << endl;
 
         
         if(!back_tracking)

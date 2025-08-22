@@ -531,12 +531,17 @@ void MCSimulation::addGlialsObstaclesFromFiles()
             z /= 1000.0;
             r = rout / 1000.0;
 
+            if (sph_id < -1) {
+                std::cerr << "Invalid sphere ID: " << sph_id << " in file: " << params.glials_files[i] << std::endl;
+                assert(0);
+            }
+
             if (type_object.find("CellSoma") != std::string::npos) {
                 // Save previous glial cell if it exists
                 if (glial_initialized) {
                     current_glial.setDiffusion(diff_i, diff_e);
                     current_glial.setPercolation(perm_);
-                    current_glial.set_spheres(current_processes);
+                    current_glial.set_up_glialcell(current_processes);
                     dynamicsEngine->glials_list.push_back(current_glial);
                     current_processes.clear();
                 }
@@ -561,11 +566,16 @@ void MCSimulation::addGlialsObstaclesFromFiles()
         if (glial_initialized) {
             current_glial.setDiffusion(diff_i, diff_e);
             current_glial.setPercolation(perm_);
-            current_glial.set_spheres(current_processes);
+            current_glial.set_up_glialcell(current_processes);
             dynamicsEngine->glials_list.push_back(current_glial);
         }
 
         in.close();
+    }
+    // keep only first glial cell
+    if (dynamicsEngine->glials_list.size() > 1) {
+        std::cout << "\033[1;33m[Warning]\033[0m More than one glial cell found, keeping only the first one." << std::endl;
+        dynamicsEngine->glials_list.resize(1);
     }
 
     std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
