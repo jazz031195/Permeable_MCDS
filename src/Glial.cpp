@@ -419,7 +419,7 @@ bool Glial::checkCollision(const Walker& walker,
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad)) {
+    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2)) {
         collision.type = Collision::null;
         return false; // outside of glia bounding box
     }
@@ -517,7 +517,15 @@ bool Glial::checkCollision(const Walker& walker,
     }
 
     // 5) Sweep to find first union boundary:
-    int occ0 = occupancy_at_point(p0, Rpad);
+    int occ0;
+
+    if (start_inside){
+        occ0 = occupancy_at_point(p0, Rpad, start_inside);
+    }
+    else{
+        occ0 = occupancy_at_point(p0, -Rpad, start_inside);
+    }
+
     bool is_inside = (occ0 > 0);
     int occ = occ0;
     if (start_inside && !is_inside){
@@ -537,6 +545,8 @@ bool Glial::checkCollision(const Walker& walker,
         collision.col_location  = Collision::inside;
         collision.perm_crossing = 0.0;
         cout << "Error: walker started outside glia but is inside a sphere at p0\n";
+        cout <<"occ0=" << occ0 << " start_inside=" << start_inside 
+             << " p0=" << p0.transpose() << " dir=" << dir.transpose() << "\n";
         //assert(0);
         return true;
     }
@@ -544,7 +554,7 @@ bool Glial::checkCollision(const Walker& walker,
     const Ev* hit = nullptr;
 
     if (!start_inside) {
-        for (const auto& e : evs) { occ += e.delta; if (occ > 0) { hit = &e; break; } }
+        hit  = &evs[0]; // first event is always +1 (entering)
     } else {
         size_t i = 0;
         while (i < evs.size()) {
@@ -669,7 +679,7 @@ bool Glial::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
     const double tol = std::max(1e-12, 1e-6 * cell);
 
     auto occ = [&](double t)->bool {
-        return occupancy_at_point(p0 + dir_unit * t, pad) > 0;
+        return occupancy_at_point(p0 + dir_unit * t, pad, start_inside) > 0;
     };
 
     // If just stepping back a hair already fixes it, do that quickly.
@@ -693,14 +703,19 @@ bool Glial::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
     t_hit = std::max(0.0, best - 0.5 * tol); // nudge a touch inward for safety
     return true;
 }
-int Glial::occupancy_at_point(const Eigen::Vector3d& p, double margin)
+int Glial::occupancy_at_point(const Eigen::Vector3d& p, double margin, const bool& isintra)
 {
     const double pad = margin;
     int occ = 0;
 
     // Soma
     const double R2s = (soma.radius + pad) * (soma.radius + pad);
-    if ((p - soma.P).squaredNorm() <= R2s + 1e-12) ++occ;
+    if (isintra){
+        if ((p - soma.P).squaredNorm() <= R2s + 1e-12) ++occ;
+    }
+    else{
+        if ((p - soma.P).squaredNorm() <= R2s) ++occ;
+    }
 
     // Big box quick reject for processes
     Box& B = grid.big_box;
@@ -725,7 +740,12 @@ int Glial::occupancy_at_point(const Eigen::Vector3d& p, double margin)
                 auto [b,i] = grid.objs[idx];
                 const Sphere& s = processes[b][i];
                 const double R2 = (s.radius + pad) * (s.radius + pad);
-                if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
+                if (isintra){
+                    if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
+                }
+                else{
+                    if ((p - s.P).squaredNorm() <= R2) ++occ;
+                }
             }
         }
     return occ;

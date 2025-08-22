@@ -57,7 +57,7 @@ inline uint64_t hash3(int x, int y, int z) {
                                v = (v^(v>>27))*0x94d049bb133111ebULL; return v^(v>>31); };
     return mix((uint64_t)(uint32_t)x) ^ (mix((uint64_t)(uint32_t)y)<<1) ^ (mix((uint64_t)(uint32_t)z)<<2);
 }
-void Axon::build_glia_grid_spheres(const std::vector<Sphere>& spheres,
+void Axon::build_axon_grid_spheres(const std::vector<Sphere>& spheres,
                                       double cell_size, double pad)
 {
     // init grid
@@ -168,11 +168,11 @@ void Axon::set_spheres(std::vector<Sphere> &spheres_to_add) {
 
     double grid_cell_size = 0.0005;
     double pad = barrier_tickness;
-    build_glia_grid_spheres(spheres,grid_cell_size, pad);
+    build_axon_grid_spheres(spheres,grid_cell_size, pad);
 
 }
 
-bool Axon::is_point_near_glia(const Eigen::Vector3d& p,
+bool Axon::is_point_near_axon(const Eigen::Vector3d& p,
                         double d)
 {
     if (!point_in_inflated_aabb(p, d)) return false;
@@ -382,9 +382,9 @@ bool Axon::checkCollision(const Walker& walker,
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad)) {
+    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad*2)) {
         collision.type = Collision::null;
-        return false; // outside of glia bounding box
+        return false; // outside of axon bounding box
     }
 
     const double Rpad = grid.build_pad;
@@ -478,7 +478,7 @@ bool Axon::checkCollision(const Walker& walker,
     }
 
     // 5) Sweep to find first union boundary:
-    int occ0 = occupancy_at_point(p0, Rpad);
+    int occ0 = occupancy_at_point(p0, Rpad, start_inside);
     bool is_inside = (occ0 > 0);
     int occ = occ0;
     if (start_inside && !is_inside){
@@ -486,7 +486,7 @@ bool Axon::checkCollision(const Walker& walker,
         collision.type = Collision::hit;
         collision.col_location  = Collision::outside;
         collision.perm_crossing = 0.0;
-        cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
+        cout << "Error: walker started inside axon but is not inside any sphere at p0\n";
         cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
              << " occ0=" << occ0 <<  "\n";
         //assert(0);
@@ -497,7 +497,7 @@ bool Axon::checkCollision(const Walker& walker,
         collision.type = Collision::hit;
         collision.col_location  = Collision::inside;
         collision.perm_crossing = 0.0;
-        cout << "Error: walker started outside glia but is inside a sphere at p0\n";
+        cout << "Error: walker started outside axon but is inside a sphere at p0\n";
         //assert(0);
         return true;
     }
@@ -630,7 +630,7 @@ bool Axon::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
     const double tol = std::max(1e-12, 1e-6 * cell);
 
     auto occ = [&](double t)->bool {
-        return occupancy_at_point(p0 + dir_unit * t, pad) > 0;
+        return occupancy_at_point(p0 + dir_unit * t, pad, start_inside) > 0;
     };
 
     // If just stepping back a hair already fixes it, do that quickly.
@@ -654,7 +654,7 @@ bool Axon::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
     t_hit = std::max(0.0, best - 0.5 * tol); // nudge a touch inward for safety
     return true;
 }
-int Axon::occupancy_at_point(const Eigen::Vector3d& p, double margin)
+int Axon::occupancy_at_point(const Eigen::Vector3d& p, double margin, const bool& isintra)
 {
     const double pad = margin;
     int occ = 0;
@@ -682,7 +682,12 @@ int Axon::occupancy_at_point(const Eigen::Vector3d& p, double margin)
                 auto i = grid.objs[idx];
                 const Sphere& s = spheres[i];
                 const double R2 = (s.radius + pad) * (s.radius + pad);
-                if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
+                if (isintra){
+                    if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
+                }
+                else{
+                    if ((p - s.P).squaredNorm() <= R2) ++occ;
+                }
             }
         }
     return occ;

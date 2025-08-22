@@ -1803,14 +1803,7 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
     
     //For each Glial Obstacle
     if ((glials_list).size()>0 ){
-        for (unsigned int i = 0 ; i < (glials_list).size(); i++ ){
-            //unsigned index = walker.collision_sphere_glials.collision_list->at(i);
-            unsigned index = i;
-            (glials_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
-            handleCollisions(collision,collision_tmp,max_collision_distance,index);     
-        }
-        /*
-
+        
         // intra walkers
         if (walker.location== Walker::intra ){
             
@@ -1830,7 +1823,7 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);     
             }
         }
-        */
+        
     }
 
 

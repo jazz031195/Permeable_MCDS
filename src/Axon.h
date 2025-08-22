@@ -63,13 +63,13 @@ public:
 
     inline bool is_empty(const Box& b);
     inline void extend(Box& b, const Eigen::Vector3d& p);
-    void build_glia_grid_spheres(const std::vector<Sphere>& spheres,
+    void build_axon_grid_spheres(const std::vector<Sphere>& spheres,
                                       double cell_size, double pad);
     inline int neighbor_radius_cells(const HashGrid& G, double query_pad);
     inline bool point_in_inflated_aabb(const Eigen::Vector3d& p,
                                    double d);
     void set_spheres(std::vector<Sphere> &spheres_to_add);
-    bool is_point_near_glia(const Eigen::Vector3d& p,
+    bool is_point_near_axon(const Eigen::Vector3d& p,
                         double d);
     inline bool segment_aabb_intersect(const Eigen::Vector3d& p0,
                                    const Eigen::Vector3d& p1,
@@ -99,7 +99,7 @@ public:
                                            double& t_hit,   // in/out
                                            int max_iter);
     
-    int occupancy_at_point(const Eigen::Vector3d& p, double margin);
+    int occupancy_at_point(const Eigen::Vector3d& p, double margin, const bool& isintra);
     double signed_distance_to_union(const Eigen::Vector3d& p, double margin);
     void set_prob_crossings(double step_length_pref);
     double minDistance(const Walker& w) const;
