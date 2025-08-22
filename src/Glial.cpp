@@ -60,9 +60,19 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
 {
     // init grid
     grid = HashGrid{};
-    grid.cell      = (cell_size > 0.0 ? cell_size : 1.0);
-    grid.build_pad = std::max(0.0, pad);              // remember build pad
-    grid.max_radius_plus_pad = 0.0;                   // start tracking
+    grid.cell = (cell_size > 0.0 ? cell_size : 1.0);
+    grid.build_pad = std::max(0.0, pad);
+
+    double maxR = 0.0;
+    for (const auto& branch : processes){
+        for (const auto& s : branch){
+            if (s.radius > 0.0){
+                maxR = std::max(maxR, s.radius + grid.build_pad);
+            }
+        }
+    }
+
+    grid.max_radius_plus_pad = maxR;
 
     // 1) compute big box from processes, already padded by `pad`
     Box B = make_empty_box();
@@ -73,7 +83,9 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
             extend(B, s.P - Eigen::Vector3d::Constant(R));
             extend(B, s.P + Eigen::Vector3d::Constant(R));
             // track global max radius+pad
-            if (R > grid.max_radius_plus_pad) grid.max_radius_plus_pad = R;
+            if (R > grid.max_radius_plus_pad){ 
+                grid.max_radius_plus_pad = R;
+            }
         }
     }
 
@@ -82,7 +94,9 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
         const double R = soma.radius + pad;
         extend(B, soma.P - Eigen::Vector3d::Constant(R));
         extend(B, soma.P + Eigen::Vector3d::Constant(R));
-        if (R > grid.max_radius_plus_pad) grid.max_radius_plus_pad = R;
+        if (R > grid.max_radius_plus_pad){
+            grid.max_radius_plus_pad = R;
+        }
     }
 
     // Fallback if still empty (degenerate case)
@@ -100,7 +114,9 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
 
     // (Optional) reserve to avoid reallocation
     size_t total = 0;
-    for (const auto& br : processes) total += br.size();
+    for (const auto& br : processes) {
+        total += br.size();
+    }
     grid.objs.reserve(total);
 
     // 3) add spheres into buckets — store indices (b,i)
@@ -132,14 +148,15 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
         }
     }
 
-    // 4) finalize derived value
-    grid.max_r_cells = std::max(
-        1,
-        (int)std::ceil(grid.max_radius_plus_pad / grid.cell)
-    );
 }
 
-
+inline int Glial::neighbor_radius_cells(const HashGrid& G, double query_pad)
+{
+    // We need to cover centers as far as (max sphere radius + query_pad)
+    const double max_sphere_radius = std::max(0.0, G.max_radius_plus_pad - G.build_pad);
+    const double Rcover = max_sphere_radius + std::max(0.0, query_pad);
+    return std::max(1, (int)std::ceil(Rcover / G.cell));
+}
 
 inline bool Glial::point_in_inflated_aabb(const Eigen::Vector3d& p,
                                    double d)
@@ -395,56 +412,21 @@ bool Glial::checkCollision(const Walker& walker,
     // Normalize direction
     const double L = (step_length > 0.0) ? step_length : step.norm();
     if (L <= 0.0) { 
+        assert(0);
         collision.type = Collision::null; 
         return false; 
-        }
+    }
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
+    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad)) {
+        collision.type = Collision::null;
+        return false; // outside of glia bounding box
+    }
 
     const double Rpad = grid.build_pad;
-    int occ0 = occupancy_at_point(p0, Rpad);
-    bool is_inside = (occ0 > 0);
-    const bool start_inside = (walker.location == Walker::intra);
-
-    if (start_inside && occ0 == 0) {
-        const double bias = std::max(1e-6, 1e-3 * grid.cell);
-        double sd = signed_distance_to_union(p0, Rpad); // negative means inside
-        if (sd < bias) {
-            // Treat as inside for this step; you are glued to the surface
-            occ0 = 1;
-            std::cerr << "Sticky-inside: sd=" << sd << "\n";
-        }
-    }
-    if (start_inside && !is_inside){
-        // problem
-        collision.type = Collision::hit;
-        collision.col_location  = Collision::outside;
-        collision.perm_crossing = 0.0;
-        cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
-        cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
-             << " occ0=" << occ0 <<  "\n";
-        //assert(0);
-        return true;
-    }
-    else if (!start_inside && is_inside){
-        // problem
-        collision.type = Collision::hit;
-        collision.col_location  = Collision::inside;
-        collision.perm_crossing = 0.0;
-        cout << "Error: walker started outside glia but is inside a sphere at p0\n";
-        return true;
-    }
-
-    //cout <<"----- Walker checkCollision at p0=" << p0.transpose() << " dir=" << dir.transpose() << " L=" << L << "\n";
-    /*
-    bool inside_glial = isPosInsideGlialCell(p0, 1e-3);
-    if (!inside_glial) {
-        cout <<"Walker is outside glia at p0=" << p0.transpose() << "\n";
-        assert(0);
-    }
-    */
     
+    const bool start_inside = (walker.location == Walker::intra);
 
     // Gather candidates
     std::vector<int> cand_ids;
@@ -467,24 +449,16 @@ bool Glial::checkCollision(const Walker& walker,
         // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
         if (t1 < t0) std::swap(t0, t1);
 
-        // Completely outside the segment?
-        if (t1 < 0.0 || t0 > L) return;
-
-        // Clip to [0, L]
-        t0 = std::max(0.0, std::min(t0, L));
-        t1 = std::max(0.0, std::min(t1, L));
-        if (t1 <= t0 + epsT) return;
-
         const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12;
 
         if (!inside0) {
-            if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
-            if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
-        } else {
-            if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
+            evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
+            evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+        } 
+        else {
+            evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
         }
     };
-
 
     addSphereEvents(&soma, p0, dir);
     //cout <<"cand_ids.size()=" << cand_ids.size() << " grid.objs.size()=" << grid.objs.size() << "\n";
@@ -511,6 +485,15 @@ bool Glial::checkCollision(const Walker& walker,
 
     if (evs.empty()) { 
         collision.type = Collision::null; 
+        /*
+        Eigen::Vector3d next_pos = p0 + step_length * step;
+        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
+        if (!next_pos_inside && start_inside){
+            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
+            assert(0);
+            
+        }
+        */
         //cout << "No sphere collisions found for walker at p0=" << p0.transpose() << " with direction :"<< dir.transpose() <<" and L : "<< L << "\n";
         return false; 
     }
@@ -519,57 +502,126 @@ bool Glial::checkCollision(const Walker& walker,
 
     // Drop any events beyond L (in case raySphere or FP noise sneaks one in)
     while (!evs.empty() && evs.back().t > L + 1e-12) evs.pop_back();
-    if (evs.empty()) { collision.type = Collision::null; return false; }
+    if (evs.empty()) { 
+        /*
+        Eigen::Vector3d next_pos = p0 + step_length * step;
+        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
+        if (!next_pos_inside && start_inside){
+            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
+            assert(0);
+            
+        }
+        */
+        collision.type = Collision::null; 
+        return false; 
+    }
 
     // 5) Sweep to find first union boundary:
-    
+    int occ0 = occupancy_at_point(p0, Rpad);
+    bool is_inside = (occ0 > 0);
     int occ = occ0;
+    if (start_inside && !is_inside){
+        // problem
+        collision.type = Collision::hit;
+        collision.col_location  = Collision::outside;
+        collision.perm_crossing = 0.0;
+        cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
+        cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
+             << " occ0=" << occ0 <<  "\n";
+        //assert(0);
+        return true;
+    }
+    else if (!start_inside && is_inside){
+        // problem
+        collision.type = Collision::hit;
+        collision.col_location  = Collision::inside;
+        collision.perm_crossing = 0.0;
+        cout << "Error: walker started outside glia but is inside a sphere at p0\n";
+        //assert(0);
+        return true;
+    }
     
-
     const Ev* hit = nullptr;
 
     if (!start_inside) {
         for (const auto& e : evs) { occ += e.delta; if (occ > 0) { hit = &e; break; } }
     } else {
-        for (const auto& e : evs) { occ += e.delta; if (occ == 0) { hit = &e; break; } }
+        size_t i = 0;
+        while (i < evs.size()) {
+            const double t = evs[i].t;
+            int sum = 0;
+            const Ev* exitE = nullptr;           // remember any -1 at this t
+            size_t j = i;
+
+            // group events with same time (within tolerance)
+            while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
+                sum += evs[j].delta;
+                if (evs[j].delta == -1 && exitE == nullptr) 
+                {
+                    exitE = &evs[j];
+                }
+                ++j;
+            }
+
+            if (occ + sum <= 0) {
+                // leaving the union at time t
+                hit = exitE ? exitE : &evs[i];   // fall back if all +1 (rare)
+                occ += sum;                      // (optional) for logging
+                break;
+            }
+
+            occ += sum;
+            i = j;
+        }
     }
 
     if (!hit) { 
+        /*
+        Eigen::Vector3d next_pos = p0 + step_length * step;
+        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
+        if (!next_pos_inside && start_inside){
+            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
+            cout <<"p0=" << p0.transpose() << " dir=" << dir.transpose() 
+                 << " start_inside=" << start_inside << " occ0=" << occ0 
+                 << " occ_final=" << occ << "\n";
+
+            for (const auto& e : evs) {
+                cout << "Event: t=" << e.t << " delta=" << e.delta 
+                     << " sphere_id=" << e.s->id << "\n";
+            }
+            assert(0);
+            
+        }
+        */
         collision.type = Collision::null; 
-        //cout << "No sphere collisions found for walker at p0=" << p0.transpose() 
-        //     << " with occupancy start=" << occ0 << " final=" << occ << "\n";
         return false; 
     }
 
     // 6) Fill collision info
-    double t_hit = hit->t - Rpad;
+    double t_hit = hit->t;
 
     const Eigen::Vector3d pos = p0 + t_hit * dir;
-    // is the hit point inside the sphere?
-    bool next_pos_inside = isPosInsideGlialCell(pos, 0);
-    if (!next_pos_inside && start_inside){
-        double old_t_hit = t_hit;
-        bool ok = ensure_same_compartment_at_hit(p0, dir, start_inside, Rpad, grid.cell, t_hit);
-        if (!ok) {
-            // We were already on the wrong side at t=0; do a t=0 bounce
-            // (or your preferred “repair” behavior)
-            t_hit = 0.0;
-            cout << "Error: ensure_same_compartment_at_hit failed for walker at p0=" 
-                 << p0.transpose() << " dir=" << dir.transpose() 
-                 << " start_inside=" << start_inside << " occ0=" << occ0 
-                 << " occ_final=" << occ << "\n";
-            assert(0);
-        }
-        /*
-        cout << "Warning: ensure_same_compartment_at_hit repaired t_hit=" 
-             << t_hit << ", old t_hit : "<< old_t_hit <<" for walker at p0=" << p0.transpose() 
-             << " dir=" << dir.transpose() << " start_inside=" << start_inside 
-             << " occ0=" << occ0 << " occ_final=" << occ << "\n";
-             */
-    }
+    
     const Eigen::Vector3d n   = (pos - hit->s->P).normalized();
     const double dn = dir.dot(n);
     const Eigen::Vector3d bounced = dir - 2.0 * dn * n;
+
+    /*
+    // is the hit point inside the sphere?
+    bool next_pos_inside = occupancy_at_point(pos, Rpad) > 0;
+    if (!next_pos_inside && start_inside){
+
+        cout << "Error: ensure_same_compartment_at_hit failed for walker at p0=" 
+             << p0.transpose() << " dir=" << dir.transpose() 
+             << " start_inside=" << start_inside << " occ0=" << occ0 
+             << " occ_final=" << occ << "\n";
+
+            cout <<"n : " << n.transpose() << " pos : " << pos.transpose() 
+                 << " t_hit : " << t_hit << "\n";
+        
+        assert(0);
+    }
+    */
 
     collision.type = Collision::hit;
     collision.collision_point = pos;
@@ -641,57 +693,46 @@ bool Glial::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
     t_hit = std::max(0.0, best - 0.5 * tol); // nudge a touch inward for safety
     return true;
 }
-
-int Glial::occupancy_at_point(const Eigen::Vector3d& p, double margin) const
+int Glial::occupancy_at_point(const Eigen::Vector3d& p, double margin)
 {
-    const double pad = std::max(0.0, margin);
+    const double pad = margin;
     int occ = 0;
 
     // Soma
-    {
-        const double R2 = (soma.radius + pad) * (soma.radius + pad);
-        if ((p - soma.P).squaredNorm() <= R2 + 1e-12) ++occ;
-    }
+    const double R2s = (soma.radius + pad) * (soma.radius + pad);
+    if ((p - soma.P).squaredNorm() <= R2s + 1e-12) ++occ;
 
-    // Big-box quick reject
-    const Box& B = grid.big_box;
-    if (B.x_min > B.x_max || B.y_min > B.y_max || B.z_min > B.z_max) return occ;
+    // Big box quick reject for processes
+    Box& B = grid.big_box;
     if (p.x() < B.x_min - pad || p.x() > B.x_max + pad ||
         p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
         p.z() < B.z_min - pad || p.z() > B.z_max + pad) return occ;
 
-    const double cell = grid.cell;
-    const Eigen::Array3i ic = ((p - grid.origin).array() / cell).floor().cast<int>();
+    // Robust neighbor span in grid cells
+    int Lc = 1;
 
-    auto scanNeighbors = [&](int Lc) {
-        std::unordered_set<int> seen; seen.reserve(64);
-        for (int dx=-Lc; dx<=Lc; ++dx)
-          for (int dy=-Lc; dy<=Lc; ++dy)
-            for (int dz=-Lc; dz<=Lc; ++dz) {
-                auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz)); // find cell in neighborhood
-                if (it == grid.buckets.end()) continue; // if cell isnt within any sphere continue
-                for (int idx : it->second) { // for each sphere in the cell
-                    if (!seen.insert(idx).second) continue; // deduplicate
-                    auto [b,i] = grid.objs[idx]; // find sphere
-                    if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
-                    const Sphere& s = processes[b][i]; // find sphere
-                    const double R2 = (s.radius + pad) * (s.radius + pad);
-                    if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
-                }
+    // Cell index of p
+    const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
+
+    std::unordered_set<int> seen; seen.reserve(64);
+    for (int dx = -Lc; dx <= Lc; ++dx)
+      for (int dy = -Lc; dy <= Lc; ++dy)
+        for (int dz = -Lc; dz <= Lc; ++dz) {
+            auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
+            if (it == grid.buckets.end()) continue;
+            for (int idx : it->second) {
+                if (!seen.insert(idx).second) continue;
+                auto [b,i] = grid.objs[idx];
+                const Sphere& s = processes[b][i];
+                const double R2 = (s.radius + pad) * (s.radius + pad);
+                if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
             }
-    };
-
-    // Base radius in cells: cover pad + tiny safety
-    int Lc = std::max(1, (int)std::ceil((pad + 1e-3*cell) / cell));
-    scanNeighbors(Lc);
-
-    // If nothing found, escalate once; this helps when p is right on a cell boundary
-    if (occ == 0) scanNeighbors(Lc + 1);
-
+        }
     return occ;
 }
 
-double Glial::signed_distance_to_union(const Eigen::Vector3d& p, double margin) const
+
+double Glial::signed_distance_to_union(const Eigen::Vector3d& p, double margin)
 {
     const double pad = std::max(0.0, margin);
     double dmin = std::numeric_limits<double>::infinity();
@@ -708,7 +749,7 @@ double Glial::signed_distance_to_union(const Eigen::Vector3d& p, double margin) 
     // but we keep it simple here and just scan neighbors like occupancy:
     const double cell = grid.cell;
     const Eigen::Array3i ic = ((p - grid.origin).array() / cell).floor().cast<int>();
-    const int Lc = std::max(1, (int)std::ceil((pad + 1e-3*cell) / cell));
+    int Lc = neighbor_radius_cells(grid, pad);
 
     std::unordered_set<int> seen; seen.reserve(64);
     for (int dx=-Lc; dx<=Lc; ++dx)
@@ -802,53 +843,37 @@ double Glial::minDistance(const Walker& w) const
         return std::min({dx_min, dx_max, dy_min, dy_max, dz_min, dz_max});
     }
 }
-
-bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin) const
+bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin) 
 {
-    const double pad = margin;
+    const double pad = std::max(0.0, margin);
 
-    // 0) Soma
+    // Soma
     {
         const double R = soma.radius + pad;
         if ((p - soma.P).squaredNorm() <= R*R) return true;
     }
 
-    // 1) Big-box quick reject
     const Box& B = grid.big_box;
-    if (B.x_min > B.x_max || B.y_min > B.y_max || B.z_min > B.z_max) return false;
     if (p.x() < B.x_min - pad || p.x() > B.x_max + pad ||
         p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
         p.z() < B.z_min - pad || p.z() > B.z_max + pad) return false;
 
-    // 2) Cell index
+    int Lc = 1;
     const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
 
-    auto scanNeighbors = [&](int Lc)->bool {
-        std::unordered_set<int> seen; seen.reserve(64);
-        for (int dx = -Lc; dx <= Lc; ++dx)
-          for (int dy = -Lc; dy <= Lc; ++dy)
-            for (int dz = -Lc; dz <= Lc; ++dz) {
-                const uint64_t key = hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz);
-                auto it = grid.buckets.find(key);
-                if (it == grid.buckets.end()) continue;
-                for (int idx : it->second) {
-                    if (!seen.insert(idx).second) continue;
-                    auto [b, i] = grid.objs[idx];
-                    if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
-                    const Sphere& s = processes[b][i];
-                    const double R = s.radius + pad;
-                    if ((p - s.P).squaredNorm() <= R*R) return true;
-                }
+    std::unordered_set<int> seen; seen.reserve(64);
+    for (int dx=-Lc; dx<=Lc; ++dx)
+      for (int dy=-Lc; dy<=Lc; ++dy)
+        for (int dz=-Lc; dz<=Lc; ++dz) {
+            auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
+            if (it == grid.buckets.end()) continue;
+            for (int idx : it->second) {
+                if (!seen.insert(idx).second) continue;
+                auto [b,i] = grid.objs[idx];
+                const Sphere& s = processes[b][i];
+                const double R = s.radius + pad;
+                if ((p - s.P).squaredNorm() <= R*R + 1e-12) return true;
             }
-        return false;
-    };
-
-    // Neighborhood radius in cells: cover pad + a tiny safety
-    int Lc = std::max(1, (int)std::ceil((pad + 1e-3*grid.cell) / grid.cell));
-    if (scanNeighbors(Lc)) return true;
-
-    // Fallback: escalate once (helps when grid.cell is *very* small)
-    if (scanNeighbors(Lc+1)) return true;
-
+        }
     return false;
 }

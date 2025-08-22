@@ -26,31 +26,30 @@ class Glial : public Obstacle
     Sphere soma;                                    /*!< soma of glial */
     std::vector<std::vector<Sphere>> processes; /*!< ramification spheres of glial */
 
-    struct Box {
-        double x_min;
-        double x_max;
-        double y_min;
-        double y_max;
-        double z_min;
-        double z_max;
-    };
-    inline Box make_empty_box() {
-        const double inf = std::numeric_limits<double>::infinity();
-        return {+inf, -inf, +inf, -inf, +inf, -inf};
-    }
+        struct Box {
+            double x_min;
+            double x_max;
+            double y_min;
+            double y_max;
+            double z_min;
+            double z_max;
+        };
+        inline Box make_empty_box() {
+            const double inf = std::numeric_limits<double>::infinity();
+            return {+inf, -inf, +inf, -inf, +inf, -inf};
+        }
 
-    struct HashGrid {
-        double cell = 1.0;
-        Eigen::Vector3d origin = Eigen::Vector3d::Zero();
-        std::vector<std::pair<int,int>> objs;     // (branch_id, cell_id)  ✅
-        std::unordered_map<uint64_t, std::vector<int>> buckets;
-        Box big_box;
-        double max_radius_plus_pad = 0.0;   // in world units
-        int    max_r_cells         = 1;     // ceil(max_radius_plus_pad / cell)
-        double build_pad           = 0.0;   // the pad used when building
-    };
+        struct HashGrid {
+            double cell = 1.0;
+            Eigen::Vector3d origin = Eigen::Vector3d::Zero();
+            std::vector<std::pair<int,int>> objs;                 // (branch_id, cell_id)
+            std::unordered_map<uint64_t, std::vector<int>> buckets;
+            Box big_box;
+            double build_pad = 0.0;                                // store pad used at build
+            double max_radius_plus_pad = 0.0;                     
+        };
 
-    HashGrid grid; /*!< grid for fast access to processes */
+        HashGrid grid; /*!< grid for fast access to processes */
 
     Glial();
 
@@ -77,10 +76,10 @@ class Glial : public Obstacle
     inline bool segment_aabb_intersect(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1, const Box& box, double& tEnter, double& tExit);
     inline void extend(Box& b, const Eigen::Vector3d& p);
     inline bool is_empty(const Box& b);
-    bool isPosInsideGlialCell(const Eigen::Vector3d& p, double margin) const;
+    bool isPosInsideGlialCell(const Eigen::Vector3d& p, double margin);
     inline bool point_in_inflated_aabb(const Eigen::Vector3d& p, double d);
-    int occupancy_at_point(const Eigen::Vector3d& p,double radius_pad) const;
-    double signed_distance_to_union(const Eigen::Vector3d& p, double margin) const;
+    int occupancy_at_point(const Eigen::Vector3d& p,double radius_pad);
+    double signed_distance_to_union(const Eigen::Vector3d& p, double margin);
     bool ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
                                            const Eigen::Vector3d& dir_unit,
                                            bool start_inside,
@@ -88,6 +87,7 @@ class Glial : public Obstacle
                                            double cell,     // grid.cell
                                            double& t_hit,   // in/out
                                            int max_iter = 30);
+    inline int neighbor_radius_cells(const HashGrid& G, double query_pad);
 
 
 };
