@@ -1124,7 +1124,7 @@ bool DynamicsSimulation::isInsideAxons(Eigen::Vector3d &position, int &object_id
 {
     if (inner_axons_list.size() > 0) {
         for (unsigned i = 0; i < inner_axons_list.size() ; i++){
-            bool isinside = inner_axons_list[i].isPosInsideAxon_(position,  distance_to_be_inside);
+            bool isinside = inner_axons_list[i].isPosInsideAxon(position,  distance_to_be_inside);
             if (isinside){
                 object_id = i;
                 return true;
@@ -1134,7 +1134,7 @@ bool DynamicsSimulation::isInsideAxons(Eigen::Vector3d &position, int &object_id
     else{
         for (unsigned i = 0; i < axons_list.size() ; i++){
     
-            bool isinside = axons_list[i].isPosInsideAxon_(position,  distance_to_be_inside);
+            bool isinside = axons_list[i].isPosInsideAxon(position,  distance_to_be_inside);
             if (isinside){
                 object_id = i;
                 return true;
@@ -1149,7 +1149,7 @@ bool DynamicsSimulation::isOutsideAxons(Eigen::Vector3d &position, int &object_i
 {
     for (unsigned i = 0; i < axons_list.size() ; i++){
  
-        bool isinside = axons_list[i].isPosInsideAxon_(position,  distance_to_be_inside);
+        bool isinside = axons_list[i].isPosInsideAxon(position,  distance_to_be_inside);
         if (isinside){
             object_id = i;
             return false;

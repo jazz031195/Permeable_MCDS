@@ -4,6 +4,7 @@
 #include "sphere.h"
 #include "obstacle.h"
 #include <vector>
+#include <unordered_map>
 
 using namespace std;
 
@@ -45,13 +46,9 @@ public:
     /*!
      *  \brief Default constructor. Does nothing
      */
-    Axon(){};
+    Axon();
 
-    ~Axon(){
-        spheres.clear();
-        //projections.clear_projections();
-    };
-
+    ~Axon();
 
     Axon(int id_,  Eigen::Vector3d begin_,Eigen::Vector3d end_ , double radius_){
 
@@ -71,7 +68,7 @@ public:
     inline int neighbor_radius_cells(const HashGrid& G, double query_pad);
     inline bool point_in_inflated_aabb(const Eigen::Vector3d& p,
                                    double d);
-    void set_up_glialcell(std::vector<Sphere> &spheres_to_add);
+    void set_spheres(std::vector<Sphere> &spheres_to_add);
     bool is_point_near_glia(const Eigen::Vector3d& p,
                         double d);
     inline bool segment_aabb_intersect(const Eigen::Vector3d& p0,

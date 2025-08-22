@@ -118,7 +118,7 @@ void Axon::build_glia_grid_spheres(const std::vector<Sphere>& spheres,
     };
 
     for (int i = 0; i < (int)spheres.size(); ++i) {
-        const Sphere& s = branch[i];
+        const Sphere& s = spheres[i];
         if (s.radius <= 0.0) continue;
         add(i);
 
@@ -144,7 +144,7 @@ inline bool Axon::point_in_inflated_aabb(const Eigen::Vector3d& p,
             p.z() >= box.z_min - infl && p.z() <= box.z_max + infl);
 }
 
-void Axon::set_up_glialcell(std::vector<Sphere> &spheres_to_add) {
+void Axon::set_spheres(std::vector<Sphere> &spheres_to_add) {
 
     // Clear existing boxes and initialize variables
     spheres.clear();
@@ -158,7 +158,7 @@ void Axon::set_up_glialcell(std::vector<Sphere> &spheres_to_add) {
         int cell_id = sphere.id;
 
         if (cell_id < 0) {
-            cerr << "Error: Sphere with invalid id or branch_id: " << cell_id << endl;
+            cerr << "Error: Sphere with invalid id: " << cell_id << endl;
             assert(0);
         }
 
@@ -166,13 +166,6 @@ void Axon::set_up_glialcell(std::vector<Sphere> &spheres_to_add) {
         
     }
 
-    for (auto &sphere : spheres) {
-        if (sphere.id < 0) {
-            cerr << "Error in build: Sphere with invalid id or branch_id: " << sphere.id << ", " << sphere.branch_id << endl;
-            assert(0);
-        }
-    }
-    
     double grid_cell_size = 0.0005;
     double pad = barrier_tickness;
     build_glia_grid_spheres(spheres,grid_cell_size, pad);
@@ -194,7 +187,7 @@ bool Axon::is_point_near_glia(const Eigen::Vector3d& p,
           auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
           if (it == grid.buckets.end()) continue;
           for (int idx : it->second) {
-            auto [i] = grid.objs[idx];  // (branch_id, cell_id)
+            auto i = grid.objs[idx];  // (branch_id, cell_id)
             const Sphere* s = &spheres[i];
             const Eigen::Vector3d v = p - s->P;
             if (v.squaredNorm() <= (s->radius + d)*(s->radius + d)) return true;
@@ -442,7 +435,7 @@ bool Axon::checkCollision(const Walker& walker,
                       << ", k=" << k << ")\n";
             continue;
         }
-        auto [i] = grid.objs[idx];   
+        auto i = grid.objs[idx];   
         const Sphere* sp = &spheres[i];
         if (!sp) { ++null_ptr; std::cerr << "NULL grid.objs["<<idx<<"]\n"; continue; }
         addSphereEvents(sp, p0, dir);
@@ -686,8 +679,8 @@ int Axon::occupancy_at_point(const Eigen::Vector3d& p, double margin)
             if (it == grid.buckets.end()) continue;
             for (int idx : it->second) {
                 if (!seen.insert(idx).second) continue;
-                auto [i] = grid.objs[idx];
-                const Sphere& s = spheres[b][i];
+                auto i = grid.objs[idx];
+                const Sphere& s = spheres[i];
                 const double R2 = (s.radius + pad) * (s.radius + pad);
                 if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
             }
@@ -720,7 +713,7 @@ double Axon::signed_distance_to_union(const Eigen::Vector3d& p, double margin)
           if (it == grid.buckets.end()) continue;
           for (int idx : it->second) {
             if (!seen.insert(idx).second) continue;
-            auto [i] = grid.objs[idx];
+            auto i = grid.objs[idx];
             if ((size_t)i >= spheres.size()) continue;
             upd(spheres[i]);
           }
@@ -813,7 +806,7 @@ bool Axon::isPosInsideAxon(const Eigen::Vector3d& p, double margin)
             if (it == grid.buckets.end()) continue;
             for (int idx : it->second) {
                 if (!seen.insert(idx).second) continue;
-                auto [i] = grid.objs[idx];
+                auto i = grid.objs[idx];
                 const Sphere& s = spheres[i];
                 const double R = s.radius + pad;
                 if ((p - s.P).squaredNorm() <= R*R + 1e-12) return true;

@@ -26,30 +26,30 @@ class Glial : public Obstacle
     Sphere soma;                                    /*!< soma of glial */
     std::vector<std::vector<Sphere>> processes; /*!< ramification spheres of glial */
 
-        struct Box {
-            double x_min;
-            double x_max;
-            double y_min;
-            double y_max;
-            double z_min;
-            double z_max;
-        };
-        inline Box make_empty_box() {
-            const double inf = std::numeric_limits<double>::infinity();
-            return {+inf, -inf, +inf, -inf, +inf, -inf};
-        }
+    struct Box {
+        double x_min;
+        double x_max;
+        double y_min;
+        double y_max;
+        double z_min;
+        double z_max;
+    };
+    inline Box make_empty_box() {
+        const double inf = std::numeric_limits<double>::infinity();
+        return {+inf, -inf, +inf, -inf, +inf, -inf};
+    }
 
-        struct HashGrid {
-            double cell = 1.0;
-            Eigen::Vector3d origin = Eigen::Vector3d::Zero();
-            std::vector<std::pair<int,int>> objs;                 // (branch_id, cell_id)
-            std::unordered_map<uint64_t, std::vector<int>> buckets;
-            Box big_box;
-            double build_pad = 0.0;                                // store pad used at build
-            double max_radius_plus_pad = 0.0;                     
-        };
+    struct HashGrid {
+        double cell = 1.0;
+        Eigen::Vector3d origin = Eigen::Vector3d::Zero();
+        std::vector<std::pair<int,int>> objs;                 // (branch_id, cell_id)
+        std::unordered_map<uint64_t, std::vector<int>> buckets;
+        Box big_box;
+        double build_pad = 0.0;                                // store pad used at build
+        double max_radius_plus_pad = 0.0;                     
+    };
 
-        HashGrid grid; /*!< grid for fast access to processes */
+    HashGrid grid; /*!< grid for fast access to processes */
 
     Glial();
 
