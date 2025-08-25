@@ -437,28 +437,36 @@ bool Glial::checkCollision(const Walker& walker,
 
     const double epsT = std::max(1e-12, 1e-6 * grid.cell);
 
+    
     auto addSphereEvents = [&](const Sphere* s,
                             const Eigen::Vector3d& p0,
-                            const Eigen::Vector3d& dir) {
+                            const Eigen::Vector3d& dir)
+    {
         if (!s) return;
 
         double t0, t1;
-        const double Rin = s->radius + Rpad;
+        const double Rin = s->radius + Rpad;            // ← same inflation here
         if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
-
-        // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
         if (t1 < t0) std::swap(t0, t1);
 
-        const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12;
+        // discard completely outside segment
+        if (t1 < 0.0 || t0 > L) return;
+
+        // clip
+        t0 = std::max(0.0, std::min(t0, L));
+        t1 = std::max(0.0, std::min(t1, L));
+        if (t1 <= t0 + epsT) return;
+
+        const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12; // ← consistency
 
         if (!inside0) {
-            evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
-            evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
-        } 
-        else {
-            evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+            if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
+            if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
+        } else {
+            if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
         }
     };
+
 
     addSphereEvents(&soma, p0, dir);
     //cout <<"cand_ids.size()=" << cand_ids.size() << " grid.objs.size()=" << grid.objs.size() << "\n";
@@ -479,6 +487,19 @@ bool Glial::checkCollision(const Walker& walker,
         if (!sp) { ++null_ptr; std::cerr << "NULL grid.objs["<<idx<<"]\n"; continue; }
         addSphereEvents(sp, p0, dir);
     }
+    std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
+    /*
+    if (!start_inside){
+        Ev first_event = evs[0];
+        double t_first = first_event->t;
+        Sphere s = *(first_event->s);
+        if (t_first <= L){
+
+        }
+
+    }
+    */
+
     if (bad_idx || null_ptr) {
         std::cerr << "Summary: bad_idx=" << bad_idx << " null_ptr=" << null_ptr << "\n";
     }
@@ -497,8 +518,6 @@ bool Glial::checkCollision(const Walker& walker,
         //cout << "No sphere collisions found for walker at p0=" << p0.transpose() << " with direction :"<< dir.transpose() <<" and L : "<< L << "\n";
         return false; 
     }
-
-    std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
 
     // Drop any events beyond L (in case raySphere or FP noise sneaks one in)
     while (!evs.empty() && evs.back().t > L + 1e-12) evs.pop_back();
@@ -539,6 +558,7 @@ bool Glial::checkCollision(const Walker& walker,
         //assert(0);
         return true;
     }
+    
     else if (!start_inside && is_inside){
         // problem
         collision.type = Collision::hit;
@@ -547,36 +567,55 @@ bool Glial::checkCollision(const Walker& walker,
         cout << "Error: walker started outside glia but is inside a sphere at p0\n";
         cout <<"occ0=" << occ0 << " start_inside=" << start_inside 
              << " p0=" << p0.transpose() << " dir=" << dir.transpose() << "\n";
-        //assert(0);
+        assert(0);
         return true;
     }
+    
     
     const Ev* hit = nullptr;
 
     if (!start_inside) {
-        hit  = &evs[0]; // first event is always +1 (entering)
-    } else {
+        // robust outside path: first time occ becomes > 0
+        // (occ was computed earlier; should be 0 here)
         size_t i = 0;
         while (i < evs.size()) {
             const double t = evs[i].t;
             int sum = 0;
-            const Ev* exitE = nullptr;           // remember any -1 at this t
+            const Ev* firstEnter = nullptr;
             size_t j = i;
 
-            // group events with same time (within tolerance)
+            // group all events with the same time (within epsT)
             while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
                 sum += evs[j].delta;
-                if (evs[j].delta == -1 && exitE == nullptr) 
-                {
-                    exitE = &evs[j];
-                }
+                if (evs[j].delta > 0 && !firstEnter) firstEnter = &evs[j];
                 ++j;
             }
 
-            if (occ + sum <= 0) {
-                // leaving the union at time t
-                hit = exitE ? exitE : &evs[i];   // fall back if all +1 (rare)
-                occ += sum;                      // (optional) for logging
+            if (occ + sum > 0) {                    // transition to inside happens here
+                hit = firstEnter ? firstEnter : &evs[i];   // choose an ENTER in this group
+                break;
+            }
+
+            occ += sum;
+            i = j;
+        }
+    } else {
+        // keep your intra logic as-is
+        size_t i = 0;
+        while (i < evs.size()) {
+            const double t = evs[i].t;
+            int sum = 0;
+            const Ev* firstExit = nullptr;
+            size_t j = i;
+
+            while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
+                sum += evs[j].delta;
+                if (evs[j].delta < 0 && !firstExit) firstExit = &evs[j];
+                ++j;
+            }
+
+            if (occ + sum <= 0) {                   // leaving the union at this time
+                hit = firstExit ? firstExit : &evs[i];
                 break;
             }
 
@@ -652,6 +691,7 @@ bool Glial::checkCollision(const Walker& walker,
          << "\n";
          */
          
+         
 
     // Optional permeability
     if (percolation > 0.0) {
@@ -703,53 +743,74 @@ bool Glial::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
     t_hit = std::max(0.0, best - 0.5 * tol); // nudge a touch inward for safety
     return true;
 }
-int Glial::occupancy_at_point(const Eigen::Vector3d& p, double margin, const bool& isintra)
+// grid.max_radius_plus_pad should be a *double* computed at build time:
+//   grid.max_radius_plus_pad = max(grid.max_radius_plus_pad, s.radius + build_pad);
+// and grid.cell is your voxel size.
+
+int Glial::occupancy_at_point(const Eigen::Vector3d& p,
+                              double margin,
+                              const bool& isintra) const
 {
-    const double pad = margin;
+    // Tiny, scale-aware tiebreaker to avoid boundary chatter:
+    // if we *expect* to be inside, be lenient (inflate a hair);
+    // if we expect outside, be strict (shrink a hair).
+    const double tau = 1e-6 * grid.cell;
+    const double m   = margin + (isintra ? +tau : -tau);
+
     int occ = 0;
 
-    // Soma
-    const double R2s = (soma.radius + pad) * (soma.radius + pad);
-    if (isintra){
-        if ((p - soma.P).squaredNorm() <= R2s + 1e-12) ++occ;
+    // 1) Soma (allow shrink/inflate here)
+    {
+        const double R = soma.radius + m;
+        if (R > 0.0) {
+            const double R2 = R * R;
+            if ((p - soma.P).squaredNorm() <= R2) ++occ;
+        }
     }
-    else{
-        if ((p - soma.P).squaredNorm() <= R2s) ++occ;
+
+    // 2) Big-box quick reject for processes (inflate-only; never shrink the box)
+    const double infl = std::max(0.0, m);
+    const Box& B = grid.big_box;
+    if (p.x() < B.x_min - infl || p.x() > B.x_max + infl ||
+        p.y() < B.y_min - infl || p.y() > B.y_max + infl ||
+        p.z() < B.z_min - infl || p.z() > B.z_max + infl) {
+        return occ;
     }
 
-    // Big box quick reject for processes
-    Box& B = grid.big_box;
-    if (p.x() < B.x_min - pad || p.x() > B.x_max + pad ||
-        p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
-        p.z() < B.z_min - pad || p.z() > B.z_max + pad) return occ;
+    // 3) Robust neighbor span in grid cells
+    const int Lc = 1;
 
-    // Robust neighbor span in grid cells
-    int Lc = 1;
+    // 4) Cell index of p
+    const Eigen::Array3i ic =
+        ((p - grid.origin).array() / grid.cell).floor().cast<int>();
 
-    // Cell index of p
-    const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
-
+    // 5) Probe neighboring buckets
     std::unordered_set<int> seen; seen.reserve(64);
     for (int dx = -Lc; dx <= Lc; ++dx)
       for (int dy = -Lc; dy <= Lc; ++dy)
         for (int dz = -Lc; dz <= Lc; ++dz) {
             auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
             if (it == grid.buckets.end()) continue;
+
             for (int idx : it->second) {
                 if (!seen.insert(idx).second) continue;
-                auto [b,i] = grid.objs[idx];
+
+                auto [b, i] = grid.objs[idx];
+                if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
+
                 const Sphere& s = processes[b][i];
-                const double R2 = (s.radius + pad) * (s.radius + pad);
-                if (isintra){
-                    if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
-                }
-                else{
-                    if ((p - s.P).squaredNorm() <= R2) ++occ;
-                }
+
+                // Allow shrink/inflate by m; skip if degenerate
+                const double R = s.radius + m;
+                if (R <= 0.0) continue;
+
+                if ((p - s.P).squaredNorm() <= R*R) ++occ;
             }
         }
+
     return occ;
 }
+
 
 
 double Glial::signed_distance_to_union(const Eigen::Vector3d& p, double margin)
@@ -863,37 +924,61 @@ double Glial::minDistance(const Walker& w) const
         return std::min({dx_min, dx_max, dy_min, dy_max, dz_min, dz_max});
     }
 }
-bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin) 
+bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin)
 {
-    const double pad = std::max(0.0, margin);
-
-    // Soma
+    // 1) Soma test (allow shrink/inflate here)
     {
-        const double R = soma.radius + pad;
-        if ((p - soma.P).squaredNorm() <= R*R) return true;
-    }
-
-    const Box& B = grid.big_box;
-    if (p.x() < B.x_min - pad || p.x() > B.x_max + pad ||
-        p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
-        p.z() < B.z_min - pad || p.z() > B.z_max + pad) return false;
-
-    int Lc = 1;
-    const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
-
-    std::unordered_set<int> seen; seen.reserve(64);
-    for (int dx=-Lc; dx<=Lc; ++dx)
-      for (int dy=-Lc; dy<=Lc; ++dy)
-        for (int dz=-Lc; dz<=Lc; ++dz) {
-            auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
-            if (it == grid.buckets.end()) continue;
-            for (int idx : it->second) {
-                if (!seen.insert(idx).second) continue;
-                auto [b,i] = grid.objs[idx];
-                const Sphere& s = processes[b][i];
-                const double R = s.radius + pad;
-                if ((p - s.P).squaredNorm() <= R*R + 1e-12) return true;
+        const double Rs = soma.radius + margin;
+        if (Rs > 0.0) {
+            const double R2 = Rs * Rs;
+            if ((p - soma.P).squaredNorm() <= R2) {
+                return true;
             }
         }
+    }
+
+    // 2) AABB quick reject (inflate only; never shrink the box)
+    const double infl = std::max(0.0, margin);
+    const Box& B = grid.big_box;
+    if (p.x() < B.x_min - infl || p.x() > B.x_max + infl ||
+        p.y() < B.y_min - infl || p.y() > B.y_max + infl ||
+        p.z() < B.z_min - infl || p.z() > B.z_max + infl) {
+            return false;
+    }
+
+    // 3) How many neighbor cells to scan
+    //    Use the largest sphere radius you stored at build time
+    const double maxR = grid.max_radius_plus_pad; // set at build time
+    const int Lc = std::max(1, (int)std::ceil((maxR + infl) / grid.cell));
+
+    // 4) Cell index and 27/125/... neighbor scan
+    const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
+    std::unordered_set<int> seen; 
+    seen.reserve(64);
+
+    for (int dx = -Lc; dx <= Lc; ++dx){
+        for (int dy = -Lc; dy <= Lc; ++dy){
+            for (int dz = -Lc; dz <= Lc; ++dz) {
+                auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
+                if (it == grid.buckets.end()) continue;
+
+                for (int idx : it->second) {
+                    if (!seen.insert(idx).second) continue;
+                    auto [b, i] = grid.objs[idx];
+                    if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
+
+                    const Sphere& s = processes[b][i];
+                    const double R = s.radius + margin;   // allow shrink/inflate here
+                    if (R <= 0.0) continue;
+                    const double R2 = R * R;
+
+                    if ((p - s.P).squaredNorm() <= R2) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
     return false;
 }
+

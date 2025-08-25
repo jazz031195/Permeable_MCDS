@@ -560,6 +560,7 @@ void DynamicsSimulation::writeDWSignal(SimulableSequence* dataSynth)
 
 void DynamicsSimulation::iniWalkerPosition()
 {
+    cout << "Initializing walker position..." << endl;
     walker.initial_location = Walker::unknown;
     walker.location         = Walker::unknown;
     walker.intra_extra_consensus = walker.intra_coll_count = walker.extra_coll_count=walker.rejection_count=0;
@@ -954,7 +955,9 @@ void DynamicsSimulation::getAnExtraCellularPosition(Vector3d &extra_pos)
 
         Vector3d pos_temp = {x,y,z};
 
-        if(checkIfPosInsideVoxel(pos_temp) && (isInExtra(pos_temp, barrier_tickness)) ){
+        bool isextra = isInExtra(pos_temp, barrier_tickness);
+
+        if(checkIfPosInsideVoxel(pos_temp) && isextra){
             extra_pos = pos_temp;
             walker.initial_location = Walker::extra;
             walker.location = Walker::extra;
@@ -1257,6 +1260,7 @@ bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id
         bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside);
         if (isinside){
             object_id = glials_list[i].id;
+
             return true;
         }
     }
@@ -1328,40 +1332,16 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
 bool DynamicsSimulation::isInExtra(Eigen::Vector3d &position,  double distance_to_be_intra_ply)
 {
 
-    bool isExtra = true;
-    total_tries++;
+    bool ok = true; int dummy;
 
-    int ax_id, glial_id, cyl_id;
+    // cylinders/axons/spheres: ideally use the same distance-threshold idea for them too
+    if (!cylinders_list.empty()) ok = ok && isOutsideCylinders(position, dummy, 0.0);
+    if (!axons_list.empty())     ok = ok && isOutsideAxons(position, dummy, 0.0);
+    if (!plyObstacles_list.empty()) ok = ok && !isInsidePLY(position, 0.0);
+    if (!spheres_list.empty())      ok = ok && !isInsideSpheres(position, 0.0);
+    if (!glials_list.empty())   ok = ok && !this->isInsideGlial(position, dummy, 0.0);
 
-    if(cylinders_list.size()>0){
-        isExtra = isExtra && this->isOutsideCylinders(position, cyl_id, distance_to_be_intra_ply);
-
-    }
-
-    if(axons_list.size()>0){
-
-        isExtra = isExtra && this->isOutsideAxons(position, ax_id, distance_to_be_intra_ply);
-
-    }
-    
-
-    if(glials_list.size()>0){
-        isExtra = isExtra && !this->isInsideGlial(position, glial_id, distance_to_be_intra_ply);
-
-    }
-
-    if(plyObstacles_list.size()>0){
-        isExtra = isExtra && !isInsidePLY(position,distance_to_be_intra_ply);
-        assert(0);
-    }
-
-    if(spheres_list.size()>0){
-        isExtra = isExtra && !this->isInsideSpheres(position,distance_to_be_intra_ply);   
-        assert(0);    
-    }
-
-
-    return isExtra;
+    return ok;
 }
 
 

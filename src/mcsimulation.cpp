@@ -572,7 +572,14 @@ void MCSimulation::addGlialsObstaclesFromFiles()
 
         in.close();
     }
-
+    /*
+    // keep only first glial cell
+    if (dynamicsEngine->glials_list.size() > 2) {
+        std::cout << "\033[1;33m[Warning]\033[0m More than one glial cell found, keeping only the first one." << std::endl;
+        dynamicsEngine->glials_list.resize(2);
+    }
+    */
+    
 
     std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
 }

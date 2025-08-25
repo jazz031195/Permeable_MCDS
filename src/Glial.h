@@ -78,7 +78,9 @@ class Glial : public Obstacle
     inline bool is_empty(const Box& b);
     bool isPosInsideGlialCell(const Eigen::Vector3d& p, double margin);
     inline bool point_in_inflated_aabb(const Eigen::Vector3d& p, double d);
-    int occupancy_at_point(const Eigen::Vector3d& p,double radius_pad, const bool& isintra);
+    int occupancy_at_point(const Eigen::Vector3d& p,
+                              double margin,
+                              const bool& isintra) const;
     double signed_distance_to_union(const Eigen::Vector3d& p, double margin);
     bool ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
                                            const Eigen::Vector3d& dir_unit,
