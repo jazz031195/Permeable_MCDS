@@ -201,7 +201,7 @@ void Glial::set_up_glialcell(std::vector<Sphere> &spheres_to_add) {
             }
         }
     }
-    double grid_cell_size = 0.0005;
+    double grid_cell_size = 5e-4;
     double pad = barrier_tickness;
     build_glia_grid_processes(processes,grid_cell_size, pad);
 
@@ -437,36 +437,56 @@ bool Glial::checkCollision(const Walker& walker,
 
     const double epsT = std::max(1e-12, 1e-6 * grid.cell);
 
-    
     auto addSphereEvents = [&](const Sphere* s,
                             const Eigen::Vector3d& p0,
-                            const Eigen::Vector3d& dir)
-    {
-        if (!s) return;
+                            const Eigen::Vector3d& dir) {
+        if (!s) return;                         
+        if (start_inside){
 
-        double t0, t1;
-        const double Rin = s->radius + Rpad;            // ← same inflation here
-        if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
-        if (t1 < t0) std::swap(t0, t1);
+            double t0, t1;
+            const double Rin = s->radius;
+            if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
 
-        // discard completely outside segment
-        if (t1 < 0.0 || t0 > L) return;
+            // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
+            if (t1 < t0) std::swap(t0, t1);
 
-        // clip
-        t0 = std::max(0.0, std::min(t0, L));
-        t1 = std::max(0.0, std::min(t1, L));
-        if (t1 <= t0 + epsT) return;
 
-        const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12; // ← consistency
-
-        if (!inside0) {
-            if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
-            if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
-        } else {
-            if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
+            const bool inside0 = (p0 - s->P).squaredNorm() <= (s->radius - Rpad)*(s->radius - Rpad) + 1e-12;
+            
+            if (!inside0) {
+                evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
+                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+            } 
+            else {
+                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+            }
         }
-    };
+        else{
 
+            double t0, t1;
+            const double Rin = s->radius;            // ← same inflation here
+            if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
+            if (t1 < t0) std::swap(t0, t1);
+
+            // discard completely outside segment
+            if (t1 < 0.0 || t0 > L) return;
+
+            // clip
+            t0 = std::max(0.0, std::min(t0, L));
+            t1 = std::max(0.0, std::min(t1, L));
+            if (t1 <= t0 + epsT) return;
+
+            const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12; // ← consistency
+
+            if (!inside0) {
+                if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
+                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
+            } else {
+                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
+            }
+        }
+
+    };
 
     addSphereEvents(&soma, p0, dir);
     //cout <<"cand_ids.size()=" << cand_ids.size() << " grid.objs.size()=" << grid.objs.size() << "\n";
@@ -488,17 +508,6 @@ bool Glial::checkCollision(const Walker& walker,
         addSphereEvents(sp, p0, dir);
     }
     std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
-    /*
-    if (!start_inside){
-        Ev first_event = evs[0];
-        double t_first = first_event->t;
-        Sphere s = *(first_event->s);
-        if (t_first <= L){
-
-        }
-
-    }
-    */
 
     if (bad_idx || null_ptr) {
         std::cerr << "Summary: bad_idx=" << bad_idx << " null_ptr=" << null_ptr << "\n";
@@ -552,6 +561,10 @@ bool Glial::checkCollision(const Walker& walker,
         collision.type = Collision::hit;
         collision.col_location  = Collision::outside;
         collision.perm_crossing = 0.0;
+        for (const auto& e : evs) {
+            cout << "Event: t=" << e.t << " delta=" << e.delta 
+                    << " sphere_id=" << e.s->id << "\n";
+        }
         cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
         cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
              << " occ0=" << occ0 <<  "\n";
@@ -567,7 +580,7 @@ bool Glial::checkCollision(const Walker& walker,
         cout << "Error: walker started outside glia but is inside a sphere at p0\n";
         cout <<"occ0=" << occ0 << " start_inside=" << start_inside 
              << " p0=" << p0.transpose() << " dir=" << dir.transpose() << "\n";
-        assert(0);
+        //assert(0);
         return true;
     }
     
@@ -600,22 +613,25 @@ bool Glial::checkCollision(const Walker& walker,
             i = j;
         }
     } else {
-        // keep your intra logic as-is
+        // inside -> first time occ becomes 0, grouping same-t events
         size_t i = 0;
         while (i < evs.size()) {
             const double t = evs[i].t;
             int sum = 0;
-            const Ev* firstExit = nullptr;
+            const Ev* exitE = nullptr;           // remember any -1 at this t
             size_t j = i;
 
+            // group events with same time (within tolerance)
             while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
                 sum += evs[j].delta;
-                if (evs[j].delta < 0 && !firstExit) firstExit = &evs[j];
+                if (evs[j].delta == -1 && exitE == nullptr) exitE = &evs[j];
                 ++j;
             }
 
-            if (occ + sum <= 0) {                   // leaving the union at this time
-                hit = firstExit ? firstExit : &evs[i];
+            if (occ + sum <= 0) {
+                // leaving the union at time t
+                hit = exitE ? exitE : &evs[i];   // fall back if all +1 (rare)
+                occ += sum;                      // (optional) for logging
                 break;
             }
 
@@ -627,7 +643,7 @@ bool Glial::checkCollision(const Walker& walker,
     if (!hit) { 
         /*
         Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
+        bool next_pos_inside = occupancy_at_point(next_pos, Rpad, start_inside) > 0;
         if (!next_pos_inside && start_inside){
             cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
             cout <<"p0=" << p0.transpose() << " dir=" << dir.transpose() 
@@ -642,6 +658,8 @@ bool Glial::checkCollision(const Walker& walker,
             
         }
         */
+        
+        
         collision.type = Collision::null; 
         return false; 
     }

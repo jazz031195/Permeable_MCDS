@@ -99,11 +99,13 @@ public:
                                            double& t_hit,   // in/out
                                            int max_iter);
     
-    int occupancy_at_point(const Eigen::Vector3d& p, double margin, const bool& isintra);
     double signed_distance_to_union(const Eigen::Vector3d& p, double margin);
     void set_prob_crossings(double step_length_pref);
     double minDistance(const Walker& w) const;
     bool isPosInsideAxon(const Eigen::Vector3d& p, double margin);
+    int occupancy_at_point(const Eigen::Vector3d& p,
+                              double margin,
+                              const bool& isintra) const;
     
 };
 

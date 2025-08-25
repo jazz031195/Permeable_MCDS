@@ -166,7 +166,7 @@ void Axon::set_spheres(std::vector<Sphere> &spheres_to_add) {
         
     }
 
-    double grid_cell_size = 0.0005;
+    double grid_cell_size = 5e-4;
     double pad = barrier_tickness;
     build_axon_grid_spheres(spheres,grid_cell_size, pad);
 
@@ -382,9 +382,9 @@ bool Axon::checkCollision(const Walker& walker,
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad*2)) {
+    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2)) {
         collision.type = Collision::null;
-        return false; // outside of axon bounding box
+        return false; // outside of glia bounding box
     }
 
     const double Rpad = grid.build_pad;
@@ -403,28 +403,55 @@ bool Axon::checkCollision(const Walker& walker,
     auto addSphereEvents = [&](const Sphere* s,
                             const Eigen::Vector3d& p0,
                             const Eigen::Vector3d& dir) {
-        if (!s) return;
+        if (!s) return;                         
+        if (start_inside){
 
-        double t0, t1;
-        const double Rin = s->radius + Rpad;
-        if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
+            double t0, t1;
+            const double Rin = s->radius;
+            if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
 
-        // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
-        if (t1 < t0) std::swap(t0, t1);
+            // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
+            if (t1 < t0) std::swap(t0, t1);
 
-        const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12;
 
-        if (!inside0) {
-            evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
-            evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
-        } 
-        else {
-            evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+            const bool inside0 = (p0 - s->P).squaredNorm() <= (s->radius - Rpad)*(s->radius - Rpad) + 1e-12;
+            
+            if (!inside0) {
+                evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
+                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+            } 
+            else {
+                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+            }
         }
+        else{
+
+            double t0, t1;
+            const double Rin = s->radius;            // ← same inflation here
+            if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
+            if (t1 < t0) std::swap(t0, t1);
+
+            // discard completely outside segment
+            if (t1 < 0.0 || t0 > L) return;
+
+            // clip
+            t0 = std::max(0.0, std::min(t0, L));
+            t1 = std::max(0.0, std::min(t1, L));
+            if (t1 <= t0 + epsT) return;
+
+            const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12; // ← consistency
+
+            if (!inside0) {
+                if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
+                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
+            } else {
+                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
+            }
+        }
+
     };
 
 
-    // SAFETY: validate every candidate index + pointer
     size_t bad_idx = 0, null_ptr = 0;
     for (size_t k = 0; k < cand_ids.size(); ++k) {
         int idx = cand_ids[k];
@@ -440,45 +467,36 @@ bool Axon::checkCollision(const Walker& walker,
         if (!sp) { ++null_ptr; std::cerr << "NULL grid.objs["<<idx<<"]\n"; continue; }
         addSphereEvents(sp, p0, dir);
     }
+    std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
+
+
     if (bad_idx || null_ptr) {
         std::cerr << "Summary: bad_idx=" << bad_idx << " null_ptr=" << null_ptr << "\n";
     }
 
     if (evs.empty()) { 
         collision.type = Collision::null; 
-        /*
-        Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
-        if (!next_pos_inside && start_inside){
-            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
-            assert(0);
-            
-        }
-        */
-        //cout << "No sphere collisions found for walker at p0=" << p0.transpose() << " with direction :"<< dir.transpose() <<" and L : "<< L << "\n";
         return false; 
     }
-
-    std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
 
     // Drop any events beyond L (in case raySphere or FP noise sneaks one in)
     while (!evs.empty() && evs.back().t > L + 1e-12) evs.pop_back();
     if (evs.empty()) { 
-        /*
-        Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
-        if (!next_pos_inside && start_inside){
-            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
-            assert(0);
-            
-        }
-        */
+
         collision.type = Collision::null; 
         return false; 
     }
 
     // 5) Sweep to find first union boundary:
-    int occ0 = occupancy_at_point(p0, Rpad, start_inside);
+    int occ0;
+
+    if (start_inside){
+        occ0 = occupancy_at_point(p0, Rpad, start_inside);
+    }
+    else{
+        occ0 = occupancy_at_point(p0, -Rpad, start_inside);
+    }
+
     bool is_inside = (occ0 > 0);
     int occ = occ0;
     if (start_inside && !is_inside){
@@ -486,27 +504,59 @@ bool Axon::checkCollision(const Walker& walker,
         collision.type = Collision::hit;
         collision.col_location  = Collision::outside;
         collision.perm_crossing = 0.0;
-        cout << "Error: walker started inside axon but is not inside any sphere at p0\n";
+        for (const auto& e : evs) {
+            cout << "Event: t=" << e.t << " delta=" << e.delta 
+                    << " sphere_id=" << e.s->id << "\n";
+        }
+        cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
         cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
              << " occ0=" << occ0 <<  "\n";
         //assert(0);
         return true;
     }
+    
     else if (!start_inside && is_inside){
         // problem
         collision.type = Collision::hit;
         collision.col_location  = Collision::inside;
         collision.perm_crossing = 0.0;
-        cout << "Error: walker started outside axon but is inside a sphere at p0\n";
+        cout << "Error: walker started outside glia but is inside a sphere at p0\n";
+        cout <<"occ0=" << occ0 << " start_inside=" << start_inside 
+             << " p0=" << p0.transpose() << " dir=" << dir.transpose() << "\n";
         //assert(0);
         return true;
     }
     
+    
     const Ev* hit = nullptr;
 
     if (!start_inside) {
-        for (const auto& e : evs) { occ += e.delta; if (occ > 0) { hit = &e; break; } }
+        // robust outside path: first time occ becomes > 0
+        // (occ was computed earlier; should be 0 here)
+        size_t i = 0;
+        while (i < evs.size()) {
+            const double t = evs[i].t;
+            int sum = 0;
+            const Ev* firstEnter = nullptr;
+            size_t j = i;
+
+            // group all events with the same time (within epsT)
+            while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
+                sum += evs[j].delta;
+                if (evs[j].delta > 0 && !firstEnter) firstEnter = &evs[j];
+                ++j;
+            }
+
+            if (occ + sum > 0) {                    // transition to inside happens here
+                hit = firstEnter ? firstEnter : &evs[i];   // choose an ENTER in this group
+                break;
+            }
+
+            occ += sum;
+            i = j;
+        }
     } else {
+        // inside -> first time occ becomes 0, grouping same-t events
         size_t i = 0;
         while (i < evs.size()) {
             const double t = evs[i].t;
@@ -517,10 +567,7 @@ bool Axon::checkCollision(const Walker& walker,
             // group events with same time (within tolerance)
             while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
                 sum += evs[j].delta;
-                if (evs[j].delta == -1 && exitE == nullptr) 
-                {
-                    exitE = &evs[j];
-                }
+                if (evs[j].delta == -1 && exitE == nullptr) exitE = &evs[j];
                 ++j;
             }
 
@@ -537,23 +584,8 @@ bool Axon::checkCollision(const Walker& walker,
     }
 
     if (!hit) { 
-        /*
-        Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
-        if (!next_pos_inside && start_inside){
-            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
-            cout <<"p0=" << p0.transpose() << " dir=" << dir.transpose() 
-                 << " start_inside=" << start_inside << " occ0=" << occ0 
-                 << " occ_final=" << occ << "\n";
 
-            for (const auto& e : evs) {
-                cout << "Event: t=" << e.t << " delta=" << e.delta 
-                     << " sphere_id=" << e.s->id << "\n";
-            }
-            assert(0);
-            
-        }
-        */
+        
         collision.type = Collision::null; 
         return false; 
     }
@@ -567,41 +599,16 @@ bool Axon::checkCollision(const Walker& walker,
     const double dn = dir.dot(n);
     const Eigen::Vector3d bounced = dir - 2.0 * dn * n;
 
-    /*
-    // is the hit point inside the sphere?
-    bool next_pos_inside = occupancy_at_point(pos, Rpad) > 0;
-    if (!next_pos_inside && start_inside){
-
-        cout << "Error: ensure_same_compartment_at_hit failed for walker at p0=" 
-             << p0.transpose() << " dir=" << dir.transpose() 
-             << " start_inside=" << start_inside << " occ0=" << occ0 
-             << " occ_final=" << occ << "\n";
-
-            cout <<"n : " << n.transpose() << " pos : " << pos.transpose() 
-                 << " t_hit : " << t_hit << "\n";
-        
-        assert(0);
-    }
-    */
 
     collision.type = Collision::hit;
     collision.collision_point = pos;
     collision.t = t_hit;
     collision.bounced_direction = bounced.normalized();
-    collision.obstacle_type = 1;                    // your code’s convention
+    collision.obstacle_type = 0;                    // your code’s convention
     collision.obstacle_ind  = hit->s->id;           // or branch/local as needed
     collision.col_location  = start_inside ? Collision::inside : Collision::outside;
     collision.perm_crossing = 0.0;
-    /*
-    cout <<"hit sphere id=" << collision.obstacle_ind
-         << " at t=" << t_hit << " pos=" << pos.transpose()
-         << " dir=" << dir.transpose() << " bounced=" << bounced.transpose()
-         << " col_loc=" << collision.col_location
-         << " start_inside=" << start_inside
-         << " occ0=" << occ0
-         << " occ_final=" << occ
-         << "\n";
-         */
+
          
 
     // Optional permeability
@@ -617,79 +624,60 @@ bool Axon::checkCollision(const Walker& walker,
     return true;
 }
 
-// Returns true if we found a t' <= t_hit such that occupancy(p0+dir*t') == start_inside.
-// t_hit is modified in place. Uses bisection with a tolerance tied to the grid cell.
-bool Axon::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
-                                           const Eigen::Vector3d& dir_unit,
-                                           bool start_inside,
-                                           double pad,      // use grid.build_pad
-                                           double cell,     // grid.cell
-                                           double& t_hit,   // in/out
-                                           int max_iter) 
+
+int Axon::occupancy_at_point(const Eigen::Vector3d& p,
+                              double margin,
+                              const bool& isintra) const
 {
-    const double tol = std::max(1e-12, 1e-6 * cell);
+    // Tiny, scale-aware tiebreaker to avoid boundary chatter:
+    // if we *expect* to be inside, be lenient (inflate a hair);
+    // if we expect outside, be strict (shrink a hair).
+    const double tau = 1e-6 * grid.cell;
+    const double m   = margin + (isintra ? +tau : -tau);
 
-    auto occ = [&](double t)->bool {
-        return occupancy_at_point(p0 + dir_unit * t, pad, start_inside) > 0;
-    };
-
-    // If just stepping back a hair already fixes it, do that quickly.
-    double t_try = std::max(0.0, t_hit - tol);
-    if (occ(t_try) == start_inside) { t_hit = t_try; return true; }
-
-    // Otherwise, bisection on [0, t_hit] to find largest t with desired occupancy.
-    if (occ(0.0) != start_inside) {
-        // This means we started on the wrong side; caller can handle as "t=0 bounce".
-        t_hit = 0.0;
-        return false;
-    }
-
-    double lo = 0.0, hi = t_hit, best = 0.0;
-    for (int it = 0; it < max_iter; ++it) {
-        double mid = 0.5 * (lo + hi);
-        if (occ(mid) == start_inside) { best = mid; lo = mid; }
-        else                          { hi   = mid; }
-        if (hi - lo <= tol) break;
-    }
-    t_hit = std::max(0.0, best - 0.5 * tol); // nudge a touch inward for safety
-    return true;
-}
-int Axon::occupancy_at_point(const Eigen::Vector3d& p, double margin, const bool& isintra)
-{
-    const double pad = margin;
     int occ = 0;
 
-    // Big box quick reject for spheres
-    Box& B = grid.big_box;
-    if (p.x() < B.x_min - pad || p.x() > B.x_max + pad ||
-        p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
-        p.z() < B.z_min - pad || p.z() > B.z_max + pad) return occ;
 
-    // Robust neighbor span in grid cells
-    int Lc = 1;
+    // 2) Big-box quick reject for processes (inflate-only; never shrink the box)
+    const double infl = std::max(0.0, m);
+    const Box& B = grid.big_box;
+    if (p.x() < B.x_min - infl || p.x() > B.x_max + infl ||
+        p.y() < B.y_min - infl || p.y() > B.y_max + infl ||
+        p.z() < B.z_min - infl || p.z() > B.z_max + infl) {
+        return occ;
+    }
 
-    // Cell index of p
-    const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
+    // 3) Robust neighbor span in grid cells
+    const int Lc = 1;
 
+    // 4) Cell index of p
+    const Eigen::Array3i ic =
+        ((p - grid.origin).array() / grid.cell).floor().cast<int>();
+
+    // 5) Probe neighboring buckets
     std::unordered_set<int> seen; seen.reserve(64);
     for (int dx = -Lc; dx <= Lc; ++dx)
       for (int dy = -Lc; dy <= Lc; ++dy)
         for (int dz = -Lc; dz <= Lc; ++dz) {
             auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
             if (it == grid.buckets.end()) continue;
+
             for (int idx : it->second) {
                 if (!seen.insert(idx).second) continue;
+
                 auto i = grid.objs[idx];
+                if ((size_t)i >= spheres.size()) continue;
+
                 const Sphere& s = spheres[i];
-                const double R2 = (s.radius + pad) * (s.radius + pad);
-                if (isintra){
-                    if ((p - s.P).squaredNorm() <= R2 + 1e-12) ++occ;
-                }
-                else{
-                    if ((p - s.P).squaredNorm() <= R2) ++occ;
-                }
+
+                // Allow shrink/inflate by m; skip if degenerate
+                const double R = s.radius + m;
+                if (R <= 0.0) continue;
+
+                if ((p - s.P).squaredNorm() <= R*R) ++occ;
             }
         }
+
     return occ;
 }
 
