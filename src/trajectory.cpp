@@ -331,11 +331,17 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
 
     if(write_traj)
     {
-        unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step);
+        unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
         Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
 
         for (int c = 0; c < number_of_subsampled_columns; ++c) {
             pos_subsampled.col(c) = pos.col(c * write_every_nth_step);
+        }
+
+        // add last position
+        if (pos.cols() % write_every_nth_step != 0) {
+            pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
+            pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
         }
 
         if(write_bin)
@@ -388,15 +394,6 @@ void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
                 for(unsigned i = 0; i < pos.cols(); i++ ){
                     tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;
                 }
-            }
-        }
-    }
-    if(steps_subset)
-    {
-        unsigned index = 0;
-        for(unsigned i = 0; i < pos.cols(); i++ ){
-            if(i == pos_times[index]){
-                float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
             }
         }
     }
