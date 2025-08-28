@@ -422,7 +422,13 @@ bool Glial::checkCollision(const Walker& walker,
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2)) {
+    bool isclose_to_soma = false;
+
+    if ((p0 - soma.P).squaredNorm() <= (soma.radius + L*2)*(soma.radius + L*2)){
+        isclose_to_soma = true;
+    }
+
+    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2) && !isclose_to_soma) {
         collision.type = Collision::null;
         return false; // outside of glia bounding box
     }
