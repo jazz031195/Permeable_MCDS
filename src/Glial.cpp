@@ -382,7 +382,7 @@ inline bool Glial::raySphere(const Eigen::Vector3d& p0,
                       const Eigen::Vector3d& C,
                       double R,
                       double& t_enter,
-                      double& t_exit)
+                      double& t_exit, const double& distance)
 {
     // Solve ||(p0 - C) + t*dir||^2 = R^2  with a=1 (dir is unit)
     const Eigen::Vector3d oc = p0 - C;
@@ -400,6 +400,9 @@ inline bool Glial::raySphere(const Eigen::Vector3d& p0,
     if (t0 > t1) std::swap(t0, t1);
     t_enter = t0;
     t_exit  = t1;
+
+    if (t_enter > distance && t_exit > distance) return false;
+
     return true;
 }
 
@@ -431,6 +434,7 @@ bool Glial::checkCollision(const Walker& walker,
     // Gather candidates
     std::vector<int> cand_ids;
     gather_candidates_DDA(p0, dir, L, cand_ids);
+    //cout <<"cand_ids.size()=" << cand_ids.size() << "\n";
 
     struct Ev { double t; int delta; const Sphere* s; };
     std::vector<Ev> evs; evs.reserve(cand_ids.size()*2 + 2);
@@ -445,7 +449,7 @@ bool Glial::checkCollision(const Walker& walker,
 
             double t0, t1;
             const double Rin = s->radius;
-            if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
+            if (!raySphere(p0, dir, s->P, Rin, t0, t1, L + Rpad)) return;
 
             // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
             if (t1 < t0) std::swap(t0, t1);
@@ -465,7 +469,7 @@ bool Glial::checkCollision(const Walker& walker,
 
             double t0, t1;
             const double Rin = s->radius;            // ← same inflation here
-            if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
+            if (!raySphere(p0, dir, s->P, Rin, t0, t1, L + Rpad)) return;
             if (t1 < t0) std::swap(t0, t1);
 
             // discard completely outside segment

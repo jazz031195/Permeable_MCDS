@@ -71,7 +71,7 @@ class Glial : public Obstacle
     void build_glia_grid_processes(const std::vector<std::vector<Sphere>>& processes, double cell_size, double pad);
     void set_up_glialcell(std::vector<Sphere> &spheres_to_add);
     bool is_point_near_glia(const Eigen::Vector3d& p, double d);
-    inline bool raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit);
+    inline bool raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit, const double& distance);
     void gather_candidates_DDA(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, double L, std::vector<int>& out_ids);
     inline bool segment_aabb_intersect(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1, const Box& box, double& tEnter, double& tExit);
     inline void extend(Box& b, const Eigen::Vector3d& p);
