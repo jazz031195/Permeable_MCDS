@@ -51,3 +51,7 @@ useful_functions/read_trajectories.py
 *__pycache__*
 
 
+*.cache*
+*build*
+*perf*
+*cmake*
