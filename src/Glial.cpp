@@ -400,6 +400,7 @@ inline bool Glial::raySphere(const Eigen::Vector3d& p0,
     if (t0 > t1) std::swap(t0, t1);
     t_enter = t0;
     t_exit  = t1;
+
     return true;
 }
 
@@ -419,7 +420,13 @@ bool Glial::checkCollision(const Walker& walker,
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2)) {
+    bool isclose_to_soma = false;
+
+    if ((p0 - soma.P).squaredNorm() <= (soma.radius + L*2)*(soma.radius + L*2)){
+        isclose_to_soma = true;
+    }
+
+    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2) && !isclose_to_soma) {
         collision.type = Collision::null;
         return false; // outside of glia bounding box
     }
@@ -431,6 +438,7 @@ bool Glial::checkCollision(const Walker& walker,
     // Gather candidates
     std::vector<int> cand_ids;
     gather_candidates_DDA(p0, dir, L, cand_ids);
+    //cout <<"cand_ids.size()=" << cand_ids.size() << "\n";
 
     struct Ev { double t; int delta; const Sphere* s; };
     std::vector<Ev> evs; evs.reserve(cand_ids.size()*2 + 2);
@@ -447,6 +455,7 @@ bool Glial::checkCollision(const Walker& walker,
             const double Rin = s->radius;
             if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
 
+
             // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
             if (t1 < t0) std::swap(t0, t1);
 
@@ -454,11 +463,11 @@ bool Glial::checkCollision(const Walker& walker,
             const bool inside0 = (p0 - s->P).squaredNorm() <= (s->radius - Rpad)*(s->radius - Rpad) + 1e-12;
             
             if (!inside0) {
-                evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
-                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+                evs.push_back({ t0, +1, s });
+                evs.push_back({ t1, -1, s });
             } 
             else {
-                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+                evs.push_back({ t1, -1, s });
             }
         }
         else{
@@ -467,23 +476,9 @@ bool Glial::checkCollision(const Walker& walker,
             const double Rin = s->radius;            // ← same inflation here
             if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
             if (t1 < t0) std::swap(t0, t1);
+            if (t0 > L + Rpad) return;  // intersection beyond step end
 
-            // discard completely outside segment
-            if (t1 < 0.0 || t0 > L) return;
-
-            // clip
-            t0 = std::max(0.0, std::min(t0, L));
-            t1 = std::max(0.0, std::min(t1, L));
-            if (t1 <= t0 + epsT) return;
-
-            const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12; // ← consistency
-
-            if (!inside0) {
-                if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
-                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
-            } else {
-                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
-            }
+            if (t0 >= 0) evs.push_back({std::min(L, std::max(0.0, t0)), +1, s});  // ENTER
         }
 
     };
@@ -914,33 +909,26 @@ void Glial::set_prob_crossings(double step_length_pref){
 
 double Glial::minDistance(const Walker& w) const
 {
-    const Box& box = grid.big_box;
-    // if you have a helper is_empty(box), use that; otherwise:
-    if (box.x_min > box.x_max || box.y_min > box.y_max || box.z_min > box.z_max)
-        return std::numeric_limits<double>::infinity();
-
-    const Eigen::Vector3d& p = w.pos_v;
-
-    // Closest point on the box to p (clamp)
-    Eigen::Vector3d q;
-    q.x() = std::min(std::max(p.x(), box.x_min), box.x_max);
-    q.y() = std::min(std::max(p.y(), box.y_min), box.y_max);
-    q.z() = std::min(std::max(p.z(), box.z_min), box.z_max);
-
-    const double d2 = (p - q).squaredNorm();
-    if (d2 > 0.0) {
-        // Outside: Euclidean distance to the box
-        return std::sqrt(d2);
-    } else {
-        // Inside: minimum distance to any face (depth to surface)
-        const double dx_min = p.x() - box.x_min;
-        const double dx_max = box.x_max - p.x();
-        const double dy_min = p.y() - box.y_min;
-        const double dy_max = box.y_max - p.y();
-        const double dz_min = p.z() - box.z_min;
-        const double dz_max = box.z_max - p.z();
-        return std::min({dx_min, dx_max, dy_min, dy_max, dz_min, dz_max});
+    double distance_soma = (w.pos_v - soma.P).norm() - soma.radius;
+    if (processes.empty()) {
+        return distance_soma;
     }
+    const Box& box = grid.big_box;
+    const Eigen::Vector3d& p = w.pos_v;
+    if (p.x() >= box.x_min && p.x() <= box.x_max &&
+        p.y() >= box.y_min && p.y() <= box.y_max &&
+        p.z() >= box.z_min && p.z() <= box.z_max) {
+        return 0;
+    } 
+
+    double dist_x = min(std::abs(p.x() - box.x_min), std::abs(p.x() - box.x_max));
+    double dist_y = min(std::abs(p.y() - box.y_min), std::abs(p.y() - box.y_max));
+    double dist_z = min(std::abs(p.z() - box.z_min), std::abs(p.z() - box.z_max));
+
+    double distance_box = std::min({dist_x, dist_y, dist_z});
+    double dist = std::min(distance_soma, distance_box);
+
+    return dist;
 }
 bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin)
 {
@@ -999,4 +987,3 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin)
     }
     return false;
 }
-

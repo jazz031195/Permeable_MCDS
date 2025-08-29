@@ -673,7 +673,7 @@ void DynamicsSimulation::initWalkerObstacleIndexes()
     
     // The inner collision sphere has radius l*T*collision_sphere_distance
     //float inner_col_dist_factor = curr_step_lenght*sqrt(params.num_steps)*params.collision_sphere_distance;
-    float inner_col_dist_factor = curr_step_lenght*2;
+    float inner_col_dist_factor = curr_step_lenght*5;
     
     walker.collision_sphere_cylinders.setSmallSphereSize(inner_col_dist_factor);
 
@@ -1376,7 +1376,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     
         back_tracking = false;
 
-        //cout << "Progress :" << w << "/" << params.num_walkers << "( " << double(w*100/params.num_walkers) << " %)" << endl;
+        cout << "Progress :" << w << "/" << params.num_walkers << "( " << double(w*100/params.num_walkers) << " %)" << endl;
         
 
         walker.setIndex(w);
@@ -1774,7 +1774,9 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         // extra walkers or unknown
         else {
             for(unsigned int i = 0 ; i < walker.axons_collision_sphere.small_sphere_list_end; i++ ){
+            //for (unsigned int i = 0 ; i < (axons_list).size(); i++ ){
                 unsigned index = walker.axons_collision_sphere.collision_list->at(i);
+                //unsigned index = i;
                 (axons_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);  
             }

@@ -69,8 +69,6 @@ public:
     inline bool point_in_inflated_aabb(const Eigen::Vector3d& p,
                                    double d);
     void set_spheres(std::vector<Sphere> &spheres_to_add);
-    bool is_point_near_axon(const Eigen::Vector3d& p,
-                        double d);
     inline bool segment_aabb_intersect(const Eigen::Vector3d& p0,
                                    const Eigen::Vector3d& p1,
                                    const Box& box,

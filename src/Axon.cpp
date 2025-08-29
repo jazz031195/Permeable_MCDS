@@ -57,9 +57,11 @@ inline uint64_t hash3(int x, int y, int z) {
                                v = (v^(v>>27))*0x94d049bb133111ebULL; return v^(v>>31); };
     return mix((uint64_t)(uint32_t)x) ^ (mix((uint64_t)(uint32_t)y)<<1) ^ (mix((uint64_t)(uint32_t)z)<<2);
 }
-void Axon::build_axon_grid_spheres(const std::vector<Sphere>& spheres,
+void Axon::build_axon_grid_spheres(const std::vector<Sphere>& spheres_to_add,
                                       double cell_size, double pad)
 {
+
+    spheres = spheres_to_add;
     // init grid
     grid = HashGrid{};
     grid.cell = (cell_size > 0.0 ? cell_size : 1.0);
@@ -94,8 +96,7 @@ void Axon::build_axon_grid_spheres(const std::vector<Sphere>& spheres,
     grid.big_box = B;
 
     // (Optional) reserve to avoid reallocation
-    size_t total = spheres.size();
-    grid.objs.reserve(total);
+    grid.objs.reserve(spheres.size());
 
     // 3) add spheres into buckets — store indices (b,i)
     auto add = [&](int i) {
@@ -170,30 +171,6 @@ void Axon::set_spheres(std::vector<Sphere> &spheres_to_add) {
     double pad = barrier_tickness;
     build_axon_grid_spheres(spheres,grid_cell_size, pad);
 
-}
-
-bool Axon::is_point_near_axon(const Eigen::Vector3d& p,
-                        double d)
-{
-    if (!point_in_inflated_aabb(p, d)) return false;
-
-    Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
-    const int L = std::max(1, (int)std::ceil(d / grid.cell));
-    const double d2 = d*d;
-
-    for (int dx=-L; dx<=L; ++dx)
-      for (int dy=-L; dy<=L; ++dy)
-        for (int dz=-L; dz<=L; ++dz) {
-          auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
-          if (it == grid.buckets.end()) continue;
-          for (int idx : it->second) {
-            auto i = grid.objs[idx];  // (branch_id, cell_id)
-            const Sphere* s = &spheres[i];
-            const Eigen::Vector3d v = p - s->P;
-            if (v.squaredNorm() <= (s->radius + d)*(s->radius + d)) return true;
-          }
-        }
-    return false;
 }
 
 
@@ -373,7 +350,8 @@ bool Axon::checkCollision(const Walker& walker,
 {
 
     // Normalize direction
-    const double L = (step_length > 0.0) ? step_length : step.norm();
+    const double L = step_length;
+
     if (L <= 0.0) { 
         assert(0);
         collision.type = Collision::null; 
@@ -381,13 +359,8 @@ bool Axon::checkCollision(const Walker& walker,
     }
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
-
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2)) {
-        collision.type = Collision::null;
-        return false; // outside of glia bounding box
-    }
-
     const double Rpad = grid.build_pad;
+
     
     const bool start_inside = (walker.location == Walker::intra);
 
@@ -399,6 +372,9 @@ bool Axon::checkCollision(const Walker& walker,
     std::vector<Ev> evs; evs.reserve(cand_ids.size()*2 + 2);
 
     const double epsT = std::max(1e-12, 1e-6 * grid.cell);
+    
+    bool isbouncing = (walker.status == Walker::bouncing);
+
 
     auto addSphereEvents = [&](const Sphere* s,
                             const Eigen::Vector3d& p0,
@@ -410,6 +386,7 @@ bool Axon::checkCollision(const Walker& walker,
             const double Rin = s->radius;
             if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
 
+
             // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
             if (t1 < t0) std::swap(t0, t1);
 
@@ -417,11 +394,11 @@ bool Axon::checkCollision(const Walker& walker,
             const bool inside0 = (p0 - s->P).squaredNorm() <= (s->radius - Rpad)*(s->radius - Rpad) + 1e-12;
             
             if (!inside0) {
-                evs.push_back({ std::min(L, std::max(0.0, t0)), +1, s });
-                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+                evs.push_back({ t0, +1, s });
+                evs.push_back({ t1, -1, s });
             } 
             else {
-                evs.push_back({ std::min(L, std::max(0.0, t1)), -1, s });
+                evs.push_back({ t1, -1, s });
             }
         }
         else{
@@ -430,23 +407,15 @@ bool Axon::checkCollision(const Walker& walker,
             const double Rin = s->radius;            // ← same inflation here
             if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
             if (t1 < t0) std::swap(t0, t1);
+            if (t0 > L + Rpad) return;  // intersection beyond step end
 
-            // discard completely outside segment
-            if (t1 < 0.0 || t0 > L) return;
 
-            // clip
-            t0 = std::max(0.0, std::min(t0, L));
-            t1 = std::max(0.0, std::min(t1, L));
-            if (t1 <= t0 + epsT) return;
+            //if (t0 < 0){
+            //    cout << "Warning: raySphere returned t0<0 (t0=" << t0 << ", t1=" << t1 << ")\n";
+            //}
 
-            const bool inside0 = (p0 - s->P).squaredNorm() <= Rin*Rin + 1e-12; // ← consistency
-
-            if (!inside0) {
-                if (t0 > epsT) evs.push_back({t0, +1, s});  // ENTER
-                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT
-            } else {
-                if (t1 > epsT) evs.push_back({t1, -1, s});  // EXIT only
-            }
+            if (t0 >= 0) evs.push_back({std::min(L, std::max(0.0, t0)), +1, s});  // ENTER
+            
         }
 
     };
@@ -470,6 +439,7 @@ bool Axon::checkCollision(const Walker& walker,
     std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
 
 
+
     if (bad_idx || null_ptr) {
         std::cerr << "Summary: bad_idx=" << bad_idx << " null_ptr=" << null_ptr << "\n";
     }
@@ -487,6 +457,7 @@ bool Axon::checkCollision(const Walker& walker,
         return false; 
     }
 
+
     // 5) Sweep to find first union boundary:
     int occ0;
 
@@ -498,19 +469,25 @@ bool Axon::checkCollision(const Walker& walker,
     }
 
     bool is_inside = (occ0 > 0);
+
+    /*
+    cout <<"----------------------------------\n";
+    cout <<"ax_d : " << id << endl;
+    cout << "bouncing" << endl;
+
+    for (const auto& e : evs) {
+        cout << "Event: t=" << e.t << " delta=" << e.delta 
+                << " sphere_id=" << e.s->id << "\n";
+    }
+    cout <<"occ0 :  " << occ0 << "\n";
+    */
     int occ = occ0;
     if (start_inside && !is_inside){
         // problem
         collision.type = Collision::hit;
         collision.col_location  = Collision::outside;
         collision.perm_crossing = 0.0;
-        for (const auto& e : evs) {
-            cout << "Event: t=" << e.t << " delta=" << e.delta 
-                    << " sphere_id=" << e.s->id << "\n";
-        }
-        cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
-        cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
-             << " occ0=" << occ0 <<  "\n";
+
         //assert(0);
         return true;
     }
@@ -520,9 +497,6 @@ bool Axon::checkCollision(const Walker& walker,
         collision.type = Collision::hit;
         collision.col_location  = Collision::inside;
         collision.perm_crossing = 0.0;
-        cout << "Error: walker started outside glia but is inside a sphere at p0\n";
-        cout <<"occ0=" << occ0 << " start_inside=" << start_inside 
-             << " p0=" << p0.transpose() << " dir=" << dir.transpose() << "\n";
         //assert(0);
         return true;
     }
@@ -533,28 +507,7 @@ bool Axon::checkCollision(const Walker& walker,
     if (!start_inside) {
         // robust outside path: first time occ becomes > 0
         // (occ was computed earlier; should be 0 here)
-        size_t i = 0;
-        while (i < evs.size()) {
-            const double t = evs[i].t;
-            int sum = 0;
-            const Ev* firstEnter = nullptr;
-            size_t j = i;
-
-            // group all events with the same time (within epsT)
-            while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
-                sum += evs[j].delta;
-                if (evs[j].delta > 0 && !firstEnter) firstEnter = &evs[j];
-                ++j;
-            }
-
-            if (occ + sum > 0) {                    // transition to inside happens here
-                hit = firstEnter ? firstEnter : &evs[i];   // choose an ENTER in this group
-                break;
-            }
-
-            occ += sum;
-            i = j;
-        }
+        hit  =&evs[0];
     } else {
         // inside -> first time occ becomes 0, grouping same-t events
         size_t i = 0;
@@ -585,7 +538,7 @@ bool Axon::checkCollision(const Walker& walker,
 
     if (!hit) { 
 
-        
+        //cout <<" No hit found\n";
         collision.type = Collision::null; 
         return false; 
     }
@@ -598,6 +551,11 @@ bool Axon::checkCollision(const Walker& walker,
     const Eigen::Vector3d n   = (pos - hit->s->P).normalized();
     const double dn = dir.dot(n);
     const Eigen::Vector3d bounced = dir - 2.0 * dn * n;
+    /*
+    cout <<" hit at t=" << t_hit << " pos=" << pos.transpose() 
+         << " sphere_id=" << hit->s->id << " n=" << n.transpose() 
+         << " dn=" << dn << " bounced=" << bounced.transpose() << "\n";
+         */
 
 
     collision.type = Collision::hit;
@@ -747,37 +705,25 @@ void Axon::set_prob_crossings(double step_length_pref){
 
 }
 
-
-
 double Axon::minDistance(const Walker& w) const
 {
+    if (spheres.empty()) return std::numeric_limits<double>::infinity();
     const Box& box = grid.big_box;
-    // if you have a helper is_empty(box), use that; otherwise:
-    if (box.x_min > box.x_max || box.y_min > box.y_max || box.z_min > box.z_max)
-        return std::numeric_limits<double>::infinity();
 
     const Eigen::Vector3d& p = w.pos_v;
 
-    // Closest point on the box to p (clamp)
-    Eigen::Vector3d q;
-    q.x() = std::min(std::max(p.x(), box.x_min), box.x_max);
-    q.y() = std::min(std::max(p.y(), box.y_min), box.y_max);
-    q.z() = std::min(std::max(p.z(), box.z_min), box.z_max);
 
-    const double d2 = (p - q).squaredNorm();
-    if (d2 > 0.0) {
-        // Outside: Euclidean distance to the box
-        return std::sqrt(d2);
-    } else {
-        // Inside: minimum distance to any face (depth to surface)
-        const double dx_min = p.x() - box.x_min;
-        const double dx_max = box.x_max - p.x();
-        const double dy_min = p.y() - box.y_min;
-        const double dy_max = box.y_max - p.y();
-        const double dz_min = p.z() - box.z_min;
-        const double dz_max = box.z_max - p.z();
-        return std::min({dx_min, dx_max, dy_min, dy_max, dz_min, dz_max});
-    }
+    if (p.x() >= box.x_min && p.x() <= box.x_max &&
+        p.y() >= box.y_min && p.y() <= box.y_max &&
+        p.z() >= box.z_min && p.z() <= box.z_max) {
+        return 0;
+    } 
+
+    double dist_x = min(std::abs(p.x() - box.x_min), std::abs(p.x() - box.x_max));
+    double dist_y = min(std::abs(p.y() - box.y_min), std::abs(p.y() - box.y_max));
+    double dist_z = min(std::abs(p.z() - box.z_min), std::abs(p.z() - box.z_max));
+    double minimum = min(dist_x, min(dist_y, dist_z));
+    return minimum;
 }
 bool Axon::isPosInsideAxon(const Eigen::Vector3d& p, double margin) 
 {
