@@ -414,7 +414,7 @@ bool Axon::checkCollision(const Walker& walker,
             //    cout << "Warning: raySphere returned t0<0 (t0=" << t0 << ", t1=" << t1 << ")\n";
             //}
 
-            if (t0 >= 0) evs.push_back({std::min(L, std::max(0.0, t0)), +1, s});  // ENTER
+            if (t0 >= 0) evs.push_back({t0, +1, s});  // ENTER
             
         }
 
