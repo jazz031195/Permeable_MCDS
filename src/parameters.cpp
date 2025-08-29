@@ -130,6 +130,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if(str_dist(tmp,"write_traj_file") <= 2){
             in >> write_traj;
         }
+        else if(str_dist(tmp,"write_location") <= 1){
+            in >> write_location;
+        }
         else if(str_dist(tmp,"write_hit_file") <= 2){
             in >> write_hit;
         }

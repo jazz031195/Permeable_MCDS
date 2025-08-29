@@ -7,6 +7,7 @@
 #include "Eigen/src/Core/ArithmeticSequence.h"
 #include "Eigen/src/Core/util/IndexedViewHelper.h"
 #include "Eigen/src/Core/util/Macros.h"
+#include "walker.h"
 #include <iostream>
 using namespace std;
 
@@ -57,6 +58,7 @@ void Trajectory::initTrajectory(Parameters params)
     write_hit    = params.write_hit;
     write_full_c = params.write_full_c;
     write_every_nth_step = params.write_every_nth_step;
+    write_location = params.write_location;
 
     trajfile     = params.output_base_name;
     hitfile      = params.output_base_name;
@@ -171,13 +173,21 @@ void Trajectory::initTrajWriterText()
         std::cout << "Cannot open " << (trajfile + ".traj.txt").c_str()<< std::endl;
         return;
     }
+
+    // write header line 
+    if (write_location) {
+        tout << "walker_id x y z location" << std::endl;
+    }
+    else {
+        tout << "walker_id x y z" << std::endl;
+    }
 }
 
 
 
 void Trajectory::writePosition(Eigen::Vector3d &pos)
 {
-    cout << "We use the vector function, caution, subsampling not implemented!" ;
+    cout << "We use the vector function, caution, subsampling not implemented! Location output as well." ;
     cout << "traj"  << write_traj << endl;
     if(write_traj){
         if(write_bin){
@@ -358,6 +368,59 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
 
 
 }  
+
+void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
+    // Malte's new writePosition for text output that supports location output (intra/extra)
+    Eigen::Matrix3Xd& pos = walker.pos_r_log;
+
+    if (write_traj){
+        if(write_bin){
+            cout << "Only text output implemented for location output." << std::endl;
+
+        }
+        else if (write_txt) {
+            if (write_every_nth_step>1) {
+                unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
+                Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
+
+                for (int c = 0; c < number_of_subsampled_columns; ++c) {
+                    pos_subsampled.col(c) = pos.col(c * write_every_nth_step);
+                }
+
+                // add last position
+                if (pos.cols() % write_every_nth_step != 0) {
+                    pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
+                    pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
+                }
+                            
+                for (int i = 0; i < pos_subsampled.cols(); i++){
+                    if (write_location) {
+                        if (walker.location == Walker::intra){
+                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " intra"<< std::endl;
+                        }
+                        else if (walker.location == Walker::extra){
+                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " extra"<< std::endl;
+                        }
+                        else if (walker.location == Walker::unknown){
+                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " unknown"<< std::endl;
+                        }
+                        else {
+                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " not_implemented"<< std::endl;
+                        }
+                    }
+                    else {
+                        tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << std::endl;
+                }
+            }
+            }
+            
+
+
+
+
+        }
+    }
+}
     
 
 void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int &loc, unsigned &t, unsigned &id_)
@@ -381,6 +444,7 @@ void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int 
 
 void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
 {
+    cout << "Warning, buggy+" << std::endl;
     if(steps_subset)
     {
         unsigned index = 0;

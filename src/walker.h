@@ -35,65 +35,43 @@ public:
     enum RelativeLocation{unknown,intra,extra};
 
     Eigen::Vector3d pos_r;                                          /*!< Real walker position for collision, r stands for real                  */
-
     Eigen::Vector3d pos_v;                                          /*!< Walker current position                                                */
-
     Eigen::Vector3d last_pos_r;                                     /*!< Walker voxel last position                                             */
-
     Eigen::Vector3d last_pos_v;                                     /*!< Walker real last position                                              */
-
     Eigen::Vector3d ini_pos;                                        /*!< Walker intital position                                                */
-
     Eigen::Vector3d next_direction;                                 /*!< Auxiliar vector for special states cases, decides the next direction   */
-
     Eigen::Matrix3Xd pos_r_log;                                     /*!< log of the real spin position, used to compute the phase shift         */
-
     Eigen::Matrix3Xd pos_v_log;                                     /*!< log of the voxel position, used for collision location and bouncing    */
-
+    
     int in_obj_index; 
     int in_obj_type;    
-
+    
     CylinderCollisionSphere collision_sphere_cylinders;             /*!< Collision sphere for collition against cylidners                       */
-
     AxonCollisionSphere axons_collision_sphere;                     /*!< Collision sphere for collition against axons                      */
-
     GlialCollisionSphere collision_sphere_glials;                     /*!< Collision sphere for collition against glial cells                      */
-
     PLYCollisionSphere collision_sphere_ply;                        /*!< Collision sphere for collition against PLY meshes                      */
-
     SphereCollisionSphere collision_sphere_spheres;                 /*!< Collision sphere for collition against spheres                         */
-
     Eigen::Vector3d initial_sphere_pos_v;                           /*!< Saves the intial positioon of the walker inside the collition sphere   */
-
+    
     unsigned steps_count;                                           /*!< Counts the number of steps (including bouncings) made.                 */
-
+    
     state status;                                                   /*!< state memeber                                                          */
-
     RelativeLocation initial_location, location, previous_location;                    /*!< location on the substrate (if known)                                   */
-
     Eigen::VectorXi collision_in_log, collision_ext_log;                                   /*!< Vector of collision for logging                                         */
-
     Eigen::VectorXi crossing_in_log, crossing_ext_log;                                   /*!< Vector of crossing for logging                                         */
-
+    
     unsigned collision_in, collision_ext;                                              /*!< Retains the number of hit per step                                      */ 
-
     unsigned crossing_in, crossing_ext;                                              /*!< Retains the number of crossing per step                                */
-
     int intra_extra_consensus;                                      /*!< intra o extra position by face collision consensus w/r the normal*/
-
     unsigned intra_coll_count;                                      /*!< counter of collision in the ïntra-side w/r the normal*/
-
     unsigned extra_coll_count;                                      /*!< counter of collision in the extra-side w/r the normal*/
-
     unsigned int index;                                             /*!< Walker identifier (id)*/
-
     unsigned int rejection_count;                                   /*!< counter of the rejected directions in a single time-step*/
-
     float steps_per_second;                                         /*!< Particles steps per second speeed.*/
-
-    bool is_allowed_to_cross;                                       /*!< Is allowed to cross membrane, not illegal crossing */
+    bool is_allowed_to_cross;                                       /*!< Is allowed to cross membrane, not illegal crossing */   
     
     Eigen::Vector3d normal;                                         /*!< Normal vector for the collisions against voxel boundaries */
+ 
     //! Default constructor.
     /*! Set all variables to cero.*/
     Walker();

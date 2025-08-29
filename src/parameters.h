@@ -31,6 +31,10 @@ public:
     bool write_traj;                                /*!< flag, write a traj file or not, binary format only                         */
     bool write_hit;                                 /*!< flag, write a hit file or not, binary format only                         */
     unsigned write_every_nth_step = 1; /*!< write every Nth step to scale down trajectory to relevant time scale for dMRI */
+    bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
+    bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */
+    bool write_location= 0;                     /*!< flag, true if the position of the walker (intra/extra) is to be ouput      */
+
     double concentration;                           /*< concentration of walkers per mm³ */
     bool write_full_c;
     double step_length;                             /*!< step length for the walkers                                                */
@@ -38,8 +42,6 @@ public:
     double t_ex;                                    /*!< exchange time between compartments */
     double f; /*!< Useful for mixed_compartment_diffusivities */
     
-    bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
-    bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */
     bool scale_from_stu;                            /*!< flag, true if the scheme file is in standar units m,s                      */
     bool save_phase_shift;                          /*!< flag, saves the phase shift distribution for all particles                 */
     long seed;                                      /*!< Initial seed for the random generator                                      */
