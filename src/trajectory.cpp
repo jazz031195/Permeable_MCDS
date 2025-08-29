@@ -1,5 +1,6 @@
 #include "trajectory.h"
 #include <iomanip>      // std::setprecision
+#include "Eigen/src/Core/Matrix.h"
 #include "simerrno.h"
 #include <fstream>
 #include <Eigen/Dense>
@@ -9,6 +10,8 @@
 #include "Eigen/src/Core/util/Macros.h"
 #include "walker.h"
 #include <iostream>
+#include <string>
+#include <vector>
 using namespace std;
 
 
@@ -176,10 +179,10 @@ void Trajectory::initTrajWriterText()
 
     // write header line 
     if (write_location) {
-        tout << "walker_id x y z location" << std::endl;
+        tout << "walker_id step_number x y z location" << std::endl;
     }
     else {
-        tout << "walker_id x y z" << std::endl;
+        tout << "walker_id step_number x y z" << std::endl;
     }
 }
 
@@ -365,8 +368,6 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
     {
         writePositionHit(col_in, col_ext, cross_in, cross_ext);
     }    
-
-
 }  
 
 void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
@@ -382,34 +383,50 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
             if (write_every_nth_step>1) {
                 unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
                 Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
+                std::vector<int> step_number;
 
                 for (int c = 0; c < number_of_subsampled_columns; ++c) {
                     pos_subsampled.col(c) = pos.col(c * write_every_nth_step);
+                    step_number.push_back(write_every_nth_step*c);
                 }
 
                 // add last position
                 if (pos.cols() % write_every_nth_step != 0) {
                     pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
                     pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
+                    step_number.push_back(T+1);
                 }
                             
                 for (int i = 0; i < pos_subsampled.cols(); i++){
                     if (write_location) {
+                        std::string this_location;
                         if (walker.location == Walker::intra){
-                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " intra"<< std::endl;
+                            this_location="intra";
                         }
                         else if (walker.location == Walker::extra){
-                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " extra"<< std::endl;
+                            this_location="extra";
                         }
                         else if (walker.location == Walker::unknown){
-                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " unknown"<< std::endl;
+                            this_location="unknown";
                         }
                         else {
-                            tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << " not_implemented"<< std::endl;
+                            this_location="not_implemented";
                         }
+
+                        tout << std::setprecision(6) 
+                            << walker_index << " " 
+                            << step_number[i] << " "
+                            << pos(0,i) << " " << pos(1,i) << " " 
+                            << pos(2,i) << " " 
+                            << this_location << std::endl;
                     }
                     else {
-                        tout << std::setprecision(6) << walker_index << " " << pos(0,i) << " " << pos(1,i) << " " << pos(2,i) << std::endl;
+                        tout << std::setprecision(6) 
+                             << walker_index << " " 
+                             << step_number[i] << " "
+                             << pos(0,i) << " " 
+                             << pos(1,i) << " " 
+                             << pos(2,i) << std::endl;
                 }
             }
             }
@@ -444,7 +461,7 @@ void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int 
 
 void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
 {
-    cout << "Warning, buggy+" << std::endl;
+    cout << "Warning, buggy" << std::endl;
     if(steps_subset)
     {
         unsigned index = 0;

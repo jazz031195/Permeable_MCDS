@@ -1490,10 +1490,12 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);
         dataSynth->update_DWI_signal(walker);
         //Write the positions.
-        if (params.write_location){
+        if (params.write_location || params.write_txt){
             trajectory.writePosition(walker, w);
         }
-        trajectory.writePosition(walker.pos_r_log, walker.collision_in_log, walker.collision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
+        else{
+            trajectory.writePosition(walker.pos_r_log, walker.collision_in_log, walker.collision_ext_log, walker.crossing_in_log, walker.crossing_ext_log);
+        }
 
         if(params.log_propagator){
             //Update Propagator
