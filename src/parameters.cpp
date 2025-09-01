@@ -16,6 +16,7 @@ Parameters::Parameters()
     write_full_c        = false;
     write_txt           = false;
     write_bin           =  true;
+    write_location      = false;
     mix_compartment_diffusivities = false;
 
     hex_packing = false;
@@ -135,6 +136,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         }
         else if(str_dist(tmp,"write_full_c_file") <= 2){
             in >> write_full_c;
+        }
+        else if(str_dist(tmp,"write_location") <= 2){
+            in >> write_location;
         }
         else if(str_dist(tmp,"scale_from_stu") <= 2){
             in >> scale_from_stu;
