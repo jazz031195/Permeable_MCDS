@@ -420,17 +420,6 @@ bool Glial::checkCollision(const Walker& walker,
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
-    bool isclose_to_soma = false;
-
-    if ((p0 - soma.P).squaredNorm() <= (soma.radius + L*2)*(soma.radius + L*2)){
-        isclose_to_soma = true;
-    }
-
-    if (!point_in_inflated_aabb(p0, grid.max_radius_plus_pad + L*2) && !isclose_to_soma) {
-        collision.type = Collision::null;
-        return false; // outside of glia bounding box
-    }
-
     const double Rpad = grid.build_pad;
     
     const bool start_inside = (walker.location == Walker::intra);
@@ -459,15 +448,20 @@ bool Glial::checkCollision(const Walker& walker,
             // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
             if (t1 < t0) std::swap(t0, t1);
 
-
             const bool inside0 = (p0 - s->P).squaredNorm() <= (s->radius - Rpad)*(s->radius - Rpad) + 1e-12;
             
             if (!inside0) {
-                evs.push_back({ t0, +1, s });
-                evs.push_back({ t1, -1, s });
+                if (t0 < L + Rpad) {
+                    evs.push_back({ t0, +1, s });
+                }
+                if (t1 < L + Rpad){
+                    evs.push_back({ t1, -1, s });
+                }
             } 
             else {
-                evs.push_back({ t1, -1, s });
+                if (t1 < L + Rpad){
+                    evs.push_back({ t1, -1, s });
+                }
             }
         }
         else{
@@ -477,7 +471,6 @@ bool Glial::checkCollision(const Walker& walker,
             if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
             if (t1 < t0) std::swap(t0, t1);
             if (t0 > L + Rpad) return;  // intersection beyond step end
-
             if (t0 >= 0) evs.push_back({std::min(L, std::max(0.0, t0)), +1, s});  // ENTER
         }
 
@@ -543,10 +536,10 @@ bool Glial::checkCollision(const Walker& walker,
     int occ0;
 
     if (start_inside){
-        occ0 = occupancy_at_point(p0, Rpad, start_inside);
+        occ0 = occupancy_at_point(p0, Rpad, start_inside, L);
     }
     else{
-        occ0 = occupancy_at_point(p0, -Rpad, start_inside);
+        occ0 = occupancy_at_point(p0, -Rpad, start_inside, L);
     }
 
     bool is_inside = (occ0 > 0);
@@ -719,56 +712,16 @@ bool Glial::checkCollision(const Walker& walker,
     return true;
 }
 
-// Returns true if we found a t' <= t_hit such that occupancy(p0+dir*t') == start_inside.
-// t_hit is modified in place. Uses bisection with a tolerance tied to the grid cell.
-bool Glial::ensure_same_compartment_at_hit(const Eigen::Vector3d& p0,
-                                           const Eigen::Vector3d& dir_unit,
-                                           bool start_inside,
-                                           double pad,      // use grid.build_pad
-                                           double cell,     // grid.cell
-                                           double& t_hit,   // in/out
-                                           int max_iter) 
-{
-    const double tol = std::max(1e-12, 1e-6 * cell);
-
-    auto occ = [&](double t)->bool {
-        return occupancy_at_point(p0 + dir_unit * t, pad, start_inside) > 0;
-    };
-
-    // If just stepping back a hair already fixes it, do that quickly.
-    double t_try = std::max(0.0, t_hit - tol);
-    if (occ(t_try) == start_inside) { t_hit = t_try; return true; }
-
-    // Otherwise, bisection on [0, t_hit] to find largest t with desired occupancy.
-    if (occ(0.0) != start_inside) {
-        // This means we started on the wrong side; caller can handle as "t=0 bounce".
-        t_hit = 0.0;
-        return false;
-    }
-
-    double lo = 0.0, hi = t_hit, best = 0.0;
-    for (int it = 0; it < max_iter; ++it) {
-        double mid = 0.5 * (lo + hi);
-        if (occ(mid) == start_inside) { best = mid; lo = mid; }
-        else                          { hi   = mid; }
-        if (hi - lo <= tol) break;
-    }
-    t_hit = std::max(0.0, best - 0.5 * tol); // nudge a touch inward for safety
-    return true;
-}
-// grid.max_radius_plus_pad should be a *double* computed at build time:
-//   grid.max_radius_plus_pad = max(grid.max_radius_plus_pad, s.radius + build_pad);
-// and grid.cell is your voxel size.
 
 int Glial::occupancy_at_point(const Eigen::Vector3d& p,
                               double margin,
-                              const bool& isintra) const
+                              const bool& isintra, const double& L) const
 {
     // Tiny, scale-aware tiebreaker to avoid boundary chatter:
     // if we *expect* to be inside, be lenient (inflate a hair);
     // if we expect outside, be strict (shrink a hair).
-    const double tau = 1e-6 * grid.cell;
-    const double m   = margin + (isintra ? +tau : -tau);
+
+    const double m   = margin;
 
     int occ = 0;
 
@@ -791,7 +744,9 @@ int Glial::occupancy_at_point(const Eigen::Vector3d& p,
     }
 
     // 3) Robust neighbor span in grid cells
-    const int Lc = 1;
+    double cell_size = grid.cell;
+    int number_cells = int(L/cell_size);
+    const int Lc = number_cells + 1;
 
     // 4) Cell index of p
     const Eigen::Array3i ic =
@@ -824,42 +779,6 @@ int Glial::occupancy_at_point(const Eigen::Vector3d& p,
     return occ;
 }
 
-
-
-double Glial::signed_distance_to_union(const Eigen::Vector3d& p, double margin)
-{
-    const double pad = std::max(0.0, margin);
-    double dmin = std::numeric_limits<double>::infinity();
-
-    auto upd = [&](const Sphere& s){
-        const double d = (p - s.P).norm() - (s.radius + pad);
-        if (d < dmin) dmin = d;
-    };
-
-    // Soma
-    upd(soma);
-
-    // Big-box quick reject: if outside by more than dmin, you can early-return,
-    // but we keep it simple here and just scan neighbors like occupancy:
-    const double cell = grid.cell;
-    const Eigen::Array3i ic = ((p - grid.origin).array() / cell).floor().cast<int>();
-    int Lc = neighbor_radius_cells(grid, pad);
-
-    std::unordered_set<int> seen; seen.reserve(64);
-    for (int dx=-Lc; dx<=Lc; ++dx)
-      for (int dy=-Lc; dy<=Lc; ++dy)
-        for (int dz=-Lc; dz<=Lc; ++dz) {
-          auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
-          if (it == grid.buckets.end()) continue;
-          for (int idx : it->second) {
-            if (!seen.insert(idx).second) continue;
-            auto [b,i] = grid.objs[idx];
-            if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
-            upd(processes[b][i]);
-          }
-        }
-    return dmin; // <0 inside, >0 outside, ~0 on surface (w.r.t. margin)
-}
 
 void Glial::set_prob_crossings(double step_length_pref){
 
@@ -930,7 +849,7 @@ double Glial::minDistance(const Walker& w) const
 
     return dist;
 }
-bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin)
+bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
 {
     // 1) Soma test (allow shrink/inflate here)
     {
@@ -955,7 +874,9 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin)
     // 3) How many neighbor cells to scan
     //    Use the largest sphere radius you stored at build time
     const double maxR = grid.max_radius_plus_pad; // set at build time
-    const int Lc = std::max(1, (int)std::ceil((maxR + infl) / grid.cell));
+    double cell_size = grid.cell;
+    int number_cells = int(L/cell_size);
+    const int Lc = number_cells + 1;
 
     // 4) Cell index and 27/125/... neighbor scan
     const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();

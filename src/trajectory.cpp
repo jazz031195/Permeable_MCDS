@@ -672,9 +672,7 @@ void Trajectory::closeHitReaderFile()
 
 void Trajectory::setTrajFile(std::string trajfile_)
 {
-    if (write_location){
-        trajfile_ = trajfile_ + "_location";
-    }
+
     trajfile = trajfile_  + ".traj";
     headerfile = trajfile_+ ".bhdr";
     readTrajectoryHeader();

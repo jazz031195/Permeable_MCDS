@@ -4,7 +4,7 @@ import random
 import pandas as pd
 import matplotlib.colors as mcolors
 
-def plot_bfloat_points(file_paths):
+def plot_bfloat_points(file_paths, binary, location):
     """
     Reads X, Y, Z coordinates from a .bfloat file and plots them using PyVista.
 
@@ -17,23 +17,56 @@ def plot_bfloat_points(file_paths):
     # Plot the points
     plotter = pv.Plotter()
     for file_path in file_paths:
-        print(f"Reading .bfloat file: {file_path}")
-        # Read the binary float32 data
-        data = np.fromfile(file_path, dtype="float32")
 
-        # Ensure the data can be reshaped into (N, 3) format
-        if len(data) % 3 != 0:
-            raise ValueError("Invalid .bfloat file: Data length is not a multiple of 3 (expected XYZ triplets).")
+        if (not location and binary):
+            print(f"Reading .bfloat file: {file_path}")
+            # Read the binary float32 data
+            data = np.fromfile(file_path, dtype="float32")
 
-        # Reshape into N x 3 (X, Y, Z)
-        points = data.reshape(-1, 3)
+            # Ensure the data can be reshaped into (N, 3) format
+            if len(data) % 3 != 0:
+                raise ValueError("Invalid .bfloat file: Data length is not a multiple of 3 (expected XYZ triplets).")
 
-        points = points*1000
+            # Reshape into N x 3 (X, Y, Z)
+            points = data.reshape(-1, 3)
 
-        # Create a PyVista point cloud
-        cloud = pv.PolyData(points)
-        plotter.add_mesh(cloud, color="blue", point_size=2, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
+            print(f"Number of points read: {points.shape[0]}")
+
+            points = points*1000
+
+            # Create a PyVista point cloud
+            cloud = pv.PolyData(points)
+            plotter.add_mesh(cloud, color="blue", point_size=1, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
+        elif location:
+            # Read the file (replace 'data.txt' with your filename)
+            data = pd.read_csv(file_path, delim_whitespace=True)
+
+            data_intra = data.loc[data['location'] == "intra"]
+            x = data_intra['x'].values
+            y = data_intra['y'].values
+            z = data_intra['z'].values
+
+            points = np.column_stack((x, y, z))
+
+            points = points*1000
+
+            cloud = pv.PolyData(points)
+            plotter.add_mesh(cloud, color="red", point_size=1, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
+
+            data_extra = data.loc[data['location'] == "extra"]
+            x = data_extra['x'].values
+            y = data_extra['y'].values
+            z = data_extra['z'].values
+
+            points = np.column_stack((x, y, z))
+
+            points = points*1000
+
+            cloud = pv.PolyData(points)
+            plotter.add_mesh(cloud, color="blue", point_size=1, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
+
     return plotter
+
 
 def get_random_element(dictionary, seed):
     random.seed(seed)
@@ -114,9 +147,14 @@ def plot_cells(file_path, plotter):
 # Example usage:
 if __name__ == "__main__":
 
-    nbr_trajectories = 10
-    trajectory_paths = [f"/home/localadmin/Documents/MCDS/Permeable_MCDS/output/trajectories_{i}.traj" for i in range(nbr_trajectories)]
-    plotter = plot_bfloat_points(trajectory_paths)
+    nbr_trajectories = 1
+    binary = True
+    location = False
+    if binary:
+        trajectory_paths = [f"/home/localadmin/Documents/Rita_simulations/ODF03_bead02_und02_soma/test_rep_02_{i}.traj" for i in range(nbr_trajectories)]
+    else:
+        trajectory_paths = [f"/home/localadmin/Documents/Rita_simulations/ODF03_bead02_und02_soma/test_{i}.traj.txt" for i in range(nbr_trajectories)]
+    plotter = plot_bfloat_points(trajectory_paths, binary, location)
     plotter.show()
 
     #swc_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/SMI_pred/axons_astrocytes/astrocytes_0.06.swc"

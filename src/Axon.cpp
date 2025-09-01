@@ -409,11 +409,6 @@ bool Axon::checkCollision(const Walker& walker,
             if (t1 < t0) std::swap(t0, t1);
             if (t0 > L + Rpad) return;  // intersection beyond step end
 
-
-            //if (t0 < 0){
-            //    cout << "Warning: raySphere returned t0<0 (t0=" << t0 << ", t1=" << t1 << ")\n";
-            //}
-
             if (t0 >= 0) evs.push_back({t0, +1, s});  // ENTER
             
         }
@@ -462,10 +457,10 @@ bool Axon::checkCollision(const Walker& walker,
     int occ0;
 
     if (start_inside){
-        occ0 = occupancy_at_point(p0, Rpad, start_inside);
+        occ0 = occupancy_at_point(p0, Rpad, start_inside, L);
     }
     else{
-        occ0 = occupancy_at_point(p0, -Rpad, start_inside);
+        occ0 = occupancy_at_point(p0, -Rpad, start_inside, L);
     }
 
     bool is_inside = (occ0 > 0);
@@ -585,13 +580,13 @@ bool Axon::checkCollision(const Walker& walker,
 
 int Axon::occupancy_at_point(const Eigen::Vector3d& p,
                               double margin,
-                              const bool& isintra) const
+                              const bool& isintra, const double& L) const
 {
     // Tiny, scale-aware tiebreaker to avoid boundary chatter:
     // if we *expect* to be inside, be lenient (inflate a hair);
     // if we expect outside, be strict (shrink a hair).
-    const double tau = 1e-6 * grid.cell;
-    const double m   = margin + (isintra ? +tau : -tau);
+
+    const double m   = margin;
 
     int occ = 0;
 
@@ -606,7 +601,9 @@ int Axon::occupancy_at_point(const Eigen::Vector3d& p,
     }
 
     // 3) Robust neighbor span in grid cells
-    const int Lc = 1;
+    double cell_size = grid.cell;
+    int number_cells = int(L/cell_size);
+    const int Lc = number_cells + 1;
 
     // 4) Cell index of p
     const Eigen::Array3i ic =
@@ -637,39 +634,6 @@ int Axon::occupancy_at_point(const Eigen::Vector3d& p,
         }
 
     return occ;
-}
-
-
-double Axon::signed_distance_to_union(const Eigen::Vector3d& p, double margin)
-{
-    const double pad = std::max(0.0, margin);
-    double dmin = std::numeric_limits<double>::infinity();
-
-    auto upd = [&](const Sphere& s){
-        const double d = (p - s.P).norm() - (s.radius + pad);
-        if (d < dmin) dmin = d;
-    };
-
-    // Big-box quick reject: if outside by more than dmin, you can early-return,
-    // but we keep it simple here and just scan neighbors like occupancy:
-    const double cell = grid.cell;
-    const Eigen::Array3i ic = ((p - grid.origin).array() / cell).floor().cast<int>();
-    int Lc = neighbor_radius_cells(grid, pad);
-
-    std::unordered_set<int> seen; seen.reserve(64);
-    for (int dx=-Lc; dx<=Lc; ++dx)
-      for (int dy=-Lc; dy<=Lc; ++dy)
-        for (int dz=-Lc; dz<=Lc; ++dz) {
-          auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
-          if (it == grid.buckets.end()) continue;
-          for (int idx : it->second) {
-            if (!seen.insert(idx).second) continue;
-            auto i = grid.objs[idx];
-            if ((size_t)i >= spheres.size()) continue;
-            upd(spheres[i]);
-          }
-        }
-    return dmin; // <0 inside, >0 outside, ~0 on surface (w.r.t. margin)
 }
 
 void Axon::set_prob_crossings(double step_length_pref){
@@ -725,7 +689,7 @@ double Axon::minDistance(const Walker& w) const
     double minimum = min(dist_x, min(dist_y, dist_z));
     return minimum;
 }
-bool Axon::isPosInsideAxon(const Eigen::Vector3d& p, double margin) 
+bool Axon::isPosInsideAxon(const Eigen::Vector3d& p, double margin, const double& L) 
 {
     const double pad = std::max(0.0, margin);
 
@@ -734,7 +698,9 @@ bool Axon::isPosInsideAxon(const Eigen::Vector3d& p, double margin)
         p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
         p.z() < B.z_min - pad || p.z() > B.z_max + pad) return false;
 
-    int Lc = 1;
+    double cell_size = grid.cell;
+    int number_cells = int(L/cell_size);
+    const int Lc = number_cells + 1;
     const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
 
     std::unordered_set<int> seen; seen.reserve(64);

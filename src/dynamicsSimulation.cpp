@@ -1125,9 +1125,10 @@ bool DynamicsSimulation::isInsideCylinders(Vector3d &position, int &object_id, d
 
 bool DynamicsSimulation::isInsideAxons(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside)
 {
+    double max_step = max(step_lenght_intra, step_lenght_extra);
     if (inner_axons_list.size() > 0) {
         for (unsigned i = 0; i < inner_axons_list.size() ; i++){
-            bool isinside = inner_axons_list[i].isPosInsideAxon(position,  distance_to_be_inside);
+            bool isinside = inner_axons_list[i].isPosInsideAxon(position,  distance_to_be_inside, max_step);
             if (isinside){
                 object_id = i;
                 return true;
@@ -1137,7 +1138,7 @@ bool DynamicsSimulation::isInsideAxons(Eigen::Vector3d &position, int &object_id
     else{
         for (unsigned i = 0; i < axons_list.size() ; i++){
     
-            bool isinside = axons_list[i].isPosInsideAxon(position,  distance_to_be_inside);
+            bool isinside = axons_list[i].isPosInsideAxon(position,  distance_to_be_inside, max_step);
             if (isinside){
                 object_id = i;
                 return true;
@@ -1150,9 +1151,10 @@ bool DynamicsSimulation::isInsideAxons(Eigen::Vector3d &position, int &object_id
 
 bool DynamicsSimulation::isOutsideAxons(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside)
 {
+    double max_step = max(step_lenght_intra, step_lenght_extra);
     for (unsigned i = 0; i < axons_list.size() ; i++){
  
-        bool isinside = axons_list[i].isPosInsideAxon(position,  distance_to_be_inside);
+        bool isinside = axons_list[i].isPosInsideAxon(position,  distance_to_be_inside, max_step);
         if (isinside){
             object_id = i;
             return false;
@@ -1255,9 +1257,9 @@ bool DynamicsSimulation::isInsideSpheres(Vector3d &position, double distance_to_
 
 bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id, const double& distance_to_be_inside)
 {
-
+    double max_step = max(step_lenght_intra, step_lenght_extra);
     for (unsigned i = 0; i < glials_list.size() ; i++){
-        bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside);
+        bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside, max_step);
         if (isinside){
             object_id = glials_list[i].id;
 

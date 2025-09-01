@@ -50,6 +50,7 @@ The main simulation settings are defined as key-value pairs in the configuration
 - **`num_process`**: Number of simulations to run simultaneously. It is recommended to set this to the number of CPU cores available.
 - **`ini_walkers_pos`**: Initial compartment in which the molecules start. Can be : intra or extra. If this is not given, the water molecules can be inside or outside the cells.
 - **`write_every_nth_step`**: If you want to save trajctories but not every single step taken by walkers (as this makes the saved files very heavy), you can save lighter trajectories with the positions for every N steps.
+- **`write_location`****': Write location (intra or extra) of each walker in the trajectory file .traj.
 
 Other parameters can be found in /src/parameters.h
 
