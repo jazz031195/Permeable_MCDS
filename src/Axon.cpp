@@ -167,7 +167,7 @@ void Axon::set_spheres(std::vector<Sphere> &spheres_to_add) {
         
     }
 
-    double grid_cell_size = 5e-4;
+    double grid_cell_size = 5e-3;
     double pad = barrier_tickness;
     build_axon_grid_spheres(spheres,grid_cell_size, pad);
 
