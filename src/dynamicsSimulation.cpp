@@ -623,10 +623,14 @@ void DynamicsSimulation::iniWalkerPosition()
         bool isintra = isInIntra(walker.ini_pos, object_id, object_type, -barrier_tickness);
         bool isextra = isInExtra(walker.ini_pos, barrier_tickness);
 
-        while (!isintra && !isextra){
+        bool illegal = (!isintra && !isextra) || (isintra && isextra);
+
+        while (illegal){
             walker.setRandomInitialPosition(params.min_sampling_area,params.max_sampling_area);
             isintra = isInIntra(walker.ini_pos, object_id, object_type, -barrier_tickness);
             isextra = isInExtra(walker.ini_pos, barrier_tickness);
+
+            illegal = (!isintra && !isextra) || (isintra && isextra);
         }
 
         if (isintra){
@@ -977,9 +981,9 @@ bool DynamicsSimulation::checkIfPosInsideVoxel(Vector3d &pos)
         if(     pos[0] - voxels_list[v].min_limits[0] > barrier_tickness &&
                 pos[1] - voxels_list[v].min_limits[1] > barrier_tickness &&
                 pos[2] - voxels_list[v].min_limits[2] > barrier_tickness &&
-                pos[0] - voxels_list[v].max_limits[0] < barrier_tickness &&
-                pos[1] - voxels_list[v].max_limits[1] < barrier_tickness &&
-                pos[2] - voxels_list[v].max_limits[2] < barrier_tickness)
+                pos[0] - voxels_list[v].max_limits[0] < -barrier_tickness &&
+                pos[1] - voxels_list[v].max_limits[1] < -barrier_tickness &&
+                pos[2] - voxels_list[v].max_limits[2] < -barrier_tickness)
             return true;
     }
 
@@ -1261,7 +1265,7 @@ bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id
     for (unsigned i = 0; i < glials_list.size() ; i++){
         bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside, max_step);
         if (isinside){
-            object_id = glials_list[i].id;
+            object_id = int(i);
 
             return true;
         }
@@ -1337,11 +1341,11 @@ bool DynamicsSimulation::isInExtra(Eigen::Vector3d &position,  double distance_t
     bool ok = true; int dummy;
 
     // cylinders/axons/spheres: ideally use the same distance-threshold idea for them too
-    if (!cylinders_list.empty()) ok = ok && isOutsideCylinders(position, dummy, 0.0);
-    if (!axons_list.empty())     ok = ok && isOutsideAxons(position, dummy, 0.0);
-    if (!plyObstacles_list.empty()) ok = ok && !isInsidePLY(position, 0.0);
-    if (!spheres_list.empty())      ok = ok && !isInsideSpheres(position, 0.0);
-    if (!glials_list.empty())   ok = ok && !this->isInsideGlial(position, dummy, 0.0);
+    if (!cylinders_list.empty()) ok = ok && isOutsideCylinders(position, dummy, distance_to_be_intra_ply);
+    if (!axons_list.empty())     ok = ok && isOutsideAxons(position, dummy, distance_to_be_intra_ply);
+    if (!plyObstacles_list.empty()) ok = ok && !isInsidePLY(position, distance_to_be_intra_ply);
+    if (!spheres_list.empty())      ok = ok && !isInsideSpheres(position, distance_to_be_intra_ply);
+    if (!glials_list.empty())   ok = ok && !this->isInsideGlial(position, dummy, distance_to_be_intra_ply);
 
     return ok;
 }
@@ -1804,10 +1808,10 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
         // extra walkers or unknown
         else {
 
-            //for(unsigned int i = 0 ; i < walker.collision_sphere_glials.small_sphere_list_end; i++ ){
-            for (unsigned int i = 0 ; i < (glials_list).size(); i++ ){
-                //unsigned index = walker.collision_sphere_glials.collision_list->at(i);
-                unsigned index = i;
+            for(unsigned int i = 0 ; i < walker.collision_sphere_glials.small_sphere_list_end; i++ ){
+            //for (unsigned int i = 0 ; i < (glials_list).size(); i++ ){
+                unsigned index = walker.collision_sphere_glials.collision_list->at(i);
+                //unsigned index = i;
                 (glials_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);     
             }
