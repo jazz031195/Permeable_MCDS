@@ -476,6 +476,14 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
 
         }
     }
+
+    if(write_hit)
+    {
+        writePositionHit(walker.collision_in_log,
+                     walker.collision_ext_log,
+                     walker.crossing_in_log,
+                     walker.crossing_ext_log);
+    } 
 }
     
 
