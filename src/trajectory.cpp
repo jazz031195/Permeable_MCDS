@@ -398,7 +398,7 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
                 }
 
                 // add last position
-                if (pos.cols() % write_every_nth_step != 0) {
+                if (step_number.empty() || step_number.back() != pos.cols() - 1) {
                     pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
                     pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
                     //step_number.push_back(T+1);
