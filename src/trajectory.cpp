@@ -345,6 +345,10 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
     if(write_traj)
     {
         unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
+        if (pos.cols() % write_every_nth_step == 0) { 
+                 number_of_subsampled_columns -= 1;   
+            } // ensure number_of_subsampled_columns is correct when pos.cols() is not divided by write_every_nth_step
+
         Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
 
         for (int c = 0; c < number_of_subsampled_columns; ++c) {
@@ -379,9 +383,12 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
             cout << "Only text output implemented for location output." << std::endl;
 
         }
-        else if (write_txt) {
+        if (write_txt) { // make sure to write txt if it's true, even if write_bin is true
             if (write_every_nth_step>1) {
                 unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
+                if (pos.cols() % write_every_nth_step == 0) {
+                    number_of_subsampled_columns -= 1;   
+                } // ensure number_of_subsampled_columns is correct when pos.cols() is not divided by write_every_nth_step
                 Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
                 std::vector<int> step_number;
 
@@ -391,10 +398,11 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
                 }
 
                 // add last position
-                if (pos.cols() % write_every_nth_step != 0) {
+                if (step_number.empty() || step_number.back() != pos.cols() - 1) {
                     pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
                     pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
-                    step_number.push_back(T+1);
+                    //step_number.push_back(T+1);
+                    step_number.push_back(static_cast<int>(pos.cols() - 1)); // in case of subsample, pos.cols() might be smaller than T + 1, so like this it should be always correct
                 }
                             
                 for (int i = 0; i < pos_subsampled.cols(); i++){
@@ -416,27 +424,66 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
                         tout << std::setprecision(6) 
                             << walker_index << " " 
                             << step_number[i] << " "
-                            << pos(0,i) << " " << pos(1,i) << " " 
-                            << pos(2,i) << " " 
+                            << pos_subsampled(0,i) << " "  //before it was saving pos(0,i), but if we are looping over pos_subsampled, we should save pos_subsampled(0,i)
+                            << pos_subsampled(1,i) << " "  //before it was saving pos(1,i), but if we are looping over pos_subsampled, we should save pos_subsampled(1,i)
+                            << pos_subsampled(2,i) << " "  //before it was saving pos(2,i), but if we are looping over pos_subsampled, we should save pos_subsampled(2,i)
                             << this_location << std::endl;
                     }
                     else {
                         tout << std::setprecision(6) 
                              << walker_index << " " 
                              << step_number[i] << " "
-                             << pos(0,i) << " " 
-                             << pos(1,i) << " " 
-                             << pos(2,i) << std::endl;
+                             << pos_subsampled(0,i) << " "  //before it was saving pos(0,i), but if we are looping over pos_subsampled, we should save pos_subsampled(0,i)
+                             << pos_subsampled(1,i) << " "  //before it was saving pos(1,i), but if we are looping over pos_subsampled, we should save pos_subsampled(1,i)
+                             << pos_subsampled(2,i) << std::endl; //before it was saving pos(2,i), but if we are looping over pos_subsampled, we should save pos_subsampled(2,i)
                 }
             }
+            } else { // add case for when write_every_nth_step == 1
+                for (int i = 0; i < pos.cols(); i++){
+                        if (write_location) {
+                            std::string this_location;
+                            if (walker.location == Walker::intra){
+                                this_location="intra";
+                            }
+                            else if (walker.location == Walker::extra){
+                                this_location="extra";
+                            }
+                            else if (walker.location == Walker::unknown){
+                                this_location="unknown";
+                            }
+                            else {
+                                this_location="not_implemented";
+                            }
+
+                            tout << std::setprecision(6) 
+                                << walker_index << " " 
+                                << i << " "  // save i instead of step_number[i], because here we are not subsampling
+                                << pos(0,i) << " "  // save pos(0,i) instead of pos_subsampled(0,i), because here we are not subsampling
+                                << pos(1,i) << " "  // save pos(1,i) instead of pos_subsampled(1,i), because here we are not subsampling
+                                << pos(2,i) << " "  // save pos(2,i) instead of pos_subsampled(2,i), because here we are not subsampling
+                                << this_location << std::endl;
+                        }
+                        else {
+                            tout << std::setprecision(6) 
+                                << walker_index << " " 
+                                << i << " " // save i instead of step_number[i], because here we are not subsampling
+                                << pos(0,i) << " "  // save pos(0,i) instead of pos_subsampled(0,i), because here we are not subsampling
+                                << pos(1,i) << " "  // save pos(1,i) instead of pos_subsampled(1,i), because here we are not subsampling
+                                << pos(2,i) << std::endl; // save pos(2,i) instead of pos_subsampled(2,i), because here we are not subsampling
+                    }
+                }
             }
-            
-
-
-
 
         }
     }
+
+    if(write_hit)
+    {
+        writePositionHit(walker.collision_in_log,
+                     walker.collision_ext_log,
+                     walker.crossing_in_log,
+                     walker.crossing_ext_log);
+    } 
 }
     
 
@@ -481,9 +528,11 @@ void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
     else
     {
         for(unsigned  i = 0; i < pos.cols(); i++ ){      
-            float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
-            bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
-            bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
+            //float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
+            //bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
+            //bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
+            tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl; // save to tout and not bout and save pos(2) which was not saved before
+
         }
     }
 
