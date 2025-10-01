@@ -353,7 +353,7 @@ bool Axon::checkCollision(const Walker& walker,
     const double L = step_length;
 
     if (L <= 0.0) { 
-        assert(0);
+        cout <<"L : " << L << endl;
         collision.type = Collision::null; 
         return false; 
     }
@@ -563,9 +563,9 @@ bool Axon::checkCollision(const Walker& walker,
     collision.perm_crossing = 0.0;
 
          
-
     // Optional permeability
     if (percolation > 0.0) {
+        
         static thread_local std::mt19937 gen{std::random_device{}()};
         std::uniform_real_distribution<double> U(0.0,1.0);
         const double p_cross = start_inside ? prob_cross_i_e : prob_cross_e_i;

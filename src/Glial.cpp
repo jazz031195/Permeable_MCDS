@@ -413,7 +413,7 @@ bool Glial::checkCollision(const Walker& walker,
     // Normalize direction
     const double L = (step_length > 0.0) ? step_length : step.norm();
     if (L <= 0.0) { 
-        assert(0);
+        cout <<"L : " << L << endl;
         collision.type = Collision::null; 
         return false; 
     }
