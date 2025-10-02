@@ -332,7 +332,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
         in.open(params.axons_files[i]);
         double x,y,z,rout, rin, p, r;
-        double cell_id, component_id, sphere_id = 0;
+        double cell_id, component_id;
+        int sphere_id = 0;
         int last_ax_id = -1;
         std::string cell_type = "", component = "", last_type ="";
         std::string header;
@@ -346,14 +347,14 @@ void MCSimulation::addAxonsObstaclesFromFiles()
 
         int line_num = 0;
 
-        int header_size = 10;
+        int header_size = 9;
 
         for(unsigned j = 0; j < header_size; j++){  
             in >>header;
             //cout << "header :" << header << endl;
         } 
 
-        std::string header;
+
         while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout){
 
             if (cell_type.find("axon") == std::string::npos) {
@@ -371,7 +372,7 @@ void MCSimulation::addAxonsObstaclesFromFiles()
             component_id = int(component_id);
 
             // if the new line is from a different axon
-            if (line_num !=0 and last_ax_id != ax_id){
+            if (line_num !=0 and last_ax_id != cell_id){
                 // create the axon with id : last_ax_id
                 Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
                 Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
@@ -416,8 +417,8 @@ void MCSimulation::addAxonsObstaclesFromFiles()
                 dynamicsEngine->axons_list.push_back(ax);
                 sphere_id = 0;
             }
-            sphere_out = Sphere(sph_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
-            sphere_in = Sphere(sph_id, cell_id, Eigen::Vector3d(x,y,z), rin, 0);
+            sphere_out = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
+            sphere_in = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rin, 0);
             sphere_id += 1;
             spheres_out.push_back(sphere_out);
             spheres_in.push_back(sphere_in);
@@ -496,7 +497,7 @@ void MCSimulation::addGlialsObstaclesFromFiles()
         }
 
         // Skip header lines
-        for (int j = 0; j < 10; ++j) {
+        for (int j = 0; j < 9; ++j) {
             std::string header;
             in >> header;
         }
@@ -508,6 +509,7 @@ void MCSimulation::addGlialsObstaclesFromFiles()
         // Variables to hold parsed data
         double x, y, z, rout, rin, r, cell_id, component_id;
         std::string cell_type, component;
+        int sphere_id = 0;
 
         Glial current_glial;
         std::vector<Sphere> current_processes;
@@ -532,10 +534,10 @@ void MCSimulation::addGlialsObstaclesFromFiles()
                     current_glial.set_up_glialcell(current_processes);
                     dynamicsEngine->glials_list.push_back(current_glial);
                     current_processes.clear();
-                    sph_id = 0;
+                    sphere_id = 0;
                 }
 
-                Sphere soma(int(sph_id), int(cell_id), Eigen::Vector3d(x, y, z), r, 1, int(component_id));
+                Sphere soma(int(sphere_id), int(cell_id), Eigen::Vector3d(x, y, z), r, 1, int(component_id));
                 soma.setDiffusion(diff_i, diff_e);
                 soma.setPercolation(perm_);
                 current_glial = Glial(cell_id, soma);
@@ -543,12 +545,12 @@ void MCSimulation::addGlialsObstaclesFromFiles()
                 glial_initialized = true;
             } 
             else if (component.find("branch") != std::string::npos) {
-                Sphere process(int(sph_id), current_glial.id, Eigen::Vector3d(x, y, z), r, 1, int(component_id));
+                Sphere process(int(sphere_id), current_glial.id, Eigen::Vector3d(x, y, z), r, 1, int(component_id));
                 process.setDiffusion(diff_i, diff_e);
                 process.setPercolation(perm_);
                 current_processes.push_back(process);
             }
-            sph_id += 1;
+            sphere_id += 1;
         }
 
         // Save the last glial cell, if any
