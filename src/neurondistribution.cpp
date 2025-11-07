@@ -2,6 +2,7 @@
 #include <algorithm> // std::sort
 #include <random>
 #include "simerrno.h"
+#include <Eigen/Dense>
 
 using namespace std;
 using namespace Eigen;
@@ -55,7 +56,7 @@ void NeuronDistribution::createSubstrate()
     while(!achieved){
 
         // double target_icvf = this->icvf+adjustments*adj_increase;
-        double soma_radius = 10e-3; //mm
+        double soma_radius = 4e-3; //mm
         // Let enough distance for the radius and for a step_length so that 
         // mirroring border conditions are ok
         double min_distance_from_border = barrier_tickness + soma_radius;
@@ -144,9 +145,9 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
     {   
         cout << "dendrite " << i << endl;
         int tries = 0;
-        int nb_branching = 1;//generateNbBranching();
+        int nb_branching = 3;//generateNbBranching();
         // Radius of each dendrite sphere [mm]
-        double sphere_radius = 0.5e-3;
+        double sphere_radius = 0.8e-3;
         // Don't initiate dendrite too close from the borders
         double min_distance_from_border = barrier_tickness + sphere_radius + step_length;
         
@@ -178,7 +179,7 @@ void NeuronDistribution::growDendrites(Neuron& neuron)
                 for(int b=0; b < nb_branching; ++b)
                 {
                     // Length of a segment before branching
-                    double l_segment = 240e-3 / double(nb_branching);//generateLengthSegment();
+                    double l_segment = 10e-3;//generateLengthSegment();
                     vector<int> proximal_branch;
                     vector<int> distal_branch;
                     if(b == 0)
@@ -367,50 +368,23 @@ NeuronDistribution::branching_pt NeuronDistribution::growSubbranch(Dendrite& den
         dendrite.add_subbranch(subbranch);
     } 
 
-    float phi_to_target, theta_to_target;
-    tie(phi_to_target, theta_to_target) = phi_theta_to_target(parent.direction);
+    Vector3d d = parent.direction;
+    Vector3d t1 = d.unitOrthogonal();
+    Vector3d t2 = d.cross(t1);              // Create orthonormal basis (d, t1, t2)
 
-    random_device dev;
-    mt19937 rng(dev());
-    normal_distribution<float> theta_distr(M_PI / 4.0, M_PI / 16.0);
-    float delta_theta = theta_distr(rng) / 2.0;
-    float theta = theta_to_target + delta_theta;
-    float delta_x, delta_y, delta_z;
+    static thread_local std::mt19937 rng{std::random_device{}()};
+    std::uniform_real_distribution<double> U(0.0, 2.0*M_PI);
+    double phi = U(rng);                     // Random azimuthal angle
+
+    double angle = M_PI / 4.0 / 2.0;
     vector<Vector3d> children_dir;
-    for(int c=0; c < 2; c++)
+    for(int i=0; i < 2; ++i)
     {
-        delta_x = cos(theta);
-        delta_y = sin(theta);
-        delta_z = parent.direction[2];
-
-        Vector3d new_dir(delta_x, delta_y, delta_z);
-        new_dir = new_dir.normalized();
-        children_dir.push_back(new_dir);
-
-        // phi = phi;
-        theta = theta_to_target - delta_theta;
+        Vector3d vector = Vector3d(std::cos(angle)*d + std::sin(angle)*(std::cos(phi)*t1 + std::sin(phi)*t2)); // New direction vector
+        angle *= -1;
+        children_dir.push_back(vector);
     }
-    
-    uniform_real_distribution<double> rot_distr(0, M_PI);
 
-    double rot = rot_distr(rng);
-    double ux = parent.direction[0];
-    double uy = parent.direction[1];
-    double uz = parent.direction[2];
-    Matrix3d m;
-    m << cos(rot) + ux*ux*(1 - cos(rot)), ux*uy*(1-cos(rot)) - uz*sin(rot), ux*uz*(1-cos(rot)) + uy*sin(rot),
-        uy*ux*(1-cos(rot)) + uz*sin(rot), cos(rot) + uy*uy*(1 - cos(rot)), uy*uz*(1-cos(rot)) - ux*sin(rot),
-        uz*ux*(1-cos(rot)) - uy*sin(rot), uz*uy*(1-cos(rot)) + ux*sin(rot), cos(rot) + uz*uz*(1 - cos(rot)); 
-    
-
-    children_dir[0] = (m * children_dir[0]).normalized();
-    children_dir[1] = (m * children_dir[1]).normalized();
-    // cout << acos(children_dir[0].dot(children_dir[1])) << endl;
-    // cout << 2*delta_theta << endl;
-    // cout << subbranch.projections.axon_projections[0][0] << " " << subbranch.projections.axon_projections[0][1];
-    // cout << subbranch.projections.axon_projections[1][0] << " " << subbranch.projections.axon_projections[1][1];
-    // cout << subbranch.projections.axon_projections[2][0] << " " << subbranch.projections.axon_projections[2][1];
-    
     // Return the next branching point
     return {spheres_to_add[spheres_to_add.size()-1].center, parent.direction, children_dir, branch_id};
     
