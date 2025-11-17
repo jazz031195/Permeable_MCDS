@@ -238,7 +238,7 @@ void ParallelMCSimulation::jointResults()
         if (simulations[0]->dataSynth->type != "PGSE_INTERVALS"){
 
             std::string outDWI   = params.output_base_name  + "_DWI.txt";
-            std::string outDWIi   = params.output_base_name  + "_DWI.txt";
+            std::string outDWIi   = params.output_base_name  + "_DWI_img.txt";
             std::string outPhase  = params.output_base_name  + "_phase_shift.txt";
 
             std::string boutDWI    = params.output_base_name  + "_DWI.bfloat";
