@@ -38,6 +38,10 @@ OUTPUT/*
 
 results/
 
+docs/
+
+andres/
+
 instructions/
 
 build/
