@@ -50,4 +50,10 @@ useful_functions/read_trajectories.py
 *vscode*
 *__pycache__*
 
+build/
+andres/
+docs/
+instructions/
+results/
+
 
