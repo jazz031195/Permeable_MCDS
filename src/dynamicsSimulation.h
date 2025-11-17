@@ -71,11 +71,18 @@ public:
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
     std::vector<unsigned>  spheres_deque;           /*!< deque with the indexes of the spheres (used for optmization)             */
 
-    int nbr_walker_intra;                           /*!< Number of walkers that are inside the intra-cellular space                 */
-    int nbr_walker_extra;                           /*!< Number of walkers that are inside the extra-cellular space                 */
-    int nbr_walker_axons;                          /*!< Number of walkers that are inside the axons                 */
-    int nbr_walker_glials;                          /*!< Number of walkers that are inside the glial cells                 */
-    int nbr_walker_outside;                          /*!< Number of walkers that are inside the extra-cellular space                  */
+    int nbr_walker_intra_ini;                           /*!< Number of walkers that are inside the intra-cellular space                 */
+    int nbr_walker_extra_ini;                           /*!< Number of walkers that are inside the extra-cellular space                 */
+    int nbr_walker_axons_ini;                          /*!< Number of walkers that are inside the axons                 */
+    int nbr_walker_glials_ini;                          /*!< Number of walkers that are inside the glial cells                 */
+    
+    int nbr_walker_intra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
+    int nbr_walker_extra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
+    int nbr_walker_axons_final;                         /*!< Number of walkers that are inside the axons                 */
+    int nbr_walker_glials_final;                         /*!< Number of walkers that are inside the glial cells                 */
+
+    std::vector <int> list_walkers_intra;            /*!< vector with the number of the walkers that are inside the intra-cellular space */
+    std::vector <int> list_walkers_extra;            /*!< vector with the number of the walkers that are inside the extra-cellular space */
 
     /******   Auxiliar variables   ********/
     Eigen::Vector3d step;
@@ -181,6 +188,14 @@ public:
     Eigen::Vector3d findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal);
 
     bool isOutsideCylinders(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside);
+
+    double r1, r2; /*!< Useful for mixed_compartment_diffusivities */
+
+    double alpha; /*!< Useful for mixed_compartment_diffusivities */
+
+    double beta; /*!< Useful for mixed_compartment_diffusivities */
+
+
 private:    
     /*! \fn     generateStep
      *  \param  step stores the computed step.
@@ -307,7 +322,8 @@ private:
      * \param   curr_step_lenght step length
      * \param   curr_diffusivity Diffusivity of the medium
      */
-    inline void updateStepLength(double &l);
+    inline void updateStepLength(double &l, const int &t);
+
 
     /*!
      * \brief   Updates the list of indexes inside the inner and outher collision spheres.

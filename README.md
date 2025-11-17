@@ -49,6 +49,8 @@ The main simulation settings are defined as key-value pairs in the configuration
 - **`write_traj_file`**: Save water molecule trajectories (`0` for no, `1` for yes).
 - **`num_process`**: Number of simulations to run simultaneously. It is recommended to set this to the number of CPU cores available.
 - **`ini_walkers_pos`**: Initial compartment in which the molecules start. Can be : intra or extra. If this is not given, the water molecules can be inside or outside the cells.
+- **`write_every_nth_step`**: If you want to save trajctories but not every single step taken by walkers (as this makes the saved files very heavy), you can save lighter trajectories with the positions for every N steps.
+- **`write_location`****': Write location (intra or extra) of each walker in the trajectory file .traj.
 
 Other parameters can be found in /src/parameters.h
 
@@ -91,7 +93,7 @@ permeability global desired_permeability
 ```
 The path/to/swc/file should be the same twice. 
 
-Set desired_permeability to 0 for no permeability.
+Set desired_permeability to 0 for no permeability. Permeability is in m/s.
 
 ### Voxel Size Adjustment
 
@@ -119,29 +121,43 @@ xmax ymax zmax
 
 Scheme files are located in the `instructions/scheme/` directory. These files are essential for defining the parameters of your PGSE (Pulsed Gradient Spin Echo) sequences. Each line in a scheme file describes a single gradient direction and associated parameters required for the simulation or analysis. The parameters are specified in the following order: X Y Z G Δ δ TE
 
-### Explanation of Parameters
-- **X, Y, Z**: Components of the gradient direction in 3D space.
+### Explanation of PGSE Parameters
+- **X, Y, Z**: Components of the gradient direction in 3D space (mm).
 - **G**: Gradient amplitude (in millitesla per meter, mT/m).
 - **Δ (big delta)**: Time interval between the diffusion gradients (in seconds).
 - **δ (small delta)**: Duration of the diffusion gradients (in seconds).
 - **TE**: Echo time (in seconds).
 
-### Example Scheme File
+If you want multiple DWI values during the PGSE sequence, add an additional parameter:
+- **num_intervals**: Number of DWI values you wish to obtain during sequence.
+
+### Example PGSE Scheme File
 
 ```xml
+VERSION: STEJSKALTANNER 
 0 0 1 0.0 0.05 0.0165 0.07
 0 0 1 0.01518807 0.05 0.0165 0.07
 0 0 1 0.02401444 0.05 0.0165 0.07
-0 0 1 0.03396155 0.05 0.0165 0.07
-0 0 1 0.04159423 0.05 0.0165 0.07
-0 0 1 0.04802888 0.05 0.0165 0.07
-0 0 1 0.05369793 0.05 0.0165 0.07
-0 0 1 0.07594033 0.05 0.0165 0.07
-0 0 1 0.08318847 0.05 0.0165 0.07
-0 0 1 0.08985382 0.05 0.0165 0.07
-0 0 1 0.09605777 0.05 0.0165 0.07
-0 0 1 0.10188465 0.05 0.0165 0.07
-0 0 1 0.10739585 0.05 0.0165 0.07
+```
+### Example if you want DWI outputs during PGSE sequence 
+```xml
+VERSION: PGSE_INTERVALS
+0 0 1 0.0 0.05 0.0165 0.07 1000
+0 0 1 0.01518807 0.05 0.0165 0.07 1000
+0 0 1 0.02401444 0.05 0.0165 0.07 1000
+```
+
+### Example for waveforms
+```xml
+VERSION: WAVEFORM
+0.06696
+6697
+11
+0.0 0.0 0.0
+0.0 0.0 0.0003316466017446737
+0.0 0.0 0.0006632932034893485
+0.0 0.0 0.00099493980523402
+0.0 0.0 0.0013265864069786936
 ```
 
 ### Generating Isotropic Directions
@@ -163,3 +179,10 @@ Once the configuration and scheme files are created, simply execute :
 ```xml
 ./run_mcds.sh
 ```
+## Citation
+
+If you use this tool, please cite the following works:
+
+- Nguyen-Duc JK, Brammerloh M, Cherchali M, De Riedmatten I, Perot JB, Rafael-Patino J, Jelescu IO, CATERPillar: A Flexible Framework for Generating White Matter Numerical Substrates with incorporated Glial Cells, bioRxiv 2025
+
+- Rafael-Patino Jonathan, Romascano David, Ramirez-Manzanares Alonso, Canales-Rodríguez Erick Jorge, Girard Gabriel, Thiran Jean-Philippe, Robust Monte-Carlo Simulations in Diffusion-MRI: Effect of the Substrate Complexity and Parameter Choice on the Reproducibility of Results, Frontiers in Neuroinformatics, 2020

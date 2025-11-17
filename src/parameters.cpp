@@ -16,6 +16,8 @@ Parameters::Parameters()
     write_full_c        = false;
     write_txt           = false;
     write_bin           =  true;
+    write_location      = false;
+    mix_compartment_diffusivities = false;
 
     hex_packing = false;
     hex_packing_radius      = 0;
@@ -100,6 +102,15 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if(str_dist(tmp,"diffusivity_extra") <= 1){
             in >> diffusivity_extra;
         }
+        else if(str_dist(tmp,"mix_compartment_diffusivities") <= 1){
+            in >> mix_compartment_diffusivities;
+        }
+        else if(str_dist(tmp,"t_ex") <= 1){
+            in >> t_ex;
+        }
+        else if(str_dist(tmp,"f") <= 1){
+            in >> f;
+        }
         else if( (str_dist(tmp,"out_traj_file_index") <= 2) or (str_dist(tmp,"exp_prefix") <= 2)) {
             in >> traj_file;
             hit_file= traj_file;
@@ -107,6 +118,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         }
         else if( str_dist(tmp,"ini_walkers_file") <= 3){
             in >> ini_walkers_file;
+        }
+        else if(str_dist(tmp,"write_every_nth_step") <= 7){
+            in >> write_every_nth_step;
         }
         else if(str_dist(tmp,"write_txt") <= 1){
             in >> write_txt;
@@ -122,6 +136,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         }
         else if(str_dist(tmp,"write_full_c_file") <= 2){
             in >> write_full_c;
+        }
+        else if(str_dist(tmp,"write_location") <= 2){
+            in >> write_location;
         }
         else if(str_dist(tmp,"scale_from_stu") <= 2){
             in >> scale_from_stu;

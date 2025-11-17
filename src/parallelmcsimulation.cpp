@@ -99,28 +99,40 @@ void ParallelMCSimulation::startSimulation()
                    + " in average",out,false);
     SimErrno::info("Number of particles labeled as stuck: "        + to_string(stuck_count)  ,out,false);
     SimErrno::info("Number of particles eliminated due crossings: "+ to_string(illegal_count),out,false);
-    int tot_nbr_walker_extra = 0;
-    int tot_nbr_walker_intra = 0;
-    int tot_nbr_walker_axons = 0;
-    int tot_nbr_walker_glials = 0;
-    int tot_nbr_walker_outside = 0;
+    int tot_nbr_walker_extra_ini = 0;
+    int tot_nbr_walker_intra_ini  = 0;
+    int tot_nbr_walker_axons_ini  = 0;
+    int tot_nbr_walker_glials_ini  = 0;
+    int tot_nbr_walker_extra_final = 0;
+    int tot_nbr_walker_intra_final  = 0;
+    int tot_nbr_walker_axons_final  = 0;
+    int tot_nbr_walker_glials_final  = 0;
+
     int tot_nbr_bounces = 0;
     int tot_nbr_legal_crossings = 0;
     for (unsigned i = 0; i < simulations.size(); i++){
-        tot_nbr_walker_extra += simulations[i]->dynamicsEngine->nbr_walker_extra;
-        tot_nbr_walker_intra += simulations[i]->dynamicsEngine->nbr_walker_intra;
-        tot_nbr_walker_axons += simulations[i]->dynamicsEngine->nbr_walker_axons;
-        tot_nbr_walker_glials += simulations[i]->dynamicsEngine->nbr_walker_glials;
-        tot_nbr_walker_outside += simulations[i]->dynamicsEngine->nbr_walker_outside;
+        tot_nbr_walker_extra_ini += simulations[i]->dynamicsEngine->nbr_walker_extra_ini;
+        tot_nbr_walker_intra_ini += simulations[i]->dynamicsEngine->nbr_walker_intra_ini;
+        tot_nbr_walker_axons_ini += simulations[i]->dynamicsEngine->nbr_walker_axons_ini;
+        tot_nbr_walker_glials_ini += simulations[i]->dynamicsEngine->nbr_walker_glials_ini;
+        tot_nbr_walker_extra_final += simulations[i]->dynamicsEngine->nbr_walker_extra_final;
+        tot_nbr_walker_intra_final += simulations[i]->dynamicsEngine->nbr_walker_intra_final;
+        tot_nbr_walker_axons_final += simulations[i]->dynamicsEngine->nbr_walker_axons_final;
+        tot_nbr_walker_glials_final += simulations[i]->dynamicsEngine->nbr_walker_glials_final;
+
         tot_nbr_bounces += simulations[i]->dynamicsEngine->tot_nbr_bounces;
         tot_nbr_legal_crossings += simulations[i]->dynamicsEngine->tot_nbr_legal_crossings;
 
     }
-    SimErrno::info("Number of intracellular particles at the start : "+ to_string(tot_nbr_walker_intra),out,false);
-    SimErrno::info("Number of extracellular particles at the start : "+ to_string(tot_nbr_walker_extra),out,false);
-    SimErrno::info("Number of walkers in axons at the end : "+ to_string(tot_nbr_walker_axons),out,false);
-    SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials),out,false);
-    SimErrno::info("Number of walkers in extracellular space at the end : "+ to_string(tot_nbr_walker_outside),out,false);
+    SimErrno::info("Number of intracellular particles at the start : "+ to_string(tot_nbr_walker_intra_ini),out,false);
+    SimErrno::info("Number of extracellular particles at the start : "+ to_string(tot_nbr_walker_extra_ini),out,false);
+    SimErrno::info("Number of axonal particles at the start : "+ to_string(tot_nbr_walker_axons_ini),out,false);
+    SimErrno::info("Number of glial particles at the start : "+ to_string(tot_nbr_walker_glials_ini),out,false);
+    SimErrno::info("Number of intracellular particles at the end : "+ to_string(tot_nbr_walker_intra_final),out,false);
+    SimErrno::info("Number of extracellular particles at the end : "+ to_string(tot_nbr_walker_extra_final),out,false);
+    SimErrno::info("Number of walkers in axons at the end : "+ to_string(tot_nbr_walker_axons_final),out,false);
+    SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials_final),out,false);
+
     SimErrno::info("Total number of bounces: "                     + to_string(tot_nbr_bounces),out,false);
     SimErrno::info("Total number of legal crossings: "             + to_string(tot_nbr_legal_crossings),out,false);
     
@@ -223,36 +235,35 @@ void ParallelMCSimulation::jointResults()
     //Writes the ouput data
     if(simulations[0]->dataSynth){
 
-
-        std::string outDWI    = params.output_base_name  + "_DWI.txt";
-        std::string outDWIi   = params.output_base_name  + "_DWI_img.txt";
-        std::string outPhase  = params.output_base_name  + "_phase_shift.txt";
-
-        std::string boutDWI    = params.output_base_name  + "_DWI.bfloat";
-        std::string boutDWIi   = params.output_base_name  + "_DWI_img.bfloat";
-        std::string boutPhase  = params.output_base_name  + "_phase_shift.bfloat";
-
-        std::ofstream phase_out,phase_bout, dwi_out, dwii_out, dwi_bout, dwii_bout;
-
-        if(params.log_phase_shift){
-            if(params.write_bin)
-                phase_bout.open(boutPhase, std::ofstream::binary);   //phase shift (binary)
-
-            if(params.write_txt)
-                phase_out.open(outPhase, std::ofstream::out);     //phase shift  (txt)
-        }
-
-        if(params.write_txt){
-            dwi_out.open(outDWI  ,std::ofstream::out);       //real part
-            dwii_out.open(outDWIi,std::ofstream::out);       //img part
-        }
-
-        if(params.write_bin){
-            dwi_bout.open(boutDWI  ,std::ofstream::binary);       //real part (binary)
-            dwii_bout.open(boutDWIi,std::ofstream::binary);       //img part  (binary)
-        }
-
         if (simulations[0]->dataSynth->type != "PGSE_INTERVALS"){
+
+            std::string outDWI   = params.output_base_name  + "_DWI.txt";
+            std::string outDWIi   = params.output_base_name  + "_DWI.txt";
+            std::string outPhase  = params.output_base_name  + "_phase_shift.txt";
+
+            std::string boutDWI    = params.output_base_name  + "_DWI.bfloat";
+            std::string boutDWIi   = params.output_base_name  + "_DWI_img.bfloat";
+            std::string boutPhase  = params.output_base_name  + "_phase_shift.bfloat";
+
+            std::ofstream phase_out,phase_bout, dwi_out, dwii_out, dwi_bout, dwii_bout;
+
+            if(params.log_phase_shift){
+                if(params.write_bin)
+                    phase_bout.open(boutPhase, std::ofstream::binary);   //phase shift (binary)
+
+                if(params.write_txt)
+                    phase_out.open(outPhase, std::ofstream::out);     //phase shift  (txt)
+            }
+
+            if(params.write_txt){
+                dwi_out.open(outDWI  ,std::ofstream::out);       //real part
+                dwii_out.open(outDWIi,std::ofstream::out);       //img part
+            }
+
+            if(params.write_bin){
+                dwi_bout.open(boutDWI  ,std::ofstream::binary);       //real part (binary)
+                dwii_bout.open(boutDWIi,std::ofstream::binary);       //img part  (binary)
+            }
             for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI.size(); i++ )
             {
                 double DWI   = 0;
@@ -309,34 +320,121 @@ void ParallelMCSimulation::jointResults()
                     }
                 }
             }
+            if(params.write_txt){
+                dwi_out.close();
+                dwii_out.close();
+            }
+            if(params.write_bin){
+                dwi_bout.close();
+                dwii_bout.close();
+            }
+
+            if(params.log_phase_shift)
+                phase_out.close();
         }
         else{
 
-            for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI_intervals.size(); i++ )
-            {
-                std::vector<double> DWI (simulations[0]->dataSynth->DWI_intervals[i].size(), 0);
-                std::vector<double> DWIi(simulations[0]->dataSynth->DWIi_intervals[i].size(), 0);
+            std::string outDWI_intra   = params.output_base_name  + "_DWI_intra.txt";
+            std::string outDWIi_intra   = params.output_base_name  + "_DWI_intra.txt";
+            std::string outPhase_intra  = params.output_base_name  + "_phase_shift_intra.txt";
 
-                for (unsigned j = 0 ; j < simulations[0]->dataSynth->DWI_intervals[i].size(); j++ )
+            std::string outDWI_extra   = params.output_base_name  + "_DWI_extra.txt";
+            std::string outDWIi_extra   = params.output_base_name  + "_DWI_extra.txt";
+            std::string outPhase_extra  = params.output_base_name  + "_phase_shift_extra.txt";
+
+            std::string boutDWI_intra    = params.output_base_name  + "_DWI_intra.bfloat";
+            std::string boutDWIi_intra   = params.output_base_name  + "_DWI_img_intra.bfloat";
+            std::string boutPhase_intra  = params.output_base_name  + "_phase_shift_intra.bfloat";
+
+            std::string boutDWI_extra    = params.output_base_name  + "_DWI_extra.bfloat";
+            std::string boutDWIi_extra   = params.output_base_name  + "_DWI_img_extra.bfloat";
+            std::string boutPhase_extra  = params.output_base_name  + "_phase_shift_extra.bfloat";
+
+            std::string bout_compartment_walkers  = params.output_base_name  + "_walkers_compartment.bfloat";
+            std::string out_compartment_walkers  = params.output_base_name  + "_walkers_compartment.txt";
+
+            std::ofstream phase_out_intra, phase_out_extra, dwi_out_intra, dwii_out_extra, compartment_out, dwii_out_intra, dwi_out_extra;
+            std::ofstream phase_bout_intra, phase_bout_extra,  dwi_bout_intra, dwii_bout_extra, compartment_bout, dwii_bout_intra, dwi_bout_extra;
+
+            if(params.log_phase_shift){
+                if(params.write_bin)
+                    phase_bout_intra.open(boutPhase_intra, std::ofstream::binary);   //phase shift (binary)
+                    phase_bout_extra.open(boutPhase_extra, std::ofstream::binary);   //phase shift (binary)
+
+                if(params.write_txt)
+                    phase_out_intra.open(outPhase_intra, std::ofstream::out);     //phase shift  (txt)
+                    phase_out_extra.open(outPhase_extra, std::ofstream::out);     //phase shift  (txt)
+            }
+
+            if(params.write_txt){
+                dwi_out_intra.open(outDWI_intra  ,std::ofstream::out);       //real part
+                dwii_out_intra.open(outDWIi_intra,std::ofstream::out);       //img part
+
+                dwi_out_extra.open(outDWI_extra  ,std::ofstream::out);       //real part
+                dwii_out_extra.open(outDWIi_extra,std::ofstream::out);       //img part
+
+                compartment_out.open(out_compartment_walkers, std::ofstream::out); //compartment walkers
+            }
+
+            if(params.write_bin){
+                dwi_bout_intra.open(boutDWI_intra  ,std::ofstream::binary);       //real part (binary)
+                dwii_bout_intra.open(boutDWIi_intra,std::ofstream::binary);       //img part  (binary)
+
+                dwi_bout_extra.open(boutDWI_extra  ,std::ofstream::binary);       //real part (binary)
+                dwii_bout_extra.open(boutDWIi_extra,std::ofstream::binary);       //img part  (binary)
+
+                compartment_bout.open(bout_compartment_walkers, std::ofstream::binary); //compartment walkers
+            }
+            
+            std::vector<int> compartment_walkers_intra = std::vector<int>(simulations[0]->dynamicsEngine->list_walkers_intra.size(), 0);
+            
+            for(unsigned p = 0; p < params.num_proc; p++)
+            {
+                for (unsigned i = 0 ; i < compartment_walkers_intra.size(); i++){
+                    compartment_walkers_intra[i] += simulations[p]->dynamicsEngine->list_walkers_intra[i];
+                }
+            }
+            
+
+            if(params.write_bin){
+                std::vector<float> compartment_walkers_intra_float(compartment_walkers_intra.size());
+                std::transform(compartment_walkers_intra.begin(), compartment_walkers_intra.end(), compartment_walkers_intra_float.begin(),
+                            [](double val) { return static_cast<float>(val); });
+
+                compartment_bout.write(reinterpret_cast<const char *>(compartment_walkers_intra_float.data()), compartment_walkers_intra_float.size() * sizeof(float));
+            }
+            if(params.write_txt){
+                for (unsigned i = 0 ; i < compartment_walkers_intra.size(); i++ ) {
+                    compartment_out  << compartment_walkers_intra[i] << " ";
+                }
+                compartment_out  << std::endl;
+            }
+
+            for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI_intervals_intra.size(); i++)
+            {
+                std::vector<double> DWI (simulations[0]->dataSynth->DWI_intervals_intra[i].size(), 0);
+                std::vector<double> DWIi(simulations[0]->dataSynth->DWIi_intervals_intra[i].size(), 0);
+
+                for (unsigned j = 0 ; j < simulations[0]->dataSynth->DWI_intervals_intra[i].size(); j++ )
                 {
 
                     std::vector<int> phase(3600, 0);
                     for(unsigned p = 0; p < params.num_proc; p++)
                     {
-                        DWI[j]+=  simulations[p]->dataSynth->DWI_intervals[i][j];       //real part
-                        DWIi[j]+= simulations[p]->dataSynth->DWIi_intervals[i][j];      //img  part
+                        DWI[j]+=  simulations[p]->dataSynth->DWI_intervals_intra[i][j];       //real part
+                        DWIi[j]+= simulations[p]->dataSynth->DWIi_intervals_intra[i][j];      //img  part
 
                     }
 
                     if(params.write_txt){
-                        dwi_out  << DWI[j] << " ";
-                        dwii_out << DWIi[j] << " ";
+                        dwi_out_intra  << DWI[j] << " ";
+                        dwii_out_intra << DWIi[j] << " ";
                     }
                 }
 
                 if(params.write_txt){
-                    dwi_out  << std::endl;
-                    dwii_out << std::endl;
+                    dwi_out_intra  << std::endl;
+                    dwii_out_intra << std::endl;
                 }
 
                 if(params.write_bin){
@@ -344,34 +442,90 @@ void ParallelMCSimulation::jointResults()
                     std::transform(DWI.begin(), DWI.end(), DWI_float.begin(),
                                 [](double val) { return static_cast<float>(val); });
 
-                    dwi_bout.write(reinterpret_cast<const char *>(DWI_float.data()), DWI_float.size() * sizeof(float));
+                    dwi_bout_intra.write(reinterpret_cast<const char *>(DWI_float.data()), DWI_float.size() * sizeof(float));
 
                     std::vector<float> DWI_floati(DWIi.size());
                     std::transform(DWIi.begin(), DWIi.end(), DWI_floati.begin(),
                                 [](double val) { return static_cast<float>(val); });
 
-                    dwii_bout.write(reinterpret_cast<const char *>(DWI_floati.data()), DWI_floati.size() * sizeof(float));
+                    dwii_bout_intra.write(reinterpret_cast<const char *>(DWI_floati.data()), DWI_floati.size() * sizeof(float));
 
                 }
 
             }
-        }
+            for (unsigned i = 0 ; i < simulations[0]->dataSynth->DWI_intervals_extra.size(); i++ )
+            {
+                std::vector<double> DWI (simulations[0]->dataSynth->DWI_intervals_extra[i].size(), 0);
+                std::vector<double> DWIi(simulations[0]->dataSynth->DWIi_intervals_extra[i].size(), 0);
 
-        if(params.write_txt){
-            dwi_out.close();
-            dwii_out.close();
-        }
-        if(params.write_bin){
-            dwi_bout.close();
-            dwii_bout.close();
-        }
+                for (unsigned j = 0 ; j < simulations[0]->dataSynth->DWI_intervals_extra[i].size(); j++ )
+                {
 
-        if(params.log_phase_shift)
-            phase_out.close();
-        
+                    std::vector<int> phase(3600, 0);
+                    for(unsigned p = 0; p < params.num_proc; p++)
+                    {
+                        DWI[j]+=  simulations[p]->dataSynth->DWI_intervals_extra[i][j];       //real part
+                        DWIi[j]+= simulations[p]->dataSynth->DWIi_intervals_extra[i][j];      //img  part
+
+                    }
+
+                    if(params.write_txt){
+                        dwi_out_extra << DWI[j] << " ";
+                        dwii_out_extra << DWIi[j] << " ";
+                    }
+                }
+
+                if(params.write_txt){
+                    dwi_out_extra  << std::endl;
+                    dwii_out_extra << std::endl;
+                }
+
+                if(params.write_bin){
+                    std::vector<float> DWI_float(DWI.size());
+                    std::transform(DWI.begin(), DWI.end(), DWI_float.begin(),
+                                [](double val) { return static_cast<float>(val); });
+
+                    dwi_bout_extra.write(reinterpret_cast<const char *>(DWI_float.data()), DWI_float.size() * sizeof(float));
+
+                    std::vector<float> DWI_floati(DWIi.size());
+                    std::transform(DWIi.begin(), DWIi.end(), DWI_floati.begin(),
+                                [](double val) { return static_cast<float>(val); });
+
+                    dwii_bout_extra.write(reinterpret_cast<const char *>(DWI_floati.data()), DWI_floati.size() * sizeof(float));
+
+                }
+
+            }
+
+            if(params.write_txt){
+                dwi_out_intra.close();
+                dwii_out_intra.close();
+
+                dwi_out_extra.close();
+                dwii_out_extra.close();
+
+                compartment_out.close();
+            }
+            if(params.write_bin){
+                dwi_bout_intra.close();
+                dwii_bout_intra.close();
+
+                dwi_bout_extra.close();
+                dwii_bout_extra.close();
+
+                compartment_bout.close();
+            }
+
+            if(params.log_phase_shift){
+                phase_out_intra.close();
+                phase_out_extra.close();
+            }
+        }
+    
     }
 
-    stuck_count = illegal_count = 0;
+    stuck_count = 0;
+    illegal_count = 0;
 
     for(unsigned i = 0 ; i < simulations.size();i++){
         stuck_count   += simulations[i]->dynamicsEngine->sentinela.stuck_count;

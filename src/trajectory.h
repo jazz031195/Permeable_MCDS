@@ -7,6 +7,7 @@
 #ifndef TRAJECTORY_H
 #define TRAJECTORY_H
 
+#include "walker.h"
 #include <string>
 #include <iostream>
 #include <stdio.h>
@@ -42,6 +43,8 @@ public:
     bool write_hit;                     /*!< flag if we want to write a hit file                    */
     bool write_txt;                     /*!< flag if we want to write a text traj file              */
     bool write_bin;                     /*!< flag if we want to write a binary traj file            */
+    bool write_location;
+    unsigned write_every_nth_step; /*!< write every nth step to save memory when saving traj */
 
     bool write_full_c;
 
@@ -119,8 +122,9 @@ public:
     void writePositionBinary(Eigen::Vector3d&);
 
     void writePosition(Eigen::Matrix3Xd&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
+    void writePosition(Walker&, unsigned&);
     void writePositionText(Eigen::Matrix3Xd&);
-    void writePositionBinary(Eigen::Matrix3Xd&);
+    void writePositionBinary(const Eigen::Matrix3Xd&);
     void writePositionHit(Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
 
     void writeFullCollision(Eigen::Vector3d&, int&, int&, unsigned&, unsigned&);

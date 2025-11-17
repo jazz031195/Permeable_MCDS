@@ -1,9 +1,17 @@
 #include "trajectory.h"
 #include <iomanip>      // std::setprecision
+#include "Eigen/src/Core/Matrix.h"
 #include "simerrno.h"
 #include <fstream>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include "Eigen/src/Core/ArithmeticSequence.h"
+#include "Eigen/src/Core/util/IndexedViewHelper.h"
+#include "Eigen/src/Core/util/Macros.h"
+#include "walker.h"
+#include <iostream>
+#include <string>
+#include <vector>
 using namespace std;
 
 
@@ -52,6 +60,8 @@ void Trajectory::initTrajectory(Parameters params)
     write_bin    = params.write_bin;
     write_hit    = params.write_hit;
     write_full_c = params.write_full_c;
+    write_every_nth_step = params.write_every_nth_step;
+    write_location = params.write_location;
 
     trajfile     = params.output_base_name;
     hitfile      = params.output_base_name;
@@ -166,13 +176,21 @@ void Trajectory::initTrajWriterText()
         std::cout << "Cannot open " << (trajfile + ".traj.txt").c_str()<< std::endl;
         return;
     }
+
+    // write header line 
+    if (write_location) {
+        tout << "walker_id step_number x y z location" << std::endl;
+    }
+    else {
+        tout << "walker_id step_number x y z" << std::endl;
+    }
 }
 
 
 
 void Trajectory::writePosition(Eigen::Vector3d &pos)
 {
-
+    cout << "We use the vector function, caution, subsampling not implemented! Location output as well." ;
     cout << "traj"  << write_traj << endl;
     if(write_traj){
         if(write_bin){
@@ -182,6 +200,7 @@ void Trajectory::writePosition(Eigen::Vector3d &pos)
             writePositionText(pos);
         }
     }
+
 }
 
 void Trajectory::writeTrajectoryHeaderBinary()
@@ -325,20 +344,148 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
 
     if(write_traj)
     {
-        if(write_traj)
-            writePositionBinary(pos);
+        unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
+        if (pos.cols() % write_every_nth_step == 0) { 
+                 number_of_subsampled_columns -= 1;   
+            } // ensure number_of_subsampled_columns is correct when pos.cols() is not divided by write_every_nth_step
+
+        Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
+
+        for (int c = 0; c < number_of_subsampled_columns; ++c) {
+            pos_subsampled.col(c) = pos.col(c * write_every_nth_step);
+        }
+
+        // add last position
+        if (pos.cols() % write_every_nth_step != 0) {
+            pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
+            pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
+        }
+
+        if(write_bin)
+            writePositionBinary(pos_subsampled);
 
         if(write_txt)
-            writePositionText(pos);
+            writePositionText(pos_subsampled);
     }
 
     if(write_hit)
     {
         writePositionHit(col_in, col_ext, cross_in, cross_ext);
-
     }    
-    
+}  
+
+void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
+    // Malte's new writePosition for text output that supports location output (intra/extra)
+    Eigen::Matrix3Xd& pos = walker.pos_r_log;
+
+    if (write_traj){
+        if(write_bin){
+            cout << "Only text output implemented for location output." << std::endl;
+
+        }
+        if (write_txt) { // make sure to write txt if it's true, even if write_bin is true
+            if (write_every_nth_step>1) {
+                unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
+                if (pos.cols() % write_every_nth_step == 0) {
+                    number_of_subsampled_columns -= 1;   
+                } // ensure number_of_subsampled_columns is correct when pos.cols() is not divided by write_every_nth_step
+                Eigen::Matrix3Xd pos_subsampled(3, number_of_subsampled_columns);
+                std::vector<int> step_number;
+
+                for (int c = 0; c < number_of_subsampled_columns; ++c) {
+                    pos_subsampled.col(c) = pos.col(c * write_every_nth_step);
+                    step_number.push_back(write_every_nth_step*c);
+                }
+
+                // add last position
+                if (step_number.empty() || step_number.back() != pos.cols() - 1) {
+                    pos_subsampled.conservativeResize(Eigen::NoChange, pos_subsampled.cols() + 1);
+                    pos_subsampled.col(pos_subsampled.cols() - 1) = pos.col(pos.cols() - 1);
+                    //step_number.push_back(T+1);
+                    step_number.push_back(static_cast<int>(pos.cols() - 1)); // in case of subsample, pos.cols() might be smaller than T + 1, so like this it should be always correct
+                }
+                            
+                for (int i = 0; i < pos_subsampled.cols(); i++){
+                    if (write_location) {
+                        std::string this_location;
+                        if (walker.location == Walker::intra){
+                            this_location="intra";
+                        }
+                        else if (walker.location == Walker::extra){
+                            this_location="extra";
+                        }
+                        else if (walker.location == Walker::unknown){
+                            this_location="unknown";
+                        }
+                        else {
+                            this_location="not_implemented";
+                        }
+
+                        tout << std::setprecision(6) 
+                            << walker_index << " " 
+                            << step_number[i] << " "
+                            << pos_subsampled(0,i) << " "  //before it was saving pos(0,i), but if we are looping over pos_subsampled, we should save pos_subsampled(0,i)
+                            << pos_subsampled(1,i) << " "  //before it was saving pos(1,i), but if we are looping over pos_subsampled, we should save pos_subsampled(1,i)
+                            << pos_subsampled(2,i) << " "  //before it was saving pos(2,i), but if we are looping over pos_subsampled, we should save pos_subsampled(2,i)
+                            << this_location << std::endl;
+                    }
+                    else {
+                        tout << std::setprecision(6) 
+                             << walker_index << " " 
+                             << step_number[i] << " "
+                             << pos_subsampled(0,i) << " "  //before it was saving pos(0,i), but if we are looping over pos_subsampled, we should save pos_subsampled(0,i)
+                             << pos_subsampled(1,i) << " "  //before it was saving pos(1,i), but if we are looping over pos_subsampled, we should save pos_subsampled(1,i)
+                             << pos_subsampled(2,i) << std::endl; //before it was saving pos(2,i), but if we are looping over pos_subsampled, we should save pos_subsampled(2,i)
+                }
+            }
+            } else { // add case for when write_every_nth_step == 1
+                for (int i = 0; i < pos.cols(); i++){
+                        if (write_location) {
+                            std::string this_location;
+                            if (walker.location == Walker::intra){
+                                this_location="intra";
+                            }
+                            else if (walker.location == Walker::extra){
+                                this_location="extra";
+                            }
+                            else if (walker.location == Walker::unknown){
+                                this_location="unknown";
+                            }
+                            else {
+                                this_location="not_implemented";
+                            }
+
+                            tout << std::setprecision(6) 
+                                << walker_index << " " 
+                                << i << " "  // save i instead of step_number[i], because here we are not subsampling
+                                << pos(0,i) << " "  // save pos(0,i) instead of pos_subsampled(0,i), because here we are not subsampling
+                                << pos(1,i) << " "  // save pos(1,i) instead of pos_subsampled(1,i), because here we are not subsampling
+                                << pos(2,i) << " "  // save pos(2,i) instead of pos_subsampled(2,i), because here we are not subsampling
+                                << this_location << std::endl;
+                        }
+                        else {
+                            tout << std::setprecision(6) 
+                                << walker_index << " " 
+                                << i << " " // save i instead of step_number[i], because here we are not subsampling
+                                << pos(0,i) << " "  // save pos(0,i) instead of pos_subsampled(0,i), because here we are not subsampling
+                                << pos(1,i) << " "  // save pos(1,i) instead of pos_subsampled(1,i), because here we are not subsampling
+                                << pos(2,i) << std::endl; // save pos(2,i) instead of pos_subsampled(2,i), because here we are not subsampling
+                    }
+                }
+            }
+
+        }
+    }
+
+    if(write_hit)
+    {
+        writePositionHit(walker.collision_in_log,
+                     walker.collision_ext_log,
+                     walker.crossing_in_log,
+                     walker.crossing_ext_log);
+    } 
 }
+    
 
 void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int &loc, unsigned &t, unsigned &id_)
 {
@@ -361,55 +508,92 @@ void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int 
 
 void Trajectory::writePositionText(Eigen::Matrix3Xd &pos)
 {
+    cout << "Warning, buggy" << std::endl;
     if(steps_subset)
     {
         unsigned index = 0;
-        for(unsigned i = 0; i < T+1; i++ )
+        for(unsigned i = 0; i < pos.cols(); i++ ){
             if(i == pos_times[index]){
-                tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;;
-                index++;                        // Update the index
-
-                if(index >= pos_times.size()){
-                    break;
+                tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;
+                index++;  
+            }
+            else
+            {
+                for(unsigned i = 0; i < pos.cols(); i++ ){
+                    tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;
                 }
             }
+        }
     }
     else
     {
-        for(unsigned i = 0; i < T+1; i++ )
-            tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl;;
+        for(unsigned  i = 0; i < pos.cols(); i++ ){      
+            //float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
+            //bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
+            //bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
+            tout << std::setprecision(6) << pos(0,i) << std::endl << pos(1,i) << std::endl << pos(2,i) << std::endl << std::endl; // save to tout and not bout and save pos(2) which was not saved before
+
+        }
     }
+
 }
 
-void Trajectory::writePositionBinary(Eigen::Matrix3Xd &pos)
+// Prefer a const reference and Eigen::Index for indexing
+void Trajectory::writePositionBinary(const Eigen::Matrix3Xd& pos)
 {
-    if(steps_subset)
-    {
-        unsigned index = 0;
-        for(unsigned i = 0; i < T+1; i++ )
-            if(i == pos_times[index]){
-        
-                float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
-                bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
-                bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
-                bout.write(reinterpret_cast<char *>(&pos2), sizeof(float));
-                index++;                        // Update the index
+    assert(pos.rows() == 3);
 
-                if(index >= pos_times.size()){
-                    break;
-                }
-            }
-    }
-    else
+    if (pos.cols() == 0) return;  // nothing to write
+
+    auto write_col = [&](Eigen::Index c)
     {
-        for(unsigned  i = 0; i < T+1; i++ ){      
-            float pos0 = float(pos(0,i)),pos1 = float(pos(1,i)),pos2 = float(pos(2,i));
-            bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
-            bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
-            bout.write(reinterpret_cast<char *>(&pos2), sizeof(float));
+        // c must be valid
+        assert(c >= 0 && c < pos.cols());
+        const Eigen::Vector3f p = pos.col(c).cast<float>();
+        bout.write(reinterpret_cast<const char*>(p.data()), 3 * sizeof(float));
+    };
+
+    if (!steps_subset) {
+        // ✅ NEVER use T here — write exactly what's in the matrix
+        for (Eigen::Index c = 0; c < pos.cols(); ++c)
+            write_col(c);
+        return;
+    }
+
+    // steps_subset == true
+    if (pos_times.empty()) return;
+
+    // Optional sanity: ensure non-negative and (usually) sorted
+    // assert(std::is_sorted(pos_times.begin(), pos_times.end()));
+
+    // Decide whether 'pos' stores all timesteps (full) or only the kept ones (compressed)
+    const bool full_layout = (pos.cols() == static_cast<Eigen::Index>(T + 1));
+
+    if (full_layout) {
+        // Use actual timestep as column
+        for (size_t k = 0; k < pos_times.size(); ++k) {
+            const long t = static_cast<long>(pos_times[k]);  // 0-based expected
+            if (t < 0 || t >= pos.cols()) {
+                // out-of-range timestep in config; skip or throw
+                // std::cerr << "Warning: timestep " << t << " >= pos.cols()=" << pos.cols() << '\n';
+                continue;
+            }
+            write_col(static_cast<Eigen::Index>(t));
+        }
+    } else {
+        // Compressed layout: kth kept time is at column k
+        const Eigen::Index want = static_cast<Eigen::Index>(pos_times.size());
+        if (pos.cols() != want) {
+            // Layout mismatch; write the common part without crashing
+            const Eigen::Index n = std::min(pos.cols(), want);
+            // std::cerr << "Warning: pos.cols()=" << pos.cols() << " != pos_times.size()=" << want << '\n';
+            for (Eigen::Index c = 0; c < n; ++c) write_col(c);
+        } else {
+            for (Eigen::Index c = 0; c < pos.cols(); ++c) write_col(c);
         }
     }
 }
+
 
 
 void Trajectory::writePositionHit(Eigen::VectorXi &col_in, Eigen::VectorXi &col_ext, Eigen::VectorXi &cross_in, Eigen::VectorXi &cross_ext)
@@ -537,6 +721,7 @@ void Trajectory::closeHitReaderFile()
 
 void Trajectory::setTrajFile(std::string trajfile_)
 {
+
     trajfile = trajfile_  + ".traj";
     headerfile = trajfile_+ ".bhdr";
     readTrajectoryHeader();
