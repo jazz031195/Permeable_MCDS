@@ -94,6 +94,9 @@ private:
     void addGlialsObstaclesFromSWC();
     void addGlialsObstaclesFromCSV();
 
+    void addBloodVesselObstaclesFromCSV();
+    void addBloodVesselObstaclesFromFiles();
+
     void addPLYObstaclesFromFiles();
 
     void addVoxels();

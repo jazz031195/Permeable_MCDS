@@ -74,7 +74,7 @@ bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY,
 
     }
     // crossing error when permeability
-    if ((params.obstacle_permeability > 0.0 || params.axon_obstacle_permeability > 0.0 || params.glial_obstacle_permeability > 0.0 ) and (walker.location != Walker::unknown) and (walker.previous_location != Walker::unknown) and (walker.is_allowed_to_cross == false) and (walker.location != walker.previous_location) && deport_illegals)
+    if ((params.obstacle_permeability > 0.0 || params.axon_obstacle_permeability > 0.0 || params.glial_obstacle_permeability > 0.0 ) and (walker.is_allowed_to_cross == false) and (walker.location != walker.previous_location) && deport_illegals)
     {
         cout << "error for permeability" << endl;
         cout << "walker.is_allowed_to_cross = false : " << (walker.is_allowed_to_cross == false) << endl;

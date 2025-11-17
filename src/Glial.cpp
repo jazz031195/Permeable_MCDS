@@ -411,9 +411,11 @@ bool Glial::checkCollision(const Walker& walker,
 {
 
     // Normalize direction
+    
     const double L = (step_length > 0.0) ? step_length : step.norm();
     if (L <= 0.0) { 
         cout <<"L : " << L << endl;
+        collision.perm_crossing = 0.0;
         collision.type = Collision::null; 
         return false; 
     }
@@ -502,6 +504,7 @@ bool Glial::checkCollision(const Walker& walker,
     }
 
     if (evs.empty()) { 
+        collision.perm_crossing = 0.0;
         collision.type = Collision::null; 
         /*
         Eigen::Vector3d next_pos = p0 + step_length * step;
@@ -528,6 +531,7 @@ bool Glial::checkCollision(const Walker& walker,
             
         }
         */
+        collision.perm_crossing = 0.0;
         collision.type = Collision::null; 
         return false; 
     }
@@ -647,7 +651,7 @@ bool Glial::checkCollision(const Walker& walker,
         }
         */
         
-        
+        collision.perm_crossing = 0.0;
         collision.type = Collision::null; 
         return false; 
     }
@@ -686,6 +690,7 @@ bool Glial::checkCollision(const Walker& walker,
     collision.obstacle_ind  = hit->s->id;           // or branch/local as needed
     collision.col_location  = start_inside ? Collision::inside : Collision::outside;
     collision.perm_crossing = 0.0;
+    
     /*
     cout <<"hit sphere id=" << collision.obstacle_ind
          << " at t=" << t_hit << " pos=" << pos.transpose()
@@ -705,7 +710,7 @@ bool Glial::checkCollision(const Walker& walker,
         std::uniform_real_distribution<double> U(0.0,1.0);
         const double p_cross = start_inside ? prob_cross_i_e : prob_cross_e_i;
         if (U(gen) < p_cross) {
-            cout <<" p_cross : " << p_cross << endl;
+            //cout <<" p_cross : " << p_cross << endl;
             collision.perm_crossing = p_cross;
             collision.bounced_direction = dir; // continue forward
         }

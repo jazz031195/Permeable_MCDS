@@ -1,5 +1,4 @@
 #include "Axon.h"
-#include "Axon.h"
 #include "Eigen/Dense"
 #include <Eigen/Geometry>
 #include <Eigen/Core>

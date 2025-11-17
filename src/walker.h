@@ -59,6 +59,8 @@ public:
 
     GlialCollisionSphere collision_sphere_glials;                     /*!< Collision sphere for collition against glial cells                      */
 
+    BloodVesselCollisionSphere collision_sphere_blood_vessels;         /*!< Collision sphere for collition against blood vessels                   */
+    
     PLYCollisionSphere collision_sphere_ply;                        /*!< Collision sphere for collition against PLY meshes                      */
 
     SphereCollisionSphere collision_sphere_spheres;                 /*!< Collision sphere for collition against spheres                         */

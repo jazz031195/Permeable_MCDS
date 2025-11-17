@@ -53,12 +53,17 @@ def parse_direction_file(file_path, b_values):
     if (len(b_values) != len(shell_data)):
         raise ValueError("Number of b-values does not match number of shells in text file : ", file_path)
 
+    min_nbr_directins = min([len(shell_data[shell]['x_vals']) for shell in shell_data])
+    print("Minimum number of directions in all shells: ", min_nbr_directins)
+
     # Consolidate all shells into separate x, y, and z lists
     for shell, values in shell_data.items():
-        all_x_vals.extend(values['x_vals'])
-        all_y_vals.extend(values['y_vals'])
-        all_z_vals.extend(values['z_vals'])
+
+        all_x_vals.extend(values['x_vals'][:min_nbr_directins])
+        all_y_vals.extend(values['y_vals'][:min_nbr_directins])
+        all_z_vals.extend(values['z_vals'][:min_nbr_directins])
         all_b_values.extend([b_values[shell-1]] * len(values['x_vals']))
+
 
     return all_x_vals, all_y_vals, all_z_vals, all_b_values
 
@@ -192,6 +197,31 @@ def time_dependence_narrow_pulse_dki() :
     write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
 
 
+def scheme_from_directions(combo) :
+    directions_path = combo["directions_path"]
+    output_file = combo["output_file"]
+
+    # B values and directions
+    b_values = combo["b_values"]
+    x_vals, y_vals, z_vals, b_values = parse_direction_file(directions_path, b_values)
+    print("x_vals: ", len(x_vals))
+
+    delta_values = combo["delta_values"]
+    # TE, big_delta, small_delta
+    small_delta_values = [combo["small_delta"]]*len(delta_values) # narrow pulse
+    te_values = [delta_values[i]+small_delta_values[i]+0.005 for i in range(len(delta_values))]
+
+    add_b0 = combo["add_b0"]
+    if add_b0:
+        # add b0
+        b_values = [0] + b_values
+        x_vals = [0.0] + x_vals
+        y_vals = [0.0] + y_vals
+        z_vals = [1.0] + z_vals
+
+    write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
+
+
 def fixed_direction() :
     output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/quentins_exp_d_20.scheme"
 
@@ -217,4 +247,22 @@ def fixed_direction() :
 
 if __name__ == "__main__":
 
-    fixed_direction()
+    Malte_substrate1 = {
+        "directions_path": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/directions/2shells_61_dir.txt",
+        "output_file": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/Malteb22000_b30000.scheme",
+        "b_values": [22000, 30000],
+        "delta_values": [0.046, 0.155, 0.255, 0.505],
+        "small_delta": 0.003,
+        "add_b0": False
+    }
+
+    Malte_substrate2 = {
+        "directions_path": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/directions/SMI_directions.txt",
+        "output_file": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/Malteb0_b15000.scheme",
+        "b_values": [50, 1500, 4000, 8000, 15000],
+        "delta_values": [0.046, 0.155, 0.255, 0.505],
+        "small_delta": 0.003,
+        "add_b0": True
+    }
+
+    scheme_from_directions(Malte_substrate2)

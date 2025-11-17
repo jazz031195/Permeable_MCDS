@@ -38,6 +38,7 @@ public:
     bool mix_compartment_diffusivities;             /*!< flag, true if the intra and extra diffusivities are mixed in the same compartment */
     double t_ex;                                    /*!< exchange time between compartments */
     double f; /*!< Useful for mixed_compartment_diffusivities */
+    double blood_flow;                               /*!< blood flow in mm/s */
     
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
     bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */
@@ -59,6 +60,7 @@ public:
     std::vector<std::string> cylinders_files;       /*!< file paths with a list of cilinders obstacles                              */
     std::vector<std::string> axons_files;           /*!< file paths with a list of axons obstacles                              */
     std::vector<std::string> glials_files;           /*!< file paths with a list of glial cells obstacles                              */
+    std::vector<std::string> blood_vessels_files;   /*!< file paths with a list of blood vessels obstacles                          */
     std::vector<std::string> PLY_files;             /*!< file paths with PLY obstacle files                                         */
     std::vector<double> PLY_scales;                 /*!< Auxiliary vector to save PLY file scales                                   */
     std::vector<float> ini_delta_pos;               /*!< Delta position for the wlakers                                             */
@@ -134,11 +136,13 @@ public:
     double obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */ 
     double axon_obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
     double glial_obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
+    double blood_vessel_obstacle_permeability     = -1.0;           /*!< Obstacles permeability if global                                          */
     
     std::vector<std::string> sphere_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> cylinder_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> axon_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<std::string> glial_permeability_files;    /*!< Obstacles permeability file if local                                       */
+    std::vector<std::string> blood_vessel_permeability_files;    /*!< Obstacles permeability file if local                                       */
     std::vector<double> PLY_permeability;
 
     bool subdivision_flag           = false;        /*!< flag to check if we have several voxel subdivision to compute the signal   */
@@ -465,6 +469,8 @@ private:
     */
 
     void readGlialList(std::ifstream& in);
+
+    void readBloodVesselList(std::ifstream& in);
 
 };
 
