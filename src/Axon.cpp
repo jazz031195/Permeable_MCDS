@@ -352,7 +352,7 @@ bool Axon::checkCollision(const Walker& walker,
     const double L = step_length;
 
     if (L <= 0.0) { 
-        cout <<"L : " << L << endl;
+
         collision.type = Collision::null; 
         return false; 
     }

@@ -155,6 +155,9 @@ if __name__ == "__main__":
     else:
         trajectory_paths = [f"/home/localadmin/Documents/MCDS/Permeable_MCDS/test_{i}.traj" for i in range(nbr_trajectories)]
     plotter = plot_bfloat_points(trajectory_paths, binary, location)
+    grid = pv.Cube(center=(150/2, 150/2, 150/2), x_length=150, y_length=150, z_length=150)
+    plotter.add_mesh(grid, style='wireframe', color='black', opacity=0.2)
+
     plotter.show()
 
     #swc_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/output/SMI_pred/axons_astrocytes/astrocytes_0.06.swc"

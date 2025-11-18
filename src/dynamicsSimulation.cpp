@@ -863,11 +863,14 @@ void DynamicsSimulation::updateStepLength(double &l, const int &t){
             curr_step_lenght = step_lenght_intra;
             curr_diffusivity = params.diffusivity_intra;
         }
-        else if (walker.location == Walker::intra && walker.in_obj_type == 3){
+        else if (walker.location == Walker::intra && walker.in_obj_type == 3 && walker.status != Walker::bouncing){
 
             Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
-            double velocity = bv.velocity(walker);
-            l = float(velocity*params.sim_duration/float(params.num_steps));
+            double v;
+            Eigen::Vector3d direction_flow;
+            bv.velocity(walker, v, direction_flow);
+
+            l = float(v*params.sim_duration/float(params.num_steps));
             curr_step_lenght = l;
             curr_diffusivity = 0.0;
         }
@@ -1322,11 +1325,10 @@ bool DynamicsSimulation::isInsideBloodVessels(Eigen::Vector3d &position, int &ob
 {
     
     for (unsigned i = 0; i < blood_vessels_list.size() ; i++){
-
-        bool isinside = blood_vessels_list[i].isPosInsideBloodVessel(position,  distance_to_be_inside);
+        double max_step = blood_vessels_list[i].max_velocity*params.sim_duration/float(params.num_steps);
+        bool isinside = blood_vessels_list[i].isPosInsideBlood_Vessel(position,  distance_to_be_inside, max_step);
         if (isinside){
             object_id = int(i);
-
             return true;
         }
     }
@@ -1657,9 +1659,12 @@ void DynamicsSimulation::generateStep(Vector3d & step, double l) {
         return;
     }
 
-    if(walker.in_obj_type ==3 and walker.location == Walker::intra){
+    if(walker.in_obj_type ==3 && walker.location == Walker::intra && walker.status != Walker::on_voxel && walker.status != Walker::bouncing){
         Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
-        step = bv.direction_flow;
+        double v;
+        Eigen::Vector3d direction_flow;
+        bv.velocity(walker, v, direction_flow);
+        step = direction_flow;
         step.normalize();
         return;
     }
@@ -1758,6 +1763,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
 
         // Updates the position and bouncing direction.
         if(update_walker_status){
+
 
             //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision);
             bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision, t);
@@ -2141,12 +2147,14 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
     
     if(dataSynth){
         if(dataSynth->dynamic){
-            if (walker.in_obj_type ==3 && walker.location == Walker::intra){
+            if (walker.in_obj_type ==3 && walker.location == Walker::intra && walker.status != Walker::bouncing){
                 Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
-                double velocity = bv.velocity(walker);
+                double v;
+                Eigen::Vector3d direction_flow;
+                bv.velocity(walker, v, direction_flow);
                 last_time_dt = dataSynth->time_steps[t-1];
                 time_dt = dataSynth->time_steps[t];
-                l = velocity * (time_dt - last_time_dt);
+                l = v * (time_dt - last_time_dt);
             }
             else{
                 last_time_dt = dataSynth->time_steps[t-1];
@@ -2333,7 +2341,6 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         bounced_step = collision.bounced_direction;
         tmax-=collision.t;
 
-        
     }
     else if(collision.type == Collision::near){
         //sentinela.rejected_step   = true;

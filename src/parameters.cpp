@@ -40,7 +40,7 @@ Parameters::Parameters()
     concentration = 0;
     step_length = 0;
     num_steps = 0;
-    blood_flow = 1e-3;
+    pressure_diff = 1e-5;
     
     gamma_num_axons=0;
 
@@ -1065,8 +1065,8 @@ void Parameters::readBloodVesselList(std::ifstream& in)
             in >> path;
             blood_vessel_permeability_files.push_back(path);
         }
-        if (str_dist(tmp,"flow") <= 2){
-            in >> blood_flow;
+        if (str_dist(tmp,"pressure_diff") <= 2){
+            in >> pressure_diff;
         } 
     }  
 }

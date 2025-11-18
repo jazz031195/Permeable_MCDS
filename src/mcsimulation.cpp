@@ -727,14 +727,12 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
         double cell_id, component_id;
         int sphere_id = 0;
         int last_bv_id = -1;
-        double flow = params.blood_flow;;
+        double pressure_diff = params.pressure_diff;;
         std::string cell_type = "", component = "", last_type ="";
         std::string header;
 
-        std::vector<Sphere> spheres_out ;
-        std::vector<Sphere> spheres_in ;
-        Sphere sphere_out;
-        Sphere sphere_in;
+        std::vector<Sphere> spheres;
+        Sphere sphere;
 
         double null_perm = 0.0;
 
@@ -766,35 +764,28 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
 
             // if the new line is from a different axon
             if (line_num !=0 and last_bv_id != cell_id){
-
-                perm_ = params.blood_vessel_obstacle_permeability;
-
-                Sphere first_sphere = spheres_out[0];
-                Sphere last_sphere = spheres_out[spheres_out.size()-1];
-                Blood_Vessel bv (last_bv_id, first_sphere.P, last_sphere.P, rout, flow);
-
-                spheres_out.clear();
+                // create the bv with id : last_bv_id
+                Blood_Vessel bv (last_bv_id, rout, pressure_diff);
+                bv.set_spheres(spheres);
+                spheres.clear();
 
                 dynamicsEngine->blood_vessels_list.push_back(bv);
                 sphere_id = 0;
             }
-            sphere_out = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
+            sphere = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
             sphere_id += 1;
-            spheres_out.push_back(sphere_out);
+            spheres.push_back(sphere);
             last_bv_id = cell_id;
             last_type = cell_type;
             line_num += 1;
         }
         
         if (last_type.find("blood_vessel") != std::string::npos) {
-            
-            Sphere first_sphere = spheres_out[0];
-            Sphere last_sphere = spheres_out[spheres_out.size()-1];
-            Blood_Vessel bv (last_bv_id, first_sphere.P, last_sphere.P, rout, flow);
-
-            spheres_out.clear();
+            // add last sphere on last axon
+            Blood_Vessel bv (last_bv_id, rout, pressure_diff);
+            bv.set_spheres(spheres);
+            spheres.clear();
             dynamicsEngine->blood_vessels_list.push_back(bv);
-
         }
 
         in.close();
