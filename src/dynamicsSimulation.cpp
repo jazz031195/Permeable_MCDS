@@ -1493,8 +1493,8 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             nbr_walker_extra_final ++;
         }
 
-        dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);
-        dataSynth->update_DWI_signal(walker);
+        dataSynth->update_phase_shift(this->time_step,walker.pos_r_log);        //HERE TO CHANGE
+        dataSynth->update_DWI_signal(walker);        //HERE TO CHANGE
         //Write the positions.
         if (params.write_location || params.write_txt){
             trajectory.writePosition(walker, w);
@@ -1554,7 +1554,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
     // Writes the final DWI signal, and the phase shift.
     if(params.log_opp)
-        writeDWSignal(dataSynth);
+        writeDWSignal(dataSynth);        //HERE TO CHANGE
 
     return;
 }

@@ -319,7 +319,7 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
             double val = giro * (Gdt.dot(xt));
             //cout <<"val : " << val << endl;
             val = fmod(val, dos_pi);
-            phase_shift[s] = fmod(phase_shift[s] + val, dos_pi);
+            phase_shift[s] = fmod(phase_shift[s] + val, dos_pi);        // OUTPUT
             //cout << "val : " << val << endl;
             //cout <<"phase_shift_intervals["<<s<<"] : " << phase_shift_intervals[s].size() << endl;
             //cout << "t_intervals["<<s<<"] : " << t_intervals[s].size() << endl;
