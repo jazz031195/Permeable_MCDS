@@ -37,7 +37,7 @@ def create_data(data_folder, SNR, name, extension, scheme_file_path):
     """
 
     dwi_real      = get_dwi(data_folder / f"{name}.{extension}")
-    print(dwi_real)
+
     # There is an imaginary part to the signal
     if os.path.exists(data_folder / f"{name}_img.{extension}"):
         dwi_imaginary = get_dwi(data_folder / f"{name}_img.{extension}")

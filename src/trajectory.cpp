@@ -332,7 +332,7 @@ void Trajectory::writePositionText(Eigen::Vector3d &pos)
 void Trajectory::writePositionBinary(Eigen::Vector3d &pos)
 
 {
-    float pos0 = float(pos(0)),pos1 = float(pos(1)),pos2 = float(pos(2));
+    float pos0 = float(pos[0]),pos1 = float(pos[1]),pos2 = float(pos[2]);
     bout.write(reinterpret_cast<char *>(&pos0), sizeof(float));
     bout.write(reinterpret_cast<char *>(&pos1), sizeof(float));
     bout.write(reinterpret_cast<char *>(&pos2), sizeof(float));
@@ -362,10 +362,14 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
         }
 
         if(write_bin)
+        {
             writePositionBinary(pos_subsampled);
+        }
 
         if(write_txt)
+        {
             writePositionText(pos_subsampled);
+        }
     }
 
     if(write_hit)

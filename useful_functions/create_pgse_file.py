@@ -1,6 +1,7 @@
 import itertools
 import math
 import numpy as np
+import pandas as pd
 
 # Gyromagnetic ratio for hydrogen nuclei in rad/ms*T
 GYROMAGNETIC_RATIO = 267.51525e3  # rad/ms*T
@@ -62,6 +63,29 @@ def parse_direction_file(file_path, b_values):
 
     return all_x_vals, all_y_vals, all_z_vals, all_b_values
 
+def parse_direction_file_juliette(file_path):
+
+    """
+    Parse a file containing shell and directional data into x, y, z values, and associate each shell with its corresponding b-value.
+
+    Args:
+        file_path (str): Path to the input file containing directional data. The file should have four columns: 
+                         shell index, x-coordinate, y-coordinate, and z-coordinate.
+        b_values (list): List of b-values, where each b-value corresponds to a shell index in the input file.
+
+    Returns:
+        tuple: 
+            - list of float: x-coordinates for all directions.
+            - list of float: y-coordinates for all directions.
+            - list of float: z-coordinates for all directions.
+            - list of float: b-values repeated for each direction in their respective shells.
+
+    Raises:
+        ValueError: If the number of b-values does not match the number of shells in the input file.
+    """
+
+    df = pd.read_csv(file_path, header=21, sep="\t")
+    return df.u_x.values, df.u_y.values, df.u_z.values
 
 def write_b_value_combinations(
     x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file
@@ -90,7 +114,7 @@ def write_b_value_combinations(
 
 
 def write_combined_directions_with_b_values(
-    x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file, intervals = None
+    x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file
 ):
     """
     Generate combinations of directions and b-values.
@@ -102,10 +126,7 @@ def write_combined_directions_with_b_values(
         output_file (str): Path to the output file.
     """
     with open(output_file, 'w') as file:
-        if intervals is not None:
-            file.write("VERSION: PGSE_INTERVALS\n")
-        else:
-            file.write("VERSION: STEJSKALTANNER\n")
+        file.write("VERSION: STEJSKALTANNER\n")
         for (x, y, z, b_value), (Delta, TE, delta) in itertools.product(
             zip(x_vals, y_vals, z_vals, b_values), zip(delta_values, te_values, small_delta_values)
         ):
@@ -115,15 +136,10 @@ def write_combined_directions_with_b_values(
             Delta, TE, delta = map(round, [Delta, TE, delta], [8, 8, 8])
 
             # Write to file
-            if intervals is not None:
-                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE} {intervals}\n")
-            else:
-                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
+            file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
 
-
-
-def write_scheme_file(
-    x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file, intervals = None
+def write_combined_directions_with_b_values_juliette(
+    x_vals, y_vals, z_vals, b_values, delta_values, TE, delta, output_file
 ):
     """
     Generate combinations of directions and b-values.
@@ -135,22 +151,17 @@ def write_scheme_file(
         output_file (str): Path to the output file.
     """
     with open(output_file, 'w') as file:
-        if intervals is not None:
-            file.write("VERSION: PGSE_INTERVALS\n")
-        else:
-            file.write("VERSION: STEJSKALTANNER\n")
-        for (x, y, z, b_value, Delta, TE, delta) in zip(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values):
-            # Compute the gradient strength G
-            G = (math.sqrt(b_value / (Delta - (delta / 3)))) / (delta * GYROMAGNETIC_RATIO)
-            G = round(G, 8)
-            Delta, TE, delta = map(round, [Delta, TE, delta], [8, 8, 8])
+        file.write("VERSION: STEJSKALTANNER\n")
+        for Delta in delta_values:
+            for (x, y, z) in zip(x_vals, y_vals, z_vals):
+                for b_value in b_values:
+                    # Compute the gradient strength G
+                    G = (math.sqrt(b_value / (Delta - (delta / 3)))) / (delta * GYROMAGNETIC_RATIO)
+                    G = round(G, 8)
+                    Delta, TE, delta = map(round, [Delta, TE, delta], [8, 8, 8])
 
-            # Write to file
-            if intervals is not None:
-                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE} {intervals}\n")
-            else:
-                file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
-
+                    # Write to file
+                    file.write(f"{x} {y} {z} {G} {Delta} {delta} {TE}\n")
 
 def write_combinations_with_fixed_gradients(
     x_vals, y_vals, z_vals, gradient_values, delta_values, te_values, small_delta_values, output_file
@@ -177,7 +188,7 @@ def write_combinations_with_fixed_gradients(
 
 def time_dependence_narrow_pulse_dki() :
     directions_path = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/directions/SMI_directions.txt"
-    output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/time_dependence_narrow_pulse_dki.scheme"
+    output_file     = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/time_dependence_narrow_pulse_dki.scheme"
 
     # B values and directions
     b_values =[0, 500, 1000, 2000, 3000]
@@ -191,30 +202,23 @@ def time_dependence_narrow_pulse_dki() :
 
     write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
 
+def time_dependence_Juliette() :
+    directions_path = "instructions/directions/PGSE_128_dir.txt"
+    output_file     = "instructions/scheme/128_dir_12_b_9_td.scheme"
 
-def fixed_direction() :
-    output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/quentins_exp_d_20.scheme"
+    # B values [s mm-2] and directions
+    b_values =[0, 200, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]
+    x_vals, y_vals, z_vals = parse_direction_file_juliette(directions_path)
+    print("x_vals: ", len(x_vals))
 
-    # B values and directions
-    direction = [0.0, 0.0, 1.0]
-    b_value =[0, 200, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000]
-    delta = [0.08]
-    small_delta = 0.0165
+    # Big delta [s]
+    Delta_values = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
+    # TE, big_delta, small_delta
+    delta = 0.0165
+    TE    = np.max(Delta_values) + delta + 0.05
 
-    nbr_combinations = len(b_value) * len(delta)
-    x_vals = [direction[0]] * nbr_combinations
-    y_vals = [direction[1]] * nbr_combinations
-    z_vals = [direction[2]] * nbr_combinations
-    b_values = list(itertools.chain.from_iterable([[b] * len(delta) for b in b_value]))
-    print(b_values)
-    delta_values = [delta]*len(b_values)
-    #flatten delta_values
-    delta_values = list(itertools.chain.from_iterable(delta_values))
-    print(delta_values)
-    small_delta_values = [small_delta] * len(delta_values)
-    te_values = [delta_values[i]+small_delta_values[i]+0.005 for i in range(len(delta_values))]
-    write_scheme_file(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file, intervals = 1000)
+    write_combined_directions_with_b_values_juliette(x_vals, y_vals, z_vals, b_values, Delta_values, TE, delta, output_file)
 
 if __name__ == "__main__":
 
-    fixed_direction()
+    time_dependence_Juliette()
