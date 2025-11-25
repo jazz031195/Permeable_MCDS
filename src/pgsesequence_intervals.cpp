@@ -319,7 +319,7 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
             double val = giro * (Gdt.dot(xt));
             //cout <<"val : " << val << endl;
             val = fmod(val, dos_pi);
-            phase_shift[s] = fmod(phase_shift[s] + val, dos_pi);
+            phase_shift[s] = fmod(phase_shift[s] + val, dos_pi);        // OUTPUT
             //cout << "val : " << val << endl;
             //cout <<"phase_shift_intervals["<<s<<"] : " << phase_shift_intervals[s].size() << endl;
             //cout << "t_intervals["<<s<<"] : " << t_intervals[s].size() << endl;
@@ -351,11 +351,11 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
            if (abs(t - t_intervals[s][indices[s]]) < 1e-3) {
                 //cout <<"t: " << t << " t_intervals["<<s<<"]["<<indices[s]<<"]: " << t_intervals[s][indices[s]]<< endl;
                 // Save the phase shift for this interval
-                phase_shift_intervals[s][indices[s]] = phase_shift[s];
+                phase_shift_intervals[s][indices[s]] = phase_shift[s];        // OUTPUT
                 indices[s]++; // Move to the next interval
                 update_DWI = true; // Set flag to update DWI after all steps
                 if (!update_interval_nbr) {
-                    interval_nbr += 1;
+                    interval_nbr += 1;                                          // OUTPUT
                     update_interval_nbr = true;
                 }
                 // Check if we reached the end of the intervals for this repetition
