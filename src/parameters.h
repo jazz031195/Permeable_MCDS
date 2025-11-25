@@ -38,6 +38,7 @@ public:
     bool mix_compartment_diffusivities;             /*!< flag, true if the intra and extra diffusivities are mixed in the same compartment */
     double t_ex;                                    /*!< exchange time between compartments */
     double f; /*!< Useful for mixed_compartment_diffusivities */
+    bool randomize_walkers_ini_pos;               /*!< flag, true if the initial position of the walkers is randomized            */
     
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
     bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */

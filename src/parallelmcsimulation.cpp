@@ -107,6 +107,7 @@ void ParallelMCSimulation::startSimulation()
     int tot_nbr_walker_intra_final  = 0;
     int tot_nbr_walker_axons_final  = 0;
     int tot_nbr_walker_glials_final  = 0;
+    int tot_nbr_walker_soma_final  = 0;
 
     int tot_nbr_bounces = 0;
     int tot_nbr_legal_crossings = 0;
@@ -119,6 +120,7 @@ void ParallelMCSimulation::startSimulation()
         tot_nbr_walker_intra_final += simulations[i]->dynamicsEngine->nbr_walker_intra_final;
         tot_nbr_walker_axons_final += simulations[i]->dynamicsEngine->nbr_walker_axons_final;
         tot_nbr_walker_glials_final += simulations[i]->dynamicsEngine->nbr_walker_glials_final;
+        tot_nbr_walker_soma_final += simulations[i]->dynamicsEngine->nbr_walker_soma_final;
 
         tot_nbr_bounces += simulations[i]->dynamicsEngine->tot_nbr_bounces;
         tot_nbr_legal_crossings += simulations[i]->dynamicsEngine->tot_nbr_legal_crossings;
@@ -132,6 +134,7 @@ void ParallelMCSimulation::startSimulation()
     SimErrno::info("Number of extracellular particles at the end : "+ to_string(tot_nbr_walker_extra_final),out,false);
     SimErrno::info("Number of walkers in axons at the end : "+ to_string(tot_nbr_walker_axons_final),out,false);
     SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials_final),out,false);
+    SimErrno::info("Number of walkers in soma at the end : "+ to_string(tot_nbr_walker_soma_final),out,false);
 
     SimErrno::info("Total number of bounces: "                     + to_string(tot_nbr_bounces),out,false);
     SimErrno::info("Total number of legal crossings: "             + to_string(tot_nbr_legal_crossings),out,false);

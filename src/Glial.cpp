@@ -850,7 +850,7 @@ double Glial::minDistance(const Walker& w) const
 
     return dist;
 }
-bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
+int Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
 {
     // 1) Soma test (allow shrink/inflate here)
     {
@@ -858,7 +858,7 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
         if (Rs > 0.0) {
             const double R2 = Rs * Rs;
             if ((p - soma.P).squaredNorm() <= R2) {
-                return true;
+                return 1;
             }
         }
     }
@@ -869,7 +869,7 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
     if (p.x() < B.x_min - infl || p.x() > B.x_max + infl ||
         p.y() < B.y_min - infl || p.y() > B.y_max + infl ||
         p.z() < B.z_min - infl || p.z() > B.z_max + infl) {
-            return false;
+            return 0;
     }
 
     // 3) How many neighbor cells to scan
@@ -901,11 +901,11 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
                     const double R2 = R * R;
 
                     if ((p - s.P).squaredNorm() <= R2) {
-                        return true;
+                        return 2;
                     }
                 }
             }
         }
     }
-    return false;
+    return 0;
 }

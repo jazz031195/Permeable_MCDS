@@ -76,7 +76,7 @@ class Glial : public Obstacle
     inline bool segment_aabb_intersect(const Eigen::Vector3d& p0, const Eigen::Vector3d& p1, const Box& box, double& tEnter, double& tExit);
     inline void extend(Box& b, const Eigen::Vector3d& p);
     inline bool is_empty(const Box& b);
-    bool isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L);
+    int isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L);
     inline bool point_in_inflated_aabb(const Eigen::Vector3d& p, double d);
     int occupancy_at_point(const Eigen::Vector3d& p,
                               double margin,
