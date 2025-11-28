@@ -17,4 +17,6 @@ df_all = pd.concat(dfs, ignore_index=True)
 df_all = df_all[df_all["step_number"] == 1]
 df_traj_init_pos = df_all[["x", "y", "z"]]
 
+df_traj_init_pos = df_traj_init_pos.sample(frac=1).reset_index(drop=True)
+
 df_traj_init_pos.to_csv(input_folder / "init_positions.txt", sep=" ", index=False, header=False)
