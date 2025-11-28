@@ -338,8 +338,11 @@ private:
      */
     inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &object_id, int &object_type);
 
-    Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_pos);
-    Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& random_pos);
+    void getAnIntraSomaPosition(Eigen::Vector3d &intra_pos, int &object_id, int &object_type);
+    void getAnIntraDendritePosition(Eigen::Vector3d &intra_pos, int &object_id, int &object_type);
+
+    // Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_pos);
+    // Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& random_pos);
 
     /*!
      * \brief   finds an extra cellular 3d position inside the voxel (needs a voxel initialized).

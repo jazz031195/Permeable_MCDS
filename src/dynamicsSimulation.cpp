@@ -587,7 +587,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.setRandomInitialPosition(Vector3d(double(params.ini_delta_pos[0]),double(params.ini_delta_pos[1]),double(params.ini_delta_pos[2])),
                 Vector3d(double(params.ini_delta_pos[0]),double(params.ini_delta_pos[1]),double(params.ini_delta_pos[2])));
     }
-    else if(params.ini_walker_flag.compare("intra")== 0){
+    else if(params.ini_walker_flag.compare("intra")== 0 and !params.randomize_walkers_ini_pos){
         Vector3d intra_pos;
         getAnIntraCellularPosition(intra_pos, object_id, object_type);
         if (object_type == 0){
@@ -604,8 +604,35 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.in_obj_index = object_id;
         walker.in_obj_type = object_type;
         nbr_walker_intra_ini++;
-
     }
+    else if (params.ini_walker_flag.compare("intra")== 0 and params.randomize_walkers_ini_pos and glials_list.size()>0){
+        Vector3d intra_pos;
+        vector<double> volumes = glials_list[0].volume_of_glialcells();                 // Here we assume only one glial cell
+        double num_walkers_in_soma = volumes[0]/(volumes[0]+volumes[1]) * params.num_walkers;
+        if(nbr_walker_intra_ini < num_walkers_in_soma){
+            getAnIntraSomaPosition(intra_pos, object_id, object_type);
+        }
+        else{
+            getAnIntraDendritePosition(intra_pos, object_id, object_type);
+        }
+        if (object_type == 0){
+            nbr_walker_axons_ini++;
+        }
+        else if (object_type == 1){
+            nbr_walker_glials_ini++;
+        }
+        bool isintra = isInIntra(intra_pos, object_id, object_type, -barrier_tickness);
+
+        walker.setInitialPosition(intra_pos);
+        walker.intra_extra_consensus--;
+        walker.initial_location = Walker::intra;
+        walker.location = Walker::intra;
+        walker.previous_location = Walker::intra;
+        walker.in_obj_index = object_id;
+        walker.in_obj_type = object_type;
+        nbr_walker_intra_ini++;
+    }
+
     else if(params.ini_walker_flag.compare("extra")== 0){
         Vector3d extra_pos;
         getAnExtraCellularPosition(extra_pos);
@@ -859,7 +886,42 @@ void DynamicsSimulation::updateCollitionSphere(unsigned t)
     }
 }
 
-void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &object_id, int &object_type)
+void DynamicsSimulation::getAnIntraSomaPosition(Vector3d &intra_pos, int &object_id, int &object_type){
+
+    intra_pos = glials_list[0].getRandomPointInSphere(glials_list[0].soma);
+
+}
+
+void DynamicsSimulation::getAnIntraDendritePosition(Vector3d &intra_pos, int &object_id, int &object_type){
+    
+    if (glials_list.empty()) {
+        throw std::runtime_error("No glial cells in glials_list");
+    }
+
+    auto &processes = glials_list[0].processes;
+    if (processes.empty()) {
+        throw std::runtime_error("No dendritic branches in glial cell 0");
+    }
+
+    static std::mt19937 gen{ std::random_device{}() };
+
+    std::uniform_int_distribution<std::size_t> branch_dist(1, processes.size() - 1);
+    std::size_t branch_id = branch_dist(gen);
+
+    auto &branch = processes[branch_id];
+    if (branch.empty()) {
+        cout << "Selected branch ID: " << branch_id << " is empty." << endl;
+        throw std::runtime_error("Selected branch has no spheres");
+    }
+
+    std::uniform_int_distribution<std::size_t> sphere_dist(0, branch.size() - 1);
+    std::size_t sphere_id = sphere_dist(gen);
+
+    intra_pos = glials_list[0].getRandomPointInSphere(branch[sphere_id]);
+
+}
+
+void DynamicsSimulation::getAnIntraCellularPosition(Eigen::Vector3d &intra_pos, int &object_id, int &object_type)
 {
 
     std::random_device rd;
@@ -878,47 +940,41 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
     }
 
     unsigned count = 0;
-    if (params.randomize_walkers_ini_pos){}
-        while(true){
+    while(true){
 
-            if(count > 10000000){
-                SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate",std::cout);
-                SimErrno::error("Max. number of tries to find an intra-celular compartment reached",std::cout);
-                assert(0);
-            }
-
-            double x = double(udist(gen));
-            double y = double(udist(gen));
-            double z = double(udist(gen));
-
-            x = x*(params.min_sampling_area[0]) + ( 1.0-x)*params.max_sampling_area[0];
-            y = y*(params.min_sampling_area[1]) + ( 1.0-y)*params.max_sampling_area[1];
-            z = z*(params.min_sampling_area[2]) + ( 1.0-z)*params.max_sampling_area[2];
-
-
-        // std::cout << initialization_gap[2] << endl;
-            Vector3d pos_temp = {x,y,z};
-
-            std::vector<int> expected_object_types;
-            if (inner_axons_list.size() > 0){
-                expected_object_types.push_back(0);
-            }
-            else if (axons_list.size() > 0){
-                expected_object_types.push_back(0);
-            }
-            if (glials_list.size() > 0){
-                expected_object_types.push_back(1);
-            }
-            if (cylinders_list.size() > 0){
-                expected_object_types.push_back(2);
-            }
-
-            bool isintra = isInIntra(pos_temp, object_id, object_type, -barrier_tickness); }
-        
-        else {
-            double volume_soma_dendrite = neurons_list[0].getVolume();
-
+        if(count > 10000000){
+            SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate",std::cout);
+            SimErrno::error("Max. number of tries to find an intra-celular compartment reached",std::cout);
+            assert(0);
         }
+
+        double x = double(udist(gen));
+        double y = double(udist(gen));
+        double z = double(udist(gen));
+
+        x = x*(params.min_sampling_area[0]) + ( 1.0-x)*params.max_sampling_area[0];
+        y = y*(params.min_sampling_area[1]) + ( 1.0-y)*params.max_sampling_area[1];
+        z = z*(params.min_sampling_area[2]) + ( 1.0-z)*params.max_sampling_area[2];
+
+
+       // std::cout << initialization_gap[2] << endl;
+        Vector3d pos_temp = {x,y,z};
+
+        std::vector<int> expected_object_types;
+        if (inner_axons_list.size() > 0){
+            expected_object_types.push_back(0);
+        }
+        else if (axons_list.size() > 0){
+            expected_object_types.push_back(0);
+        }
+        if (glials_list.size() > 0){
+            expected_object_types.push_back(1);
+        }
+        if (cylinders_list.size() > 0){
+            expected_object_types.push_back(2);
+        }
+
+        bool isintra = isInIntra(pos_temp, object_id, object_type, -barrier_tickness);
 
         if(checkIfPosInsideVoxel(pos_temp) && isintra && (std::find(expected_object_types.begin(), expected_object_types.end(), object_type) != expected_object_types.end()) ){
             
@@ -935,173 +991,6 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
     }
 }
 
-Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_pos)
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> udist(0, 1);
-
-    int count = 0;
-    // Start with a new initial position
-    if(random_pos)
-    {
-        while (true)
-        {
-            if (count > 100000)
-            {
-                SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
-                SimErrno::error("Max. number of tries to find an intra-celular compartment reached", cout);
-                assert(0);
-            }
-            std::uniform_int_distribution<int> neuron_dist(0, neurons_list.size() - 1);
-            int neuron_id = neuron_dist(gen);
-            Vector3d somaCenter = neurons_list[neuron_id].soma.center;
-            double probaRadius  = double(udist(gen)) * 0.99;
-            double somaRadius   = neurons_list[neuron_id].soma.radius;
-            double theta = 2 * M_PI * udist(gen);
-            double phi   = acos(1 - 2 * udist(gen));
-            double x = sin(phi) * cos(theta) * probaRadius * somaRadius + somaCenter[0];
-            double y = sin(phi) * sin(theta) * probaRadius * somaRadius + somaCenter[1];
-            double z = cos(phi) * probaRadius * somaRadius + somaCenter[2];
-            Vector3d pos_temp = {x, y, z};
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
-            if (checkIfPosInsideVoxel(pos_temp) && (isintra))
-            {
-                // cout << "starts in soma" << endl;
-                return pos_temp;
-            }
-            count++;
-        }
-    }
-    else
-    {
-        while (true)
-        {
-            if (count > 100000)
-            {
-                SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
-                SimErrno::error("Max. number of tries to find an intra-celular compartment reached", cout);
-                assert(0);
-            }
-            Vector3d somaCenter = neurons_list[walker.in_neuron_index].soma.center;
-            double probaRadius = double(udist(gen)) * 0.99;
-            double somaRadius = neurons_list[walker.in_neuron_index].soma.radius;
-            double theta = 2 * M_PI * udist(gen);
-            double phi = acos(1 - 2 * udist(gen));
-            double x = sin(phi) * cos(theta) * probaRadius * somaRadius + somaCenter[0];
-            double y = sin(phi) * sin(theta) * probaRadius * somaRadius + somaCenter[1];
-            double z = cos(phi) * probaRadius * somaRadius + somaCenter[2];
-            Vector3d pos_temp = {x, y, z};
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
-            if (checkIfPosInsideVoxel(pos_temp) && (isintra))
-            {
-                // cout << "starts in soma" << endl;
-                return pos_temp;
-            }
-            count++;
-        }
-    }
-}
-
-Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& random_pos)
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<double> udist(0, 1);
-
-    int count = 0;
-    // Start with a new initial position
-    if(random_pos)
-    {
-        while (true)
-        {
-            if (count > 100000)
-            {
-                SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
-                SimErrno::error("Max. number of tries to find an intra-celular compartment reached", cout);
-                assert(0);
-            }
-            
-            if(neurons_list.size() > 0)
-            {
-                std::uniform_int_distribution<int> neuron_dist(0, neurons_list.size() - 1);
-                int neuron_id    = neuron_dist(gen);
-                if(neurons_list[neuron_id].dendrites.size() > 0)
-                {
-                    std::uniform_int_distribution<int> dendrite_dist(0, neurons_list[neuron_id].dendrites.size() - 1);
-                    int dendrite_id  = dendrite_dist(gen);
-                    if(neurons_list[neuron_id].dendrites[dendrite_id].subbranches.size() > 0)
-                    {
-                        std::uniform_int_distribution<int> subbranch_dist(0, neurons_list[neuron_id].dendrites[dendrite_id].subbranches.size() - 1);
-                        int subbranch_id = subbranch_dist(gen);
-                        if(neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres.size() > 0)
-                        {
-                            std::uniform_int_distribution<int> sphere_dist(0, neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres.size() - 1);
-                            int sphere_id    = sphere_dist(gen);
-
-                            Vector3d center   = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].center;
-                            
-                            double probaRadius  = double(udist(gen)) * 0.99;
-                            double sphereRadius = neurons_list[neuron_id].dendrites[dendrite_id].subbranches[subbranch_id].spheres[sphere_id].radius;
-                            double theta = 2 * M_PI * udist(gen);
-                            double phi = acos(1 - 2 * udist(gen));
-                            double x = sin(phi) * cos(theta) * probaRadius * sphereRadius + center[0];
-                            double y = sin(phi) * sin(theta) * probaRadius * sphereRadius + center[1];
-                            double z = cos(phi) * probaRadius * sphereRadius + center[2];
-                            Vector3d pos_temp = {x, y, z};
-
-                            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
-                            if (checkIfPosInsideVoxel(pos_temp) && (isintra))
-                            {
-                                // cout << "starts in dendrite" << endl;
-                                return pos_temp;
-                            }
-                        }
-                        
-                    }
-                    
-                }
-
-                
-            }
-            
-            count++;
-        }
-    }
-    else
-    {
-        while (true)
-        {
-            if (count > 100000)
-            {
-                SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate", cout);
-                SimErrno::error("Max. number of tries to find an intra-celular compartment reached", cout);
-                assert(0);
-            }
-            auto spheres = neurons_list[walker.in_neuron_index].dendrites[walker.in_dendrite_index].subbranches[walker.in_subbranch_index].spheres;
-            std::uniform_int_distribution<int> sphere_dist(0, spheres.size() - 1);
-            int sphere_id = sphere_dist(gen);
-            Vector3d center = spheres[sphere_id].center;
-            
-            double probaRadius  = double(udist(gen)) * 0.99;
-            double sphereRadius = spheres[sphere_id].radius;
-            double theta = 2 * M_PI * udist(gen);
-            double phi = acos(1 - 2 * udist(gen));
-            double x = sin(phi) * cos(theta) * probaRadius * sphereRadius + center[0];
-            double y = sin(phi) * sin(theta) * probaRadius * sphereRadius + center[1];
-            double z = cos(phi) * probaRadius * sphereRadius + center[2];
-            Vector3d pos_temp = {x, y, z};
-
-            bool isintra = isInIntra(pos_temp, walker.in_ax_index, walker.in_neuron_index, walker.in_dendrite_index, walker.in_subbranch_index, walker.in_sph_index, -barrier_tickness);
-            if (checkIfPosInsideVoxel(pos_temp) && (isintra))
-            {
-                // cout << "starts in dendrite" << endl;
-                return pos_temp;
-            }
-            count++;
-        }
-    }
-}
 
 void DynamicsSimulation::getAnExtraCellularPosition(Vector3d &extra_pos)
 {

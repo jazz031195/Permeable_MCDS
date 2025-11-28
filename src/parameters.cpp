@@ -19,6 +19,8 @@ Parameters::Parameters()
     write_location      = false;
     mix_compartment_diffusivities = false;
 
+    randomize_walkers_ini_pos = true;
+
     hex_packing = false;
     hex_packing_radius      = 0;
     hex_packing_separation  = 0;

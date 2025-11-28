@@ -82,7 +82,8 @@ class Glial : public Obstacle
                               double margin,
                               const bool& isintra, const double& L) const;
     inline int neighbor_radius_cells(const HashGrid& G, double query_pad);
-
+    vector<double> volume_of_glialcells();
+    Eigen::Vector3d getRandomPointInSphere(Sphere s);
 
 };
 
