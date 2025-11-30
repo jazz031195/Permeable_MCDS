@@ -9,7 +9,7 @@ traj_files = sorted(input_folder.glob("*traj*.txt"))
 dfs = []
 
 for file in traj_files:
-    df = pd.read_csv(file, delim_whitespace=True)
+    df = pd.read_csv(file, sep=r"\s+")
     dfs.append(df)
 
 df_all = pd.concat(dfs, ignore_index=True)

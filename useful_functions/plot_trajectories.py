@@ -147,6 +147,8 @@ def plot_cells(file_path, plotter):
     # Show the plot
     plotter.show()
 
+cluster = f"/work/PRTNR/CHUV/RADMED/ijelescu/firepath/Juliette"
+computer = f"/home/juliette/Bureau"
 
 # Example usage:
 if __name__ == "__main__":
@@ -157,7 +159,7 @@ if __name__ == "__main__":
     if binary:
         trajectory_paths = [f"/home/localadmin/Documents/Rita_simulations/ODF03_bead02_und02_soma/test_rep_02_{i}.traj" for i in range(nbr_trajectories)]
     else:
-        trajectory_paths = [f"/home/juliette/Bureau/Permeable_MCDS/results/neuron_tortuous_beaded_3/_{i}.traj.txt" for i in range(nbr_trajectories)]
+        trajectory_paths = [f"{cluster}/Permeable_MCDS/results/neuron_tortuous_beaded_3/_{i}.traj.txt" for i in range(nbr_trajectories)]
     plotter = plot_bfloat_points(trajectory_paths, binary, location)
     plotter.show()
 
