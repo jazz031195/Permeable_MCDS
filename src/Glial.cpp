@@ -850,7 +850,7 @@ double Glial::minDistance(const Walker& w) const
 
     return dist;
 }
-bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
+int Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
 {
     // 1) Soma test (allow shrink/inflate here)
     {
@@ -858,7 +858,7 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
         if (Rs > 0.0) {
             const double R2 = Rs * Rs;
             if ((p - soma.P).squaredNorm() <= R2) {
-                return true;
+                return 1;
             }
         }
     }
@@ -869,7 +869,7 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
     if (p.x() < B.x_min - infl || p.x() > B.x_max + infl ||
         p.y() < B.y_min - infl || p.y() > B.y_max + infl ||
         p.z() < B.z_min - infl || p.z() > B.z_max + infl) {
-            return false;
+            return 0;
     }
 
     // 3) How many neighbor cells to scan
@@ -901,11 +901,54 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
                     const double R2 = R * R;
 
                     if ((p - s.P).squaredNorm() <= R2) {
-                        return true;
+                        return 2;
                     }
                 }
             }
         }
     }
-    return false;
+    return 0;
+}
+
+vector<double> Glial::volume_of_glialcells(){
+    double VolumeSoma = 0.0;
+    // soma volume
+    VolumeSoma = (4.0/3.0) * M_PI * pow(soma.radius,3);
+
+    double VolumeDendrites = 0.0;
+
+    // processes volume
+    for(unsigned i= 0 ; i < processes.size();i++){
+        for (unsigned j = 1; j < processes[i].size(); j++){
+            double l = (processes[i][j-1].P - processes[i][j].P).norm();
+
+            VolumeDendrites += M_PI/3*l*(processes[i][j].radius*processes[i][j].radius + processes[i][j].radius*processes[i][j-1].radius + processes[i][j-1].radius*processes[i][j-1].radius);
+        }
+    }
+    return {VolumeSoma, VolumeDendrites};
+}
+
+Eigen::Vector3d Glial::getRandomPointInSphere(Sphere s){
+    
+    static std::mt19937_64 rng{ std::random_device{}() };
+    std::uniform_real_distribution<double> unif01(0.0, 1.0);
+
+    double u = unif01(rng);
+    double v = unif01(rng);  
+    double w = unif01(rng); 
+
+    double theta = 2.0 * M_PI * u;
+    double z_dir = 2.0 * v - 1.0;
+    double xy = std::sqrt(1.0 - z_dir*z_dir);
+
+    double x_dir = xy * std::cos(theta);
+    double y_dir = xy * std::sin(theta);
+
+    double r = s.radius * std::cbrt(w);
+
+    return {
+        s.P.x() + r * x_dir,
+        s.P.y() + r * y_dir,
+        s.P.z() + r * z_dir
+    };
 }

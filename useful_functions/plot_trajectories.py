@@ -41,10 +41,14 @@ def plot_bfloat_points(file_paths, binary, location):
             # Read the file (replace 'data.txt' with your filename)
             data = pd.read_csv(file_path, delim_whitespace=True)
 
-            data_intra = data.loc[data['location'] == "intra"]
-            x = data_intra['x'].values
-            y = data_intra['y'].values
-            z = data_intra['z'].values
+            # data_intra = data.loc[data['location'] == "intra"]
+            # x = data_intra['x'].values
+            # y = data_intra['y'].values
+            # z = data_intra['z'].values
+
+            x = data['x'].values
+            y = data['y'].values
+            z = data['z'].values
 
             points = np.column_stack((x, y, z))
 
@@ -53,17 +57,17 @@ def plot_bfloat_points(file_paths, binary, location):
             cloud = pv.PolyData(points)
             plotter.add_mesh(cloud, color="red", point_size=1, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
 
-            data_extra = data.loc[data['location'] == "extra"]
-            x = data_extra['x'].values
-            y = data_extra['y'].values
-            z = data_extra['z'].values
+            # data_extra = data.loc[data['location'] == "extra"]
+            # x = data_extra['x'].values
+            # y = data_extra['y'].values
+            # z = data_extra['z'].values
 
-            points = np.column_stack((x, y, z))
+            # points = np.column_stack((x, y, z))
 
-            points = points*1000
+            # points = points*1000
 
-            cloud = pv.PolyData(points)
-            plotter.add_mesh(cloud, color="blue", point_size=1, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
+            # cloud = pv.PolyData(points)
+            # plotter.add_mesh(cloud, color="blue", point_size=1, render_points_as_spheres=True, ambient = 0.5, diffuse = 0.5, specular = 0.5)
 
     return plotter
 
@@ -143,17 +147,19 @@ def plot_cells(file_path, plotter):
     # Show the plot
     plotter.show()
 
+cluster = f"/work/PRTNR/CHUV/RADMED/ijelescu/firepath/Juliette"
+computer = f"/home/juliette/Bureau"
 
 # Example usage:
 if __name__ == "__main__":
 
-    nbr_trajectories = 1
-    binary = True
-    location = False
+    nbr_trajectories = 20
+    binary = False
+    location = True
     if binary:
         trajectory_paths = [f"/home/localadmin/Documents/Rita_simulations/ODF03_bead02_und02_soma/test_rep_02_{i}.traj" for i in range(nbr_trajectories)]
     else:
-        trajectory_paths = [f"/home/localadmin/Documents/Rita_simulations/ODF03_bead02_und02_soma/test_{i}.traj.txt" for i in range(nbr_trajectories)]
+        trajectory_paths = [f"{cluster}/Permeable_MCDS/results/neuron_tortuous_beaded_3/_{i}.traj.txt" for i in range(nbr_trajectories)]
     plotter = plot_bfloat_points(trajectory_paths, binary, location)
     plotter.show()
 

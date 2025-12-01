@@ -69,6 +69,7 @@ DynamicsSimulation::DynamicsSimulation() {
     nbr_walker_intra_final = 0;
     nbr_walker_glials_final = 0;
     nbr_walker_axons_final = 0;
+    nbr_walker_soma_final = 0;
 
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
@@ -84,6 +85,7 @@ DynamicsSimulation::DynamicsSimulation() {
     intra_tries=0;
     total_tries=0;
     step_nbr = 0;
+
 }
 
 /**
@@ -119,6 +121,7 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
     nbr_walker_intra_final = 0;
     nbr_walker_glials_final = 0;
     nbr_walker_axons_final = 0;
+    nbr_walker_soma_final = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
@@ -157,7 +160,8 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
     nbr_walker_intra_final = 0;
     nbr_walker_glials_final = 0;
     nbr_walker_axons_final = 0;
-
+    nbr_walker_soma_final = 0;
+    
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
 }
@@ -583,7 +587,7 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.setRandomInitialPosition(Vector3d(double(params.ini_delta_pos[0]),double(params.ini_delta_pos[1]),double(params.ini_delta_pos[2])),
                 Vector3d(double(params.ini_delta_pos[0]),double(params.ini_delta_pos[1]),double(params.ini_delta_pos[2])));
     }
-    else if(params.ini_walker_flag.compare("intra")== 0){
+    else if(params.ini_walker_flag.compare("intra")== 0 and !params.randomize_walkers_ini_pos){
         Vector3d intra_pos;
         getAnIntraCellularPosition(intra_pos, object_id, object_type);
         if (object_type == 0){
@@ -600,8 +604,35 @@ void DynamicsSimulation::iniWalkerPosition()
         walker.in_obj_index = object_id;
         walker.in_obj_type = object_type;
         nbr_walker_intra_ini++;
-
     }
+    else if (params.ini_walker_flag.compare("intra")== 0 and params.randomize_walkers_ini_pos and glials_list.size()>0){
+        Vector3d intra_pos;
+        vector<double> volumes = glials_list[0].volume_of_glialcells();                 // Here we assume only one glial cell
+        double num_walkers_in_soma = volumes[0]/(volumes[0]+volumes[1]) * params.num_walkers;
+        if(nbr_walker_intra_ini < num_walkers_in_soma){
+            getAnIntraSomaPosition(intra_pos, object_id, object_type);
+        }
+        else{
+            getAnIntraDendritePosition(intra_pos, object_id, object_type);
+        }
+        if (object_type == 0){
+            nbr_walker_axons_ini++;
+        }
+        else if (object_type == 1){
+            nbr_walker_glials_ini++;
+        }
+        bool isintra = isInIntra(intra_pos, object_id, object_type, -barrier_tickness);
+
+        walker.setInitialPosition(intra_pos);
+        walker.intra_extra_consensus--;
+        walker.initial_location = Walker::intra;
+        walker.location = Walker::intra;
+        walker.previous_location = Walker::intra;
+        walker.in_obj_index = object_id;
+        walker.in_obj_type = object_type;
+        nbr_walker_intra_ini++;
+    }
+
     else if(params.ini_walker_flag.compare("extra")== 0){
         Vector3d extra_pos;
         getAnExtraCellularPosition(extra_pos);
@@ -855,7 +886,42 @@ void DynamicsSimulation::updateCollitionSphere(unsigned t)
     }
 }
 
-void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &object_id, int &object_type)
+void DynamicsSimulation::getAnIntraSomaPosition(Vector3d &intra_pos, int &object_id, int &object_type){
+
+    intra_pos = glials_list[0].getRandomPointInSphere(glials_list[0].soma);
+
+}
+
+void DynamicsSimulation::getAnIntraDendritePosition(Vector3d &intra_pos, int &object_id, int &object_type){
+    
+    if (glials_list.empty()) {
+        throw std::runtime_error("No glial cells in glials_list");
+    }
+
+    auto &processes = glials_list[0].processes;
+    if (processes.empty()) {
+        throw std::runtime_error("No dendritic branches in glial cell 0");
+    }
+
+    static std::mt19937 gen{ std::random_device{}() };
+
+    std::uniform_int_distribution<std::size_t> branch_dist(1, processes.size() - 1);
+    std::size_t branch_id = branch_dist(gen);
+
+    auto &branch = processes[branch_id];
+    if (branch.empty()) {
+        cout << "Selected branch ID: " << branch_id << " is empty." << endl;
+        throw std::runtime_error("Selected branch has no spheres");
+    }
+
+    std::uniform_int_distribution<std::size_t> sphere_dist(0, branch.size() - 1);
+    std::size_t sphere_id = sphere_dist(gen);
+
+    intra_pos = glials_list[0].getRandomPointInSphere(branch[sphere_id]);
+
+}
+
+void DynamicsSimulation::getAnIntraCellularPosition(Eigen::Vector3d &intra_pos, int &object_id, int &object_type)
 {
 
     std::random_device rd;
@@ -924,6 +990,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
         count++;
     }
 }
+
 
 void DynamicsSimulation::getAnExtraCellularPosition(Vector3d &extra_pos)
 {
@@ -1263,10 +1330,12 @@ bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id
 {
     double max_step = max(step_lenght_intra, step_lenght_extra);
     for (unsigned i = 0; i < glials_list.size() ; i++){
-        bool isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside, max_step);
-        if (isinside){
+        int isinside = glials_list[i].isPosInsideGlialCell(position,  distance_to_be_inside, max_step);
+        if (isinside > 0){
             object_id = int(i);
-
+            if (isinside == 1) {
+                nbr_walker_soma_final++;
+            }
             return true;
         }
     }
@@ -1555,6 +1624,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     // Writes the final DWI signal, and the phase shift.
     if(params.log_opp)
         writeDWSignal(dataSynth);        //HERE TO CHANGE
+
+    cout << "Nber walkers inside soma at the end: " << nbr_walker_soma_final << endl;
+    cout << "Percentage of walkers inside soma at the end: " << double(nbr_walker_soma_final)/double(num_simulated_walkers)*100.0 << " %" << endl;
+    cout << "Nber walkers in glial cells at the end: " << nbr_walker_glials_final << endl;
 
     return;
 }

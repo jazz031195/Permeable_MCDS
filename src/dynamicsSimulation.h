@@ -80,6 +80,7 @@ public:
     int nbr_walker_extra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
     int nbr_walker_axons_final;                         /*!< Number of walkers that are inside the axons                 */
     int nbr_walker_glials_final;                         /*!< Number of walkers that are inside the glial cells                 */
+    int nbr_walker_soma_final;                         /*!< Number of walkers that are inside the soma                 */
 
     std::vector <int> list_walkers_intra;            /*!< vector with the number of the walkers that are inside the intra-cellular space */
     std::vector <int> list_walkers_extra;            /*!< vector with the number of the walkers that are inside the extra-cellular space */
@@ -336,6 +337,12 @@ private:
      * \param   intra_pos vector to save the 3d position.
      */
     inline void getAnIntraCellularPosition(Eigen::Vector3d& intra_pos, int &object_id, int &object_type);
+
+    void getAnIntraSomaPosition(Eigen::Vector3d &intra_pos, int &object_id, int &object_type);
+    void getAnIntraDendritePosition(Eigen::Vector3d &intra_pos, int &object_id, int &object_type);
+
+    // Vector3d DynamicsSimulation::getAnIntraCellularPosition_soma(bool const& random_pos);
+    // Vector3d DynamicsSimulation::getAnIntraCellularPosition_dendrite(bool const& random_pos);
 
     /*!
      * \brief   finds an extra cellular 3d position inside the voxel (needs a voxel initialized).

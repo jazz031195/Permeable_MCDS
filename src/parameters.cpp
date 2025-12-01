@@ -19,6 +19,8 @@ Parameters::Parameters()
     write_location      = false;
     mix_compartment_diffusivities = false;
 
+    randomize_walkers_ini_pos = true;
+
     hex_packing = false;
     hex_packing_radius      = 0;
     hex_packing_separation  = 0;
@@ -118,6 +120,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         }
         else if( str_dist(tmp,"ini_walkers_file") <= 3){
             in >> ini_walkers_file;
+        }
+        else if(str_dist(tmp,"ini_walkers_file_count") <= 1){
+            in >> ini_walkers_file_count;
         }
         else if(str_dist(tmp,"write_every_nth_step") <= 7){
             in >> write_every_nth_step;
