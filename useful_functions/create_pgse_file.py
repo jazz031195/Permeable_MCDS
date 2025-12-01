@@ -211,11 +211,14 @@ def time_dependence_Juliette() :
     x_vals, y_vals, z_vals = parse_direction_file_juliette(directions_path)
     print("x_vals: ", len(x_vals))
 
-    # Big delta [s]
-    Delta_values = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
     # TE, big_delta, small_delta
     delta = 0.0165
-    TE    = np.max(Delta_values) + delta + 0.05
+
+    # Big delta [s]
+    Delta_values = [0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
+    Delta_values = [d + delta/3.0 for d in Delta_values]
+    TE    = np.max(Delta_values) + delta + 0.005
+    print(TE, np.max(Delta_values), np.max(Delta_values) + delta)
 
     write_combined_directions_with_b_values_juliette(x_vals, y_vals, z_vals, b_values, Delta_values, TE, delta, output_file)
 

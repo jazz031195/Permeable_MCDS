@@ -8,6 +8,7 @@ import os
 import sys
 if sys.platform == "linux":
     sys.path.insert(1, '/home/localadmin/Documents/analytical_formula/')
+    sys.path.insert(1, '/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS')
 import pandas as pd
 import seaborn as sns
 from pathlib import Path
@@ -15,6 +16,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from utils import get_bvals, get_bvectors, calculate_DKI, get_dwi, get_psge, analytical_solutions
 
+from fig_style import fig_size
 
 cur_path    = os.getcwd()
 giro        = 2.6751525e8 # Gyromagnetic radio [rad/(s*T)]
@@ -164,10 +166,10 @@ plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 DWI_folder  = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/test_juliette")
-scheme_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/test_juliette/21_dir_12_b_9_td.scheme"
-df_all_data = create_df_all(DWI_folder, scheme_file)
+scheme_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/scheme/128_dir_12_b_5_td.scheme"
+# df_all_data = create_df_all(DWI_folder, scheme_file)
 
-df_all_data.to_csv(DWI_folder / "data.csv")
+# df_all_data.to_csv(DWI_folder / "data.csv")
 df_all_data = pd.read_csv(DWI_folder / "data.csv")
 
 data_psge = get_psge(scheme_file)
@@ -177,13 +179,15 @@ delta     = data_psge['delta [ms]'].unique()
 # 2.0e-9 [m²/s] -> 2.0 [um²/ms]
 D0        = 2.0 # [um²/ms]
 df_tmp = df_all_data
+df_tmp = df_tmp[df_tmp['Delta [ms]'].isin([20, 40, 60])]
 means = df_tmp.groupby(['b [ms/um²]', 'Delta [ms]'])['Sb/So'].mean().reset_index()
 means['Delta [ms]'] = means['Delta [ms]'].astype('category')
 
-fig, ax = plt.subplots(1, 1, figsize=(15,15))
-g = sns.scatterplot(data=means, x='b [ms/um²]', y='Sb/So', hue='Delta [ms]', ax=ax, s=200)
+fig, ax = plt.subplots(1, 1, figsize=fig_size(fraction=0.42, height_ratio=0.8))
+g = sns.scatterplot(data=means, x='b [ms/um²]', y='Sb/So', hue='Delta [ms]', ax=ax, s=20)
 ax.legend(title='Delta [ms]', loc="upper right")
 ax.set_ylim([y_lim_min, y_lim_max])
 
 # plt.show()
 plt.savefig(DWI_folder / f"diff.png")
+plt.savefig(DWI_folder / f"diff.pdf")
