@@ -23,6 +23,7 @@ def get_bvals(scheme_file_path):
     """
 
     b_values = []  # Initialize an empty list to store the values from the 4th column
+    Deltas   = []  # Initialize an empty list to store the values from the 4th column
 
     try:
         with open(scheme_file_path, 'r') as file:
@@ -36,11 +37,12 @@ def get_bvals(scheme_file_path):
                     Delta = float(columns[4]) * 1e3 # [ms]
                     b     = pow(G * giro * delta, 2) * (Delta - delta/3) # [ms/um²]
                     b_values.append(b)  # Assuming columns are 0-based
+                    Deltas.append(Delta)  # Assuming columns are 0-based
 
     except FileNotFoundError:
         print(f"File not found: {scheme_file_path}")
     
-    return np.array(b_values)
+    return np.array(b_values), np.array(Deltas)
 
 def get_bvectors(scheme_file_path):
     """
@@ -96,41 +98,57 @@ def calculate_DKI(scheme_file_path, dwi):
     """
 
     # Get b-values <= 1 [ms/um^2] (DTI has Gaussian assumption => small b needed)
-    bvalues = get_bvals(scheme_file_path)      
+    bvalues, Deltas = get_bvals(scheme_file_path)      
     bvecs = get_bvectors(scheme_file_path)
    
-    
-    # DTI fit
-    idx       = bvalues <= 1
-    bvals_dti = bvalues[idx]  
-    bvecs_dti = bvecs[idx]    
-    gtab      = gradient_table(bvals_dti, bvecs_dti)
-    # build model
-    dkimodel  = dki.DiffusionKurtosisModel(gtab)
-    # Create an empty 4x4 affine matrix with ones on the diagonal
-    affine = np.eye(4)
-    dwi_nii   = nib.Nifti1Image(dwi[idx], affine)
-    dkifit    = dkimodel.fit(dwi_nii.get_fdata())
-    # save maps
-    FA = dkifit.fa
-    MD = dkifit.md
-    AD = dkifit.ad
-    RD = dkifit.rd
+    df = pd.DataFrame()
+    for D in np.unique(Deltas):
+        bval_D  = bvalues[Deltas == D]
+        bvecs_D = bvecs[Deltas == D]
+        dwi_D   = dwi[Deltas == D]
 
-    # DKI fit
-    idx       = bvalues <= 3
-    bvals_dki = bvalues[idx]  
-    bvecs_dki = bvecs[idx]    
-    gtab      = gradient_table(bvals_dki, bvecs_dki)
-    # build model
-    dkimodel  = dki.DiffusionKurtosisModel(gtab)
-    dki_nii   = nib.Nifti1Image(dwi[idx], affine)
-    dkifit    = dkimodel.fit(dki_nii.get_fdata())
-    MK = dkifit.mk(0, 10)
-    AK = dkifit.ak(0, 10)
-    RK = dkifit.rk(0, 10)
+        # DTI fit
+        idx       = (bval_D <= 1) | (abs(bval_D - 1) < 1e-4)
+        bvals_dti = bval_D[idx]  
+        bvecs_dti = bvecs_D[idx]    
+        gtab      = gradient_table(bvals_dti, bvecs_dti)
+        # Create an empty 4x4 affine matrix with ones on the diagonal
+        affine = np.eye(4)
+        dwi_nii   = nib.Nifti1Image(dwi_D[idx], affine)
+        tenmodel = dti.TensorModel(gtab)
+        tenfit = tenmodel.fit(dwi_nii.get_fdata())
 
-    return FA, MD, AD, RD, MK, AK, RK
+        # ---- Extract maps ----
+        FA = tenfit.fa
+        MD = tenfit.md
+        RD = tenfit.rd
+        AD = tenfit.ad  
+
+        # DKI fit
+        idx       = (bval_D <= 3) | (abs(bval_D - 3) < 1e-4)
+        bvals_dki = bval_D[idx]  
+        bvecs_dki = bvecs_D[idx]    
+
+        gtab      = gradient_table(bvals_dki, bvecs_dki)
+        # build model
+        dkimodel  = dki.DiffusionKurtosisModel(gtab)
+        dki_nii   = nib.Nifti1Image(dwi_D[idx], affine)
+        dkifit    = dkimodel.fit(dki_nii.get_fdata())
+        MK = dkifit.mk(0, 10)
+        AK = dkifit.ak(0, 10)
+        RK = dkifit.rk(0, 10)
+
+        d = {"FA": [FA],
+             "MD": [MD],
+             "AD": [AD],
+             "RD": [RD],
+             "MK": [MK],
+             "AK": [AK],
+             "RK": [RK],
+             "Delta": [D]}
+        df = pd.concat([df, pd.DataFrame(d)])
+
+    return df
 
 def get_dwi(dwi_path):
     """
@@ -228,10 +246,11 @@ def create_data(data_folder, SNR, name, extension, scheme_file_path):
         dwi_noise = (dwi_real/dwi_real[0] + np.random.randn(1, dwi_real.shape[0])*sigma)
         warnings.warn("Warning...........The signal is purely real")
 
-    FA, MD, AD, RD, MK, AK, RK = calculate_DKI(scheme_file_path, dwi_no_noise)
+    DKI = calculate_DKI(scheme_file_path, dwi_no_noise)
 
 
     data_psge          = get_psge(scheme_file_path)
+
     Sb_So              = list(np.squeeze(dwi_noise.reshape((-1, 1))))
 
     data_psge["Sb/So"] = Sb_So
@@ -250,13 +269,15 @@ def create_data(data_folder, SNR, name, extension, scheme_file_path):
         data_dir["log(Sb/So)"]   = list(map(lambda Sb : np.log(Sb), list(data_dir["Sb/So"])))
         adc                      = list(map(lambda b,Sb : -np.log(Sb)/(b-b0) if b != b0 else np.nan, list(data_dir["b [ms/um²]"]), list(data_dir["Sb/So"])))
         data_dir["adc [ms/um²]"] = adc
-        data_dir["FA"]           = [FA] * nb_b
-        data_dir["MD"]           = [MD] * nb_b
-        data_dir["AD"]           = [AD] * nb_b
-        data_dir["RD"]           = [RD] * nb_b
-        data_dir["MK"]           = [MK] * nb_b
-        data_dir["AK"]           = [AK] * nb_b
-        data_dir["RK"]           = [RK] * nb_b
+        D = np.unique(data_dir["Delta [ms]"])[0]
+        DKI_td = DKI[DKI["Delta"] == D]
+        data_dir["FA"]           = [DKI_td.FA] * nb_b
+        data_dir["MD"]           = [DKI_td.MD] * nb_b
+        data_dir["AD"]           = [DKI_td.AD] * nb_b
+        data_dir["RD"]           = [DKI_td.RD] * nb_b
+        data_dir["MK"]           = [DKI_td.MK] * nb_b
+        data_dir["AK"]           = [DKI_td.AK] * nb_b
+        data_dir["RK"]           = [DKI_td.RK] * nb_b
 
         data_dwi = pd.concat([data_dwi, data_dir])
 
