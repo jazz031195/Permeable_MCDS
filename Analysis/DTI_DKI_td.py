@@ -39,8 +39,8 @@ scheme_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructi
 giro        = 2.6751525e8 # Gyromagnetic radio [rad/(s*T)]
 
 
-MEDIUM_SIZE = 25
-BIGGER_SIZE = 25
+MEDIUM_SIZE = 40
+BIGGER_SIZE = 35
 plt.rc('font',   size=MEDIUM_SIZE)       # controls default text sizes
 plt.rc('axes',   titlesize=MEDIUM_SIZE)  # fontsize of the axes title
 plt.rc('axes',   labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
@@ -56,62 +56,74 @@ params = ["MD", "RD", "FA", "AD", "MK", "RK", "AK"]
 params = ["MD", "MK"]
 hue_order = [
             "neuron", 
-             "neuron_ref", 
+             "neuron", 
              "neuron_tortuous", 
-             "neuron_tortuous_ref", 
+             "neuron_tortuous", 
              "neuron_beaded", 
-             "neuron_beaded_ref", 
+             "neuron_beaded", 
              "neuron_tortuous_beaded",
-             "neuron_tortuous_beaded_ref"
+             "neuron_tortuous_beaded"
              ]
+
+colors = [
+            "tab:blue", 
+            "tab:orange", 
+            "tab:green", 
+            "tab:red", 
+             ]
+
+
 
 print(df_all_data.columns)
 for SNR in [np.inf, 30]:
     b_labels    = df_all_data["b [ms/um²]"].unique()
     Deltas      = [25.5, 105.5] # df_all_data["Delta"].unique()
     df_all_data = df_all_data[(df_all_data['b [ms/um²]'] > 0)]
-    for D in Deltas:
+    for b in ["branched", "non-branched"]:
         for p in params:
             order_complexity = [
                 "straight",
-                "undulated",
                 "beaded",
+                "undulated",
                 "undulated-beaded",
             ]
-            xtick_labels     = ["Straight", "Undulated", "Beaded", "Undulated-Beaded"]
+            xtick_labels     = ["Straight", "Beaded", "Undulated", "Und.-Bead."]
 
             colors_comp = {
                 "straight": "tab:blue",
-                "undulated": "tab:orange",
-                "beaded": "tab:green",
+                "beaded": "tab:orange",
+                "undulated": "tab:green",
                 "undulated-beaded": "tab:red",
             }
 
-            structure_order = ["branched", "unbranched"]
 
-            fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+            fig, ax = plt.subplots(1, 1, figsize=(8, 10))
 
-            df = df_all_data[(df_all_data["Delta [ms]"] == D) & (df_all_data["SNR"] == SNR)].copy()
+            df = df_all_data[(df_all_data["Delta [ms]"].isin(Deltas)) & (df_all_data["SNR"] == SNR)].copy()
 
-            means = df.groupby(["cells", "configuration"])[p].mean()
+            if b == "non-branched":
+                df = df[df.configuration.str.contains("_ref")]
+            else:
+                df = df[~df.configuration.str.contains("_ref")]
+
+            means = df.groupby(["cells", "configuration", "Delta [ms]"])[p].mean()
+
             d = {
                 p: means.values,
                 "configuration": means.index.get_level_values("configuration"),
+                "Delta [ms]": means.index.get_level_values("Delta [ms]")
             }
             to_plot = pd.DataFrame(d)
 
-            to_plot["structure"]  = to_plot["configuration"].apply(
-                lambda x: "unbranched" if "_ref" in x else "branched"
-            )
             to_plot["complexity"] = to_plot["configuration"].apply(get_complexity)
 
             sns.boxplot(
                 data=to_plot,
                 x="complexity",
                 y=p,
-                hue="structure",
+                hue="Delta [ms]",
                 order=order_complexity,
-                hue_order=structure_order,
+                hue_order=Deltas,
                 ax=ax,
                 showfliers=False,
                 dodge=True,
@@ -123,9 +135,9 @@ for SNR in [np.inf, 30]:
                 data=to_plot,
                 x="complexity",
                 y=p,
-                hue="structure",
+                hue="Delta [ms]",
                 order=order_complexity,
-                hue_order=structure_order,
+                hue_order=Deltas,
                 ax=ax,
                 dodge=True,
                 color="white",
@@ -147,7 +159,7 @@ for SNR in [np.inf, 30]:
             )
 
             n_comp   = len(order_complexity)
-            n_struct = len(structure_order)
+            n_struct = len(Deltas)
 
             for g_idx in range(n_comp):
                 comp = order_complexity[g_idx]
@@ -155,31 +167,35 @@ for SNR in [np.inf, 30]:
 
                 for j in range(n_struct): 
                     patch = boxes_sorted[g_idx * n_struct + j]
-                    alpha = 1.0 if structure_order[j] == "branched" else 0.25
+                    alpha = 1.0 if Deltas[j] == 25.5 else 0.25
                     patch.set_facecolor((*base_color[:3], alpha))
                     patch.set_edgecolor(base_color[:3])
 
+
+            
+            if p == "MD":
+                ax.set_ylim(0.25, 0.45)
+            elif p== "MK":
+                ax.set_ylim(1.4, 2)
+
             y_min, y_max = ax.get_ylim()
-            y_text = y_max + 0.02 * (y_max - y_min)
+            y_text = y_max + 0.01 * (y_max - y_min)
 
-            for x_center in ax.get_xticks():
-                ax.text(x_center - 0.15, y_text, "B",
-                        ha="center", va="bottom", fontsize=MEDIUM_SIZE - 2)
-                ax.text(x_center + 0.15, y_text, "NB",
-                        ha="center", va="bottom", fontsize=MEDIUM_SIZE - 2)
-
-            ax.set_ylim(y_min, y_text)
-
+            for c, x_center in enumerate(ax.get_xticks()):
+                ax.text(x_center - 0.24, y_text, "Δ$_1$",
+                        ha="center", va="bottom", fontsize=MEDIUM_SIZE - 2, color=colors[c])
+                ax.text(x_center + 0.24, y_text, "Δ$_2$",
+                        ha="center", va="bottom", fontsize=MEDIUM_SIZE - 2, color=colors[c])
             ax.set_xlabel("")
-            ax.set_xticklabels(xtick_labels, rotation=0)
+            ax.set_xticklabels(xtick_labels, rotation=60)
 
             ax.set_ylabel(p)
-            ax.grid(True, axis="y", alpha=0.4)
+
             plt.tight_layout()
             if not os.path.exists(f"results/OHBM26/SNR_{SNR}/{p}/"):
                 os.makedirs(f"results/OHBM26/SNR_{SNR}/{p}/")
             plt.grid()
             plt.tight_layout()
-            print(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{D}.png")
-            fig.savefig(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{D}.png")
-            fig.savefig(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{D}.pdf")
+            print(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{b}.png")
+            fig.savefig(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{b}.png")
+            fig.savefig(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{b}.pdf")

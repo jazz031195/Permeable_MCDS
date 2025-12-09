@@ -246,8 +246,7 @@ def create_data(data_folder, SNR, name, extension, scheme_file_path):
         dwi_noise = (dwi_real/dwi_real[0] + np.random.randn(1, dwi_real.shape[0])*sigma)
         warnings.warn("Warning...........The signal is purely real")
 
-    DKI = calculate_DKI(scheme_file_path, dwi_no_noise)
-
+    DKI = calculate_DKI(scheme_file_path, np.squeeze(dwi_noise))
 
     data_psge          = get_psge(scheme_file_path)
 
@@ -312,6 +311,7 @@ def analytical_solutions(bvalues, Delta, delta, sphere_radius, D0, log, sphere_f
     signal_sticks = []
     signal_both   = []
     for i in range(bvalues.shape[0]):
+
         # Signal intra sphere
         mlnS, _, _, _, _ = my_murdaycotts(Delta, delta, sphere_radius, D0, bvalues[i])
         if log:

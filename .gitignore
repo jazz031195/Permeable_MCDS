@@ -58,4 +58,7 @@ docs/
 instructions/
 results/
 
+*.png
+*.pdf
+
 
