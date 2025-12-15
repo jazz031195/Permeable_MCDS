@@ -25,10 +25,10 @@ print("\n")
 print("soma fraction {:e}".format(soma_fraction))
 print("neurites fraction {:e}\n".format(neurite_fraction))
 
-td = 100 # in [ms]
-T  = 15526 # Number of timesteps, 15526->0.16um, 6944->0.24um, 3906->0.32um
+td = 127 # in [ms]
+T  = 15500 # Number of timesteps, 15526->0.16um, 6944->0.24um, 3906->0.32um
 D0 = 2 # in [um²/ms]
-print(f"step length 2D {np.sqrt(2*td/T*D0)} um, step length MCDS {np.sqrt(6*td/T*D0)} um, time step {td/T} s")
-print(f"step length 2D {np.sqrt(2*td/T*D0)} um, step length MCDS {np.sqrt(2*td/T*D0)} um, time step {td/T} s")
+print(f"step length 3D {np.sqrt(2*td/T*D0)} um, step length MCDS {np.sqrt(6*td/T*D0)} um, time step {td/T} s")
+print(f"step length 1D {np.sqrt(2*td/T*D0)} um, step length MCDS {np.sqrt(2*td/T*D0)} um, time step {td/T} s")
 print(f"Diffusion distance {np.sqrt(2*2*100)} um")
 print(f"Diffusion distance {np.sqrt(2*2*60)} um")

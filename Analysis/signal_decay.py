@@ -13,9 +13,11 @@ from pathlib import Path
 import warnings
 warnings.filterwarnings("ignore")
 from utils import get_bvals, get_bvectors, calculate_DKI, get_dwi, get_psge, create_data, analytical_solutions
+from sklearn.linear_model import LinearRegression
+from scipy.stats import linregress
 
 cur_path    = os.getcwd()
-scheme_file = "/work/PRTNR/CHUV/RADMED/ijelescu/firepath/Juliette/Permeable_MCDS/instructions/scheme/128_dir_12_b_9_td.scheme"
+scheme_file = "/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/instructions/scheme/128_dir_12_b_9_td.scheme"
 giro        = 2.6751525e8 # Gyromagnetic radio [rad/(s*T)]
 
 def get_info(simu_info):
@@ -62,7 +64,8 @@ def create_df_all(DWI_folder, scheme_file_path):
                     name         = ('_').join(filename.split('_')[:-1])
                     extension    = filename.split('_')[-1].split('.')[-1]
                     SNR          = np.inf
-                    for SNR in [np.inf, 30]:
+                    for SNR in [np.inf]:
+                        print(filename)
                         data_one_exp = create_data(DWI_folder / subdir, SNR, name, extension, scheme_file)
 
                         data = data_one_exp.copy()
@@ -71,7 +74,7 @@ def create_df_all(DWI_folder, scheme_file_path):
                             data
                             .groupby(["Delta [ms]", "b_shell"], as_index=False)
                             .agg({
-                                "Sb/So": "mean",
+                                "Sb/So": ["mean", "std"],
                                 "adc [ms/um²]": "mean",
                                 "MD": "mean",   
                                 "AD": "mean",   
@@ -81,6 +84,29 @@ def create_df_all(DWI_folder, scheme_file_path):
                                 "RK": "mean",   
                                 "AK": "mean",   
                             }))
+                        
+                        # print(grouped)
+                        # print(grouped["Sb/So"])
+                        # print(grouped["b_shell"])
+                        # plt.figure(figsize=(12,8))
+
+                        # x = grouped[grouped["Delta [ms]"] == 25.5]["b_shell"].values
+                        # y = grouped[grouped["Delta [ms]"] == 25.5][("Sb/So", "mean")].values
+                        # y_std = grouped[grouped["Delta [ms]"] == 25.5][("Sb/So", "std")].values
+                        
+                        # # line plot for the mean
+                        # plt.plot(x, y)
+
+                        # # shaded area for std
+                        # plt.fill_between(x, y - y_std, y + y_std, alpha=0.3)
+
+                        # plt.xlabel("x")
+                        # plt.ylabel("Sb/So")
+                        # plt.legend()
+                        # plt.tight_layout()
+                        # plt.savefig("signal.png")
+                        # plt.savefig("signal.pdf")
+                        # assert(0)
 
                         conf = "neuron"
                         if "tortuous_beaded" in subdir:
@@ -97,11 +123,13 @@ def create_df_all(DWI_folder, scheme_file_path):
                         grouped["configuration"] = conf
                         grouped["cells"] = subdir
                         grouped["SNR"] = SNR
+                        grouped["N"] = info.N
+                        grouped["T"] = info.T
 
                         grouped = grouped.rename(columns={
                             "b_shell": "b [ms/um²]",
                         })
-                        df_avg_data = grouped[["loc", "N", "T", "Sb/So", "b [ms/um²]", "Delta [ms]", "configuration", "configuration_all", "MD", "RD", "AD", "FA", "MK", "RK", "AK", "SNR"]]
+                        df_avg_data = grouped[["N", "T", "Sb/So", "b [ms/um²]", "Delta [ms]", "configuration", "cells", "MD", "RD", "AD", "FA", "MK", "RK", "AK", "SNR"]]
                         df_all_data = pd.concat([df_all_data, df_avg_data], ignore_index=True)
     return df_all_data, df_crossings
 
@@ -121,7 +149,7 @@ DWI_folder = Path("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/resul
 # df_all_data.to_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/OHBM26/results_geo/data.csv")
 df_all_data = pd.read_csv("/home/localadmin/Documents/MCDC_perm_jas/Permeable_MCDS/results/OHBM26/results_geo/data.csv")
 df_all_data = df_all_data[df_all_data.SNR == np.inf]
-print(df_all_data.SNR.unique())
+
 def PlotSignal(df_all_data) :
 
     df_all_data["Delta"] = df_all_data["Delta [ms]"]
@@ -188,14 +216,15 @@ def PlotSignal(df_all_data) :
         ax.set_xlabel("b [ms µm⁻²]")
         # ax2 = ax.twinx()
         ax.plot(bvals*1e-9, both_signal, label=f"Sphere & sticks", color='k', linestyle="solid")
-        ax.plot(bvals*1e-9, neurites_signal, label=f"Sticks", color='k', linestyle="dashed")
-        ax.plot(bvals*1e-9, soma_signal, label=f"Sphere", color='k', linestyle="dotted")
+        # ax.plot(bvals*1e-9, neurites_signal, label=f"Sticks", color='k', linestyle="dashed")
+        # ax.plot(bvals*1e-9, soma_signal, label=f"Sphere", color='k', linestyle="dotted")
         handles, labels = ax.get_legend_handles_labels()
 
         labels = [label.replace("neuron_", "").replace("_", " ") for label in labels]
         labels[0] = "straight"
-        ax.legend(handles, labels, ncol=2, bbox_to_anchor=(1, 1.5)).set_title('')
+        # ax.legend(handles, labels, ncol=2, bbox_to_anchor=(1, 1.5)).set_title('')
         plt.grid()
+
         fig.tight_layout()
 
         if not os.path.exists("results/OHBM26/signal_decay/"):
@@ -248,6 +277,19 @@ def PlotSignalDiff(df_all_data):
         merged['diff'] = merged['mean_S'] - merged['mean_S_ref']
         merged['diff_std'] = np.sqrt(merged['std_S']**2 + merged['std_S_ref']**2)
 
+        # x = merged[merged["b [ms/um²]"] > 0.2]["b [ms/um²]"].values
+        # y = merged[merged["b [ms/um²]"] > 0.2]['diff'].values
+ 
+        # result = linregress(x, y)
+        # x = merged["b [ms/um²]"].values
+        # y_fit = result.slope * x + result.intercept
+        # print("Slope:", result.slope)
+        # print("Intercept:", result.intercept)
+        # print("R-squared:", result.rvalue**2)
+        # print("p-value:", result.pvalue)
+        # print("Std. error:", result.stderr)
+
+
         sns.scatterplot(
             data=merged,
             x='b [ms/um²]',
@@ -261,6 +303,7 @@ def PlotSignalDiff(df_all_data):
             ax=ax
         )
 
+        # ax.plot(x, y_fit, color='k', label=f"{result.slope:.2f}x + {result.intercept:.2f}\nR2: {result.rvalue**2:.2f}, p: {result.pvalue:.2e}")
         ax.axhline(0, color='black', linestyle='--', linewidth=1)
 
         ax.set_xlabel("b [ms µm⁻²]")

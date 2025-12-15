@@ -72,46 +72,16 @@ for SNR in [np.inf, 30]:
     df_all_data = df_all_data[(df_all_data['b [ms/um²]'] > 0)]
     for D in Deltas:
         for p in params:
-            order_complexity = [
-                "straight",
-                "undulated",
-                "beaded",
-                "undulated-beaded",
-            ]
-            xtick_labels     = ["Straight", "Undulated", "Beaded", "Undulated-Beaded"]
-
-            colors_comp = {
-                "straight": "tab:blue",
-                "undulated": "tab:orange",
-                "beaded": "tab:green",
-                "undulated-beaded": "tab:red",
-            }
-
-            structure_order = ["branched", "unbranched"]
 
             fig, ax = plt.subplots(1, 1, figsize=(14, 10))
 
-            df = df_all_data[(df_all_data["Delta [ms]"] == D) & (df_all_data["SNR"] == SNR)].copy()
-
-            means = df.groupby(["cells", "configuration"])[p].mean()
-            d = {
-                p: means.values,
-                "configuration": means.index.get_level_values("configuration"),
-            }
-            to_plot = pd.DataFrame(d)
-
-            to_plot["structure"]  = to_plot["configuration"].apply(
-                lambda x: "unbranched" if "_ref" in x else "branched"
-            )
-            to_plot["complexity"] = to_plot["configuration"].apply(get_complexity)
+            df = df_all_data[(df_all_data["Delta [ms]"] == D) & (df_all_data["SNR"] == SNR) & (df_all_data["cells"].str.contains("neuron_0_MCDS"))].copy()
 
             sns.boxplot(
-                data=to_plot,
-                x="complexity",
+                data=df,
+                x="cells",
                 y=p,
-                hue="structure",
-                order=order_complexity,
-                hue_order=structure_order,
+                hue="cells",
                 ax=ax,
                 showfliers=False,
                 dodge=True,
@@ -120,12 +90,10 @@ for SNR in [np.inf, 30]:
 
             # Points
             sns.stripplot(
-                data=to_plot,
-                x="complexity",
+                x="cells",
+                data=df,
                 y=p,
-                hue="structure",
-                order=order_complexity,
-                hue_order=structure_order,
+                hue="cells",
                 ax=ax,
                 dodge=True,
                 color="white",
@@ -135,51 +103,9 @@ for SNR in [np.inf, 30]:
                 size=5,
                 legend=False,
             )
-
             if ax.get_legend() is not None:
                 ax.get_legend().remove()
+                
+            plt.show()
 
-            boxes = [p for p in ax.patches if isinstance(p, mpl.patches.PathPatch)]
-
-            boxes_sorted = sorted(
-                boxes,
-                key=lambda b: np.mean(b.get_path().vertices[:, 0])
-            )
-
-            n_comp   = len(order_complexity)
-            n_struct = len(structure_order)
-
-            for g_idx in range(n_comp):
-                comp = order_complexity[g_idx]
-                base_color = mpl.colors.to_rgba(colors_comp[comp])
-
-                for j in range(n_struct): 
-                    patch = boxes_sorted[g_idx * n_struct + j]
-                    alpha = 1.0 if structure_order[j] == "branched" else 0.25
-                    patch.set_facecolor((*base_color[:3], alpha))
-                    patch.set_edgecolor(base_color[:3])
-
-            y_min, y_max = ax.get_ylim()
-            y_text = y_max + 0.02 * (y_max - y_min)
-
-            for x_center in ax.get_xticks():
-                ax.text(x_center - 0.15, y_text, "B",
-                        ha="center", va="bottom", fontsize=MEDIUM_SIZE - 2)
-                ax.text(x_center + 0.15, y_text, "NB",
-                        ha="center", va="bottom", fontsize=MEDIUM_SIZE - 2)
-
-            ax.set_ylim(y_min, y_text)
-
-            ax.set_xlabel("")
-            ax.set_xticklabels(xtick_labels, rotation=0)
-
-            ax.set_ylabel(p)
-            ax.grid(True, axis="y", alpha=0.4)
-            plt.tight_layout()
-            if not os.path.exists(f"results/OHBM26/SNR_{SNR}/{p}/"):
-                os.makedirs(f"results/OHBM26/SNR_{SNR}/{p}/")
-            plt.grid()
-            plt.tight_layout()
-            print(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{D}.png")
-            fig.savefig(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{D}.png")
-            fig.savefig(f"results/OHBM26/SNR_{SNR}/{p}/{p}_{D}.pdf")
+            
