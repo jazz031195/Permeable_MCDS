@@ -179,19 +179,35 @@ if __name__ == "__main__":
     voxel_length = 110  # μm
     f = 0.5
     final_df["walkers/μm³"] = final_df["nbr_walkers"] / (voxel_length**3 * f)
+    final_df["bvals_label"] = final_df["bvals"].apply(lambda b: f"{b} ms/µm²")
+
+
+    # find elbow in final_df for cov vs walkers/μm³ for b=5000
+    from kneed import KneeLocator
+    df_b1000 = final_df[final_df["bvals"] == 5]
+    print(df_b1000)
+    kn = KneeLocator(df_b1000["walkers/μm³"], df_b1000["cov"], curve='convex', direction='decreasing')
+    elbow_point = kn.knee
 
     # Plot mean
     plt.figure(figsize=(10,6))
-    sns.lineplot(data=final_df, x="walkers/μm³", y="mean_of_means", hue="bvals", marker="o", ci=None, palette="tab10", linewidth=2.5)
+    sns.lineplot(data=final_df, x="walkers/μm³", y="mean_of_means", hue="bvals_label", marker="o", ci=None, palette="tab10", linewidth=2.5)
     plt.xlabel("Density of Walkers")
     plt.ylabel("Mean powder-averaged DWI")
     plt.title("Mean Signal vs Number of Walkers")
-    plt.grid(True); plt.legend().set_title(""); plt.tight_layout(); plt.show()
+    # x axis font size
+    fontsize=14
+    plt.xticks(fontsize=fontsize); plt.yticks(fontsize=fontsize)
+    # legend font size
+    plt.grid(True); plt.legend(fontsize= fontsize).set_title(""); plt.tight_layout(); plt.show()
 
     # Plot std across groups (averaged over repeats)
     plt.figure(figsize=(10,6))
-    sns.lineplot(data=final_df, x="walkers/μm³", y="cov", hue="bvals", marker="o", ci=None, palette="tab10", linewidth=2.5)
+    sns.lineplot(data=final_df, x="walkers/μm³", y="cov", hue="bvals_label", marker="o", ci=None, palette="tab10", linewidth=2.5)
+    # highlight elbow point
+    plt.axvline(x=elbow_point, color='grey', linestyle='--', label=f'Elbow at {elbow_point:.2f} walkers/μm³')
     plt.xlabel("Density of Walkers (walkers/μm³)")
     plt.ylabel(f"CV across {nbr_group} groups (powder-avg DWI)")
     plt.title("Monte-Carlo Variability vs Number of Walkers")
-    plt.grid(True); plt.legend().set_title(""); plt.tight_layout(); plt.show()
+    plt.xticks(fontsize=fontsize); plt.yticks(fontsize=fontsize)
+    plt.grid(True); plt.legend(fontsize= fontsize).set_title(""); plt.tight_layout(); plt.show()

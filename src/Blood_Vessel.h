@@ -14,10 +14,11 @@ class Blood_Vessel : public Obstacle
     public:
         int id;
         std::vector<Sphere> spheres; 
-        double pressure_diff; //Pa/m
+        double pressure_diff; //Pa/mm
         double viscosity; // Pa * s
         double flow;
         double max_velocity; // mm/s
+        double min_velocity; // mm/s
         std::vector<Eigen::Vector3d> skeleton;
         double radius;
 
@@ -54,15 +55,15 @@ class Blood_Vessel : public Obstacle
 
         Blood_Vessel(const Blood_Vessel &bv);
 
-        Blood_Vessel(int id_, double radius_, double pressure_diff_){
+        Blood_Vessel(int id_, double radius_){
         
                 id = id_;
                 radius = radius_;
                 viscosity = 3* 1e-3; // Pa * s for blood at 37 degree C
-                pressure_diff = pressure_diff_; // Pa/m
-                flow = (M_PI*pressure_diff*(radius_*radius_*radius_*radius_))/(8*viscosity); // mm^3/s
-                max_velocity = (pressure_diff/(4*viscosity))*(radius*radius); // mm/s
-                
+                pressure_diff = 0.0;
+                flow = 0.0;
+                max_velocity = 0.0;
+                min_velocity = 0.0;
         }
 
         void set_spheres(std::vector<Sphere> &spheres_to_add);
@@ -76,7 +77,7 @@ class Blood_Vessel : public Obstacle
         double minDistance(const Eigen::Vector3d& p);
         inline bool is_empty(const Box& b);
         inline void extend(Box& b, const Eigen::Vector3d& p);
-        void velocity(const Walker &w, double& v, Eigen::Vector3d& flow_direction);
+        void WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& flow_direction);
         inline bool segment_aabb_intersect(const Eigen::Vector3d& p0,
                                    const Eigen::Vector3d& p1,
                                    const Box& box,
@@ -99,7 +100,8 @@ class Blood_Vessel : public Obstacle
                                Eigen::Vector3d& step,
                                const double& step_length,
                                Collision& collision);
-
+        void set_bv_parameters(const double &pressure_diff_);
+        double velocity(const double &radial_distance);
 
 
 };

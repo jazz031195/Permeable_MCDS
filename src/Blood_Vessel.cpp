@@ -34,52 +34,80 @@ Blood_Vessel::Blood_Vessel(const Blood_Vessel &bv)
     spheres = bv.spheres;
     skeleton = bv.skeleton;
     grid = bv.grid;
+    min_velocity = bv.min_velocity;
 
 };
+
+void Blood_Vessel::set_bv_parameters(const double &pressure_diff_){
+    pressure_diff = pressure_diff_;
+    flow = (M_PI*pressure_diff*(radius*radius*radius*radius))/(8*viscosity); // mm^3/s
+    max_velocity = (pressure_diff/(4*viscosity))*(radius*radius); // mm/s
+    double min_distance = barrier_tickness;
+    min_velocity = velocity(radius - min_distance);
+}
+
+double distancePointToSegment(const Eigen::Vector3d& P, const Eigen::Vector3d& A, const Eigen::Vector3d& B) {
+    Eigen::Vector3d AB = B - A;
+    Eigen::Vector3d AP = P - A;
+
+    double ab2 = (AB).norm() * (AB).norm();
+    if (ab2 == 0.0) {
+        // A and B are the same point
+        return (P - A).norm();
+    }
+
+    // Project AP onto AB, normalized by |AB|^2
+    double t = (AP).dot(AB) / ab2;
+
+    // Clamp t to [0, 1]
+    if (t < 0.0) t = 0.0;
+    else if (t > 1.0) t = 1.0;
+
+    // Closest point on the segment
+    Eigen::Vector3d closest = A + AB * t;
+
+    // Distance from P to closest point
+    return (P - closest).norm();
+}
 
 void Blood_Vessel::distance_to_skeleton(const Walker &w, double& min_dist, Eigen::Vector3d& tangent){
 
     // distance O to the vessel skeleton
     Eigen::Vector3d O = w.pos_v;
+
+    if (spheres.empty()) {
+        min_dist = 0.0; // or throw, depending on how you want to handle this
+        tangent = Eigen::Vector3d::Zero();
+        return;
+    }
+    if (spheres.size() == 1) {
+        min_dist =  (O - spheres[0].P).norm();
+        tangent = (O - spheres[0].P).normalized();
+        return;
+    }
+
     min_dist = std::numeric_limits<double>::max();
-    int index = -1;
-    for (unsigned i = 0; i < skeleton.size(); i++){
-        double dist = (O - skeleton[i]).norm();
-        if (dist < min_dist){
-            min_dist = dist;
-            index = i;
+    for (size_t i = 0; i + 1 < spheres.size(); ++i) {
+        double d = distancePointToSegment(O, spheres[i].P, spheres[i + 1].P);
+        if (d < min_dist) {
+            min_dist = d;
+            tangent = (spheres[i + 1].P - spheres[i].P).normalized();
         }
     }
 
 
-    if (w.normal[2] == 0){ // before colliding with voxel wall
+    if (w.normal[2] != 0){ // before colliding with voxel wall
 
-        // tangent direction at the closest point
-        if (index == 0){
-            tangent = (skeleton[1] - skeleton[0]).normalized();
-        }
-        else if (index == skeleton.size() - 1){
-            tangent = (skeleton[skeleton.size() - 1] - skeleton[skeleton.size() - 2]).normalized();
-        }
-        else{
-            tangent = (skeleton[index + 1] - skeleton[index - 1]).normalized();
-        }
+        tangent = -tangent;
     }
-    else{ // after colliding with voxel wall
-        // tangent direction at the closest point
-        if (index == 0){
-            tangent = (skeleton[0] - skeleton[1]).normalized();
-        }
-        else if (index == skeleton.size() - 1){
-            tangent = (skeleton[skeleton.size() - 2] - skeleton[skeleton.size() - 1]).normalized();
-        }
-        else{
-            tangent = (skeleton[index - 1] - skeleton[index + 1]).normalized();
-        }
-    }
+
 }
 
-void Blood_Vessel::velocity(const Walker &w, double& v, Eigen::Vector3d& flow_direction){
+double Blood_Vessel::velocity(const double &radial_distance){
+    return (pressure_diff/(4*viscosity))*(this->radius*this->radius - radial_distance*radial_distance);
+}
+
+void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& flow_direction){
 
     double min_dist;
 
@@ -87,22 +115,23 @@ void Blood_Vessel::velocity(const Walker &w, double& v, Eigen::Vector3d& flow_di
 
     distance_to_skeleton(w, min_dist, tangent);
 
-
     if (min_dist >= this->radius) {
-        v = 0.0;
-        flow_direction = Eigen::Vector3d::Zero();
+        v = min_velocity;
+        flow_direction = tangent;
         return;
     }
 
     double radial_distance = min_dist; // distance is negative inside the vessel
 
-    v= (pressure_diff/(4*viscosity))*(this->radius*this->radius - radial_distance*radial_distance); // Parabolic profile
+    v = velocity(radial_distance);
+
+    if (v < min_velocity){
+        v = min_velocity;
+    }
 
     flow_direction = tangent;
 
 }
-
-
 
 inline bool Blood_Vessel::is_empty(const Box& b) {
     return b.x_min > b.x_max || b.y_min > b.y_max || b.z_min > b.z_max;
@@ -438,7 +467,7 @@ bool Blood_Vessel::checkCollision(const Walker& walker,
         collision.col_location  = isinside ? Collision::inside : Collision::outside;
         collision.perm_crossing = 0.0;
 
-        cout << "problem step length <=0 " << endl;
+        cout << "problem step length :" << L << endl;
         //assert(0);
         return true; 
     }

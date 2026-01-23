@@ -727,7 +727,8 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
         double cell_id, component_id;
         int sphere_id = 0;
         int last_bv_id = -1;
-        double pressure_diff = params.pressure_diff;;
+        double mean_blood_velocity = params.mean_blood_velocity;
+        double mean_radius = 0.0;
         std::string cell_type = "", component = "", last_type ="";
         std::string header;
 
@@ -765,11 +766,12 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
             // if the new line is from a different axon
             if (line_num !=0 and last_bv_id != cell_id){
                 // create the bv with id : last_bv_id
-                Blood_Vessel bv (last_bv_id, rout, pressure_diff);
+                Blood_Vessel bv (last_bv_id, rout);
                 bv.set_spheres(spheres);
                 spheres.clear();
 
                 dynamicsEngine->blood_vessels_list.push_back(bv);
+                mean_radius += rout;
                 sphere_id = 0;
             }
             sphere = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
@@ -782,15 +784,23 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
         
         if (last_type.find("blood_vessel") != std::string::npos) {
             // add last sphere on last axon
-            Blood_Vessel bv (last_bv_id, rout, pressure_diff);
+            Blood_Vessel bv (last_bv_id, rout);
             bv.set_spheres(spheres);
             spheres.clear();
             dynamicsEngine->blood_vessels_list.push_back(bv);
+            mean_radius += rout;
         }
 
         in.close();
+        mean_radius = mean_radius / double(dynamicsEngine->blood_vessels_list.size());
+        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++){
+            double pressure_diff = dynamicsEngine->blood_vessels_list[i].viscosity * params.mean_blood_velocity * 1e3 * 8.0  / (mean_radius * mean_radius);
+            dynamicsEngine->blood_vessels_list[i].set_bv_parameters(pressure_diff);
+
+        }
         
     }
+
     cout << "Number of blood vessels added: " << dynamicsEngine->blood_vessels_list.size() <<  endl;
 }
 void MCSimulation::addBloodVesselObstaclesFromFiles(){

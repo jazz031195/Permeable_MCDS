@@ -855,6 +855,8 @@ double Glial::minDistance(const Walker& w) const
 
     return dist;
 }
+
+
 bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
 {
     // 1) Soma test (allow shrink/inflate here)
@@ -867,6 +869,7 @@ bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const 
             }
         }
     }
+
 
     // 2) AABB quick reject (inflate only; never shrink the box)
     const double infl = std::max(0.0, margin);

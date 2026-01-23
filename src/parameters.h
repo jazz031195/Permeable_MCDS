@@ -38,7 +38,7 @@ public:
     bool mix_compartment_diffusivities;             /*!< flag, true if the intra and extra diffusivities are mixed in the same compartment */
     double t_ex;                                    /*!< exchange time between compartments */
     double f; /*!< Useful for mixed_compartment_diffusivities */
-    double pressure_diff;                               /*!< pressure difference for blood flow simulations                             */
+    double mean_blood_velocity;                               /*!< mean blood velocity in case of flowing compartment                          */
     
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
     bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */

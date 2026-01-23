@@ -868,7 +868,7 @@ void DynamicsSimulation::updateStepLength(double &l, const int &t){
             Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
             double v;
             Eigen::Vector3d direction_flow;
-            bv.velocity(walker, v, direction_flow);
+            bv.WalkerVelocity(walker, v, direction_flow);
 
             l = float(v*params.sim_duration/float(params.num_steps));
             curr_step_lenght = l;
@@ -1663,7 +1663,7 @@ void DynamicsSimulation::generateStep(Vector3d & step, double l) {
         Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
         double v;
         Eigen::Vector3d direction_flow;
-        bv.velocity(walker, v, direction_flow);
+        bv.WalkerVelocity(walker, v, direction_flow);
         step = direction_flow;
         step.normalize();
         return;
@@ -2151,7 +2151,7 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
                 Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
                 double v;
                 Eigen::Vector3d direction_flow;
-                bv.velocity(walker, v, direction_flow);
+                bv.WalkerVelocity(walker, v, direction_flow);
                 last_time_dt = dataSynth->time_steps[t-1];
                 time_dt = dataSynth->time_steps[t];
                 l = v * (time_dt - last_time_dt);

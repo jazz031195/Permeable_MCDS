@@ -203,7 +203,14 @@ def scheme_from_directions(combo) :
 
     # B values and directions
     b_values = combo["b_values"]
-    x_vals, y_vals, z_vals, b_values = parse_direction_file(directions_path, b_values)
+    if directions_path is not None:
+        x_vals, y_vals, z_vals, b_values = parse_direction_file(directions_path, b_values)
+    else:
+        nbr_combinations = len(b_values)
+        direction = [1.0, 0.0, 0.0]
+        x_vals = [direction[0]] * nbr_combinations
+        y_vals = [direction[1]] * nbr_combinations
+        z_vals = [direction[2]] * nbr_combinations
     print("x_vals: ", len(x_vals))
 
     delta_values = combo["delta_values"]
@@ -247,22 +254,13 @@ def fixed_direction() :
 
 if __name__ == "__main__":
 
-    Malte_substrate1 = {
-        "directions_path": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/directions/2shells_61_dir.txt",
-        "output_file": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/Malteb22000_b30000.scheme",
-        "b_values": [22000, 30000],
-        "delta_values": [0.046, 0.155, 0.255, 0.505],
-        "small_delta": 0.003,
-        "add_b0": False
-    }
-
-    Malte_substrate2 = {
-        "directions_path": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/directions/SMI_directions.txt",
-        "output_file": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/Malteb0_b15000.scheme",
-        "b_values": [50, 1500, 4000, 8000, 15000],
-        "delta_values": [0.046, 0.155, 0.255, 0.505],
-        "small_delta": 0.003,
+    ADC_substrate = {
+        "directions_path": None,
+        "output_file": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/ADC_only_x.scheme",
+        "b_values": [200, 1000, 2000, 3000],
+        "delta_values": [0.05],
+        "small_delta": 0.0165,
         "add_b0": True
     }
 
-    scheme_from_directions(Malte_substrate2)
+    scheme_from_directions(ADC_substrate)
