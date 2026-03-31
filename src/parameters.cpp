@@ -25,11 +25,12 @@ Parameters::Parameters()
     hex_packing_radius      = 0;
     hex_packing_separation  = 0;
 
-    gamma_packing   = false;
-    uniform_packing = false;                      /*!< flag, true if a gamma distribution of spheres will be initialized        */
-    hex_packing     = false;
-    packing_cyl     = false;
-    packing_s       = false;
+    gamma_packing    = false;
+    gaussian_packing = false;
+    uniform_packing  = false;                      /*!< flag, true if a gamma distribution of spheres will be initialized        */
+    hex_packing      = false;
+    packing_cyl      = false;
+    packing_s        = false;
 
     packing_icvf    = 0;
     packing_output_configuration = 0.0;

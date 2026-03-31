@@ -582,6 +582,14 @@ void DynamicsSimulation::iniWalkerPosition()
             iniPos.seekg(0);
             ini_pos_file_ini_index = 0;
         }
+
+        walker.intra_extra_consensus--;
+        walker.initial_location = Walker::intra;
+        walker.location = Walker::intra;
+        walker.previous_location = Walker::intra;
+        walker.in_obj_index = object_id;
+        walker.in_obj_type = object_type;
+        nbr_walker_intra_ini++;
     }
     else if (params.ini_delta_pos.size() > 0){
         walker.setRandomInitialPosition(Vector3d(double(params.ini_delta_pos[0]),double(params.ini_delta_pos[1]),double(params.ini_delta_pos[2])),
