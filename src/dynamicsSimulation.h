@@ -70,6 +70,8 @@ public:
     double icvf;                                    /*!< Stores the ICVF (1 - Intra-Extra) if needed                                */
     unsigned intra_tries, total_tries;              /*!< Helper variables to compute the estimated ICVF                             */
     int tot_nbr_bounces;                            /*!< Total number of bounces                                                    */
+    int inside_bounces;                         /*!< Total number of bounces that happened inside the obstacles (used for stats)   */
+    int outside_bounces;                        /*!< Total number of bounces that happened outside the obstacles (used for stats)  */
     int tot_nbr_legal_crossings;                   /*!< Total number of legal crossings                                            */
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
     std::vector<unsigned>  spheres_deque;           /*!< deque with the indexes of the spheres (used for optmization)             */

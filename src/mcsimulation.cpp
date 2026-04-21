@@ -1296,6 +1296,7 @@ void MCSimulation::addCylindersConfigurations()
 
 void MCSimulation::addSpheresObstaclesFromFiles()
 {
+
     for(unsigned i = 0; i < params.spheres_files.size(); i++){
 
         std::ifstream in(params.spheres_files[i]);
@@ -1303,6 +1304,7 @@ void MCSimulation::addSpheresObstaclesFromFiles()
         if(!in){
             return;
         }
+
 
         bool first=true;
         for( std::string line; getline( in, line ); )
@@ -1331,6 +1333,10 @@ void MCSimulation::addSpheresObstaclesFromFiles()
 
         while (in >> x >> y >> z >> r)
         {
+            x = x/1000.0;
+            y = y/1000.0;
+            z = z/1000.0;
+            r = r/1000.0;
             Sphere sph(0,0,Eigen::Vector3d(x,y,z),r,scale);
 
             // Local permeability - Different for each obstacle

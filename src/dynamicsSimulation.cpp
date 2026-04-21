@@ -43,6 +43,8 @@ DynamicsSimulation::DynamicsSimulation() {
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
+    inside_bounces = 0;
+    outside_bounces = 0;
 
     params.sim_duration = 1; //secs
 
@@ -126,6 +128,8 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
+    inside_bounces = 0;
+    outside_bounces = 0;
 
 }
 
@@ -166,6 +170,8 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
+    inside_bounces = 0;
+    outside_bounces = 0;
 }
 
 void DynamicsSimulation::initObstacleInformation(){
@@ -190,16 +196,12 @@ void DynamicsSimulation::initObstacleInformation(){
 
             cylinders_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
             cylinders_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
-            
         }
-
     }
 
     walker.collision_sphere_cylinders.collision_list        = &cylinders_deque;
     walker.collision_sphere_cylinders.list_size             = unsigned(cylinders_deque.size());
     walker.collision_sphere_cylinders.big_sphere_list_end   = walker.collision_sphere_cylinders.list_size;
-
-
     
     //Axons list of index initialization
     int nbr_prints = 0;
@@ -1388,7 +1390,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
 
     if(spheres_list.size()>0){
         isIntra|= this->isInsideSpheres(position,distance_to_be_intra_ply);   
-        assert(0);    
+
     }
 
     if (isinside_axons){
@@ -2200,6 +2202,14 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             return false;
         }
         tot_nbr_bounces++;
+
+        // if we go from inside to outside
+        if (collision.col_location == Collision::inside){
+            inside_bounces++;
+        }
+        else if (collision.col_location == Collision::outside){
+            outside_bounces++;
+        }
 
         bounced = true;
         walker.status = Walker::bouncing;
