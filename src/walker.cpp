@@ -161,6 +161,8 @@ void Walker::setRealPosLog(const Eigen::Vector3d &pos, unsigned t)
     this->pos_r_log(0,t)=pos(0);
     this->pos_r_log(1,t)=pos(1);
     this->pos_r_log(2,t)=pos(2);
+
+    this->loc_r_log(t) = this->location;
 }
 
 void Walker::setRealPosLog(double x, double y, double z, unsigned t)
@@ -168,6 +170,9 @@ void Walker::setRealPosLog(double x, double y, double z, unsigned t)
     this->pos_r_log(0,t)=x;
     this->pos_r_log(1,t)=y;
     this->pos_r_log(2,t)=z;
+
+    this->loc_r_log(t) = this->location;
+
 }
 
 void Walker::setVoxPosLog(const Eigen::Vector3d &pos, unsigned t)
@@ -187,6 +192,7 @@ void Walker::setVoxPosLog(double x, double y, double z, unsigned t)
 void Walker::setNumberOfSteps(unsigned T)
 {
     pos_r_log           = Eigen::Matrix3Xd::Zero(3,T+1);
+    loc_r_log           = Eigen::VectorXi::Zero(T+1);
     pos_v_log           = Eigen::Matrix3Xd::Zero(3,T+1);
     collision_in_log     = Eigen::VectorXi::Zero(T+1);
     crossing_in_log     = Eigen::VectorXi::Zero(T+1);

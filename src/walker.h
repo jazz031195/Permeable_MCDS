@@ -47,9 +47,11 @@ public:
     Eigen::Vector3d next_direction;                                 /*!< Auxiliar vector for special states cases, decides the next direction   */
 
     Eigen::Matrix3Xd pos_r_log;                                     /*!< log of the real spin position, used to compute the phase shift         */
+    Eigen::VectorXi loc_r_log;                                     /*!< log of the real spin location (intra or extra)         */
 
     Eigen::Matrix3Xd pos_v_log;                                     /*!< log of the voxel position, used for collision location and bouncing    */
 
+    
     int in_obj_index; 
     int in_obj_type;    
 
