@@ -484,7 +484,7 @@ bool SimErrno::checkCylindersListFile(Parameters &params)
         {
             if(first) {
                 std::vector<std::string> jkr = split_(line,' ');
-                if (jkr.size() != 10 && jkr.size() != 4){
+                if (jkr.size() != 9 && jkr.size() != 4){
                     error( "Cylinder list file is not in the correct format." ,cout);
                     in.close();
                     assert(0);
@@ -539,7 +539,7 @@ bool SimErrno::checkAxonsListFile(Parameters &params)
         {
 
             std::vector<std::string> jkr = split_(line,' ');
-            if(jkr.size() != 10){
+            if(jkr.size() != 10 && jkr.size() != 9){
                 error( "Axon list file is not in the correct format." ,cout);
                 string mess  = "Length of line : "+ to_string(jkr.size());
                 error( mess,cout);

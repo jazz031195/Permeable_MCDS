@@ -117,11 +117,15 @@ double MCSimulation::getExpectedFreeeDecay(unsigned i)
 
 void MCSimulation::iniObstacles()
 {
+
+
     addCylindersObstaclesFromFiles();
 
     addAxonsObstaclesFromFiles();
 
     addGlialsObstaclesFromFiles();
+
+    addBloodVesselObstaclesFromFiles();
 
     addPLYObstaclesFromFiles();
 
@@ -293,11 +297,10 @@ int MCSimulation::str_dist(string s, string t)
 }
 
 
-void MCSimulation::addAxonsObstaclesFromFiles()
+void MCSimulation::addAxonsObstaclesFromSWC()
 {
     
     for(unsigned i = 0; i < params.axons_files.size(); i++){
-
 
         std::ifstream in(params.axons_files[i]);
 
@@ -493,7 +496,386 @@ void MCSimulation::addAxonsObstaclesFromFiles()
     }
 }
 
-void MCSimulation::addGlialsObstaclesFromFiles()
+void MCSimulation::addAxonsObstaclesFromCSV(){
+    
+    for(unsigned i = 0; i < params.axons_files.size(); i++){
+
+
+        std::ifstream in(params.axons_files[i]);
+
+        if(!in){
+            return;
+        }
+
+        bool first=true;
+        for( std::string line; getline( in, line ); )
+        {
+            if(first) {first-=1;continue;}
+
+            std::vector<std::string> jkr = split(line,' ');
+            if (jkr.size() != 10){
+                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
+            }
+            break;
+        }
+        in.close();
+
+        // Permeability file - if any
+        double perm_; 
+
+        std::ifstream in_perm;
+        if(params.axon_permeability_files.size() >0){
+            in_perm.open(params.axon_permeability_files[i]);
+        }
+
+        // Diffusion coefficients
+        double diff_i; 
+        double diff_e;
+
+        in.open(params.axons_files[i]);
+        double x,y,z,rout, rin, p, r;
+        double cell_id, component_id;
+        int sphere_id = 0;
+        int last_ax_id = -1;
+        std::string cell_type = "", component = "", last_type ="";
+        std::string header;
+
+        std::vector<Sphere> spheres_out ;
+        std::vector<Sphere> spheres_in ;
+        Sphere sphere_out;
+        Sphere sphere_in;
+
+        double null_perm = 0.0;
+
+        int line_num = 0;
+
+        int header_size = 9;
+
+        for(unsigned j = 0; j < header_size; j++){  
+            in >>header;
+            //cout << "header :" << header << endl;
+        } 
+
+
+        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout){
+
+            if (cell_type.find("axon") == std::string::npos) {
+                continue;
+            }
+
+            // convert um to m
+            x = x/1000.0;
+            y = y/1000.0;
+            z = z/1000.0;
+            rout = rout/1000.0;
+            rin = rin/1000.0;
+
+            cell_id = int(cell_id);
+            component_id = int(component_id);
+
+            // if the new line is from a different axon
+            if (line_num !=0 and last_ax_id != cell_id){
+                // create the axon with id : last_ax_id
+                Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
+                Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
+
+                perm_ = params.axon_obstacle_permeability;
+                
+                for (unsigned i = 0; i < spheres_out.size(); i++){
+
+                    if (rin != rout){
+                        spheres_out[i].setPercolation(null_perm);
+                        spheres_in[i].setPercolation(null_perm);
+                    }  
+                    else{
+                        spheres_out[i].setPercolation(perm_);
+                        spheres_in[i].setPercolation(perm_);
+                    } 
+                    // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                    diff_i = params.diffusivity_intra; 
+                    diff_e = params.diffusivity_extra;
+                    spheres_out[i].setDiffusion(diff_i, diff_e);
+                    spheres_in[i].setDiffusion(diff_i, diff_e);
+                }
+
+                ax.set_spheres(spheres_out);
+                ax.setDiffusion(diff_i, diff_e);
+
+                ax_in.set_spheres(spheres_in);
+                ax_in.setDiffusion(diff_i, diff_e);
+                spheres_out.clear();
+                spheres_in.clear();
+
+                if (ax.radius != ax_in.radius){
+                    ax_in.setPercolation(null_perm);
+                    ax.setPercolation(null_perm);
+                }
+                else{
+                    ax_in.setPercolation(perm_);
+                    ax.setPercolation(perm_);
+                }
+
+                dynamicsEngine->inner_axons_list.push_back(ax_in);
+                dynamicsEngine->axons_list.push_back(ax);
+                sphere_id = 0;
+            }
+            sphere_out = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
+            sphere_in = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rin, 0);
+            sphere_id += 1;
+            spheres_out.push_back(sphere_out);
+            spheres_in.push_back(sphere_in);
+            last_ax_id = cell_id;
+            last_type = cell_type;
+            line_num += 1;
+        }
+        
+        if (last_type.find("axon") != std::string::npos) {
+            // add last sphere on last axon
+            Axon ax (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rout);
+            Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
+
+            for (unsigned i = 0; i < spheres_out.size(); i++){
+                
+                if (rin != rout){
+                    spheres_out[i].setPercolation(null_perm);
+                    spheres_in[i].setPercolation(null_perm);
+                }  
+                else{
+                    spheres_out[i].setPercolation(perm_);
+                    spheres_in[i].setPercolation(perm_);
+                }
+                // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
+                diff_i = params.diffusivity_intra; 
+                diff_e = params.diffusivity_extra;
+                spheres_out[i].setDiffusion(diff_i, diff_e);
+                spheres_in[i].setDiffusion(diff_i, diff_e);
+            }
+            ax.set_spheres(spheres_out);
+            ax.setDiffusion(diff_i, diff_e);
+
+            ax_in.set_spheres(spheres_in);
+            ax_in.setDiffusion(diff_i, diff_e);
+
+            spheres_out.clear();
+            spheres_in.clear();
+
+            if (ax.radius != ax_in.radius){
+                ax_in.setPercolation(null_perm);
+                ax.setPercolation(null_perm);
+            }
+            else{
+                ax_in.setPercolation(perm_);
+                ax.setPercolation(perm_);
+            }
+
+            dynamicsEngine->axons_list.push_back(ax);
+            dynamicsEngine->inner_axons_list.push_back(ax_in);
+
+        }
+
+        if (params.ini_walker_flag == "intra") {
+            dynamicsEngine->axons_list.clear();
+        }
+        else if (params.ini_walker_flag == "extra") {
+            dynamicsEngine->inner_axons_list.clear();
+        }
+
+        in.close();
+        
+    }
+}
+
+
+void MCSimulation::addBloodVesselObstaclesFromCSV(){
+    
+    for(unsigned i = 0; i < params.blood_vessels_files.size(); i++){
+
+
+        std::ifstream in(params.blood_vessels_files[i]);
+
+        if(!in){
+            return;
+        }
+
+        bool first=true;
+        for( std::string line; getline( in, line ); )
+        {
+            if(first) {first-=1;continue;}
+
+            std::vector<std::string> jkr = split(line,' ');
+            if (jkr.size() != 10){
+                //std::cout << "\033[1;33m[Warning]\033[0m Cylinder orientation was set towards the Z direction by default" << std::endl;
+            }
+            break;
+        }
+        in.close();
+
+        // Permeability file - if any
+        double perm_; 
+
+        std::ifstream in_perm;
+        if(params.blood_vessel_permeability_files.size() >0){
+            in_perm.open(params.blood_vessel_permeability_files[i]);
+        }
+
+        // Diffusion coefficients
+        double diff_i; 
+        double diff_e;
+
+        in.open(params.blood_vessels_files[i]);
+        double x,y,z,rout, rin, p, r;
+        double cell_id, component_id;
+        int sphere_id = 0;
+        int last_bv_id = -1;
+        double mean_blood_velocity = params.mean_blood_velocity;
+        double mean_radius = 0.0;
+        std::string cell_type = "", component = "", last_type ="";
+        std::string header;
+
+        std::vector<Sphere> spheres;
+        Sphere sphere;
+
+        double null_perm = 0.0;
+
+        int line_num = 0;
+
+        int header_size = 9;
+
+        for(unsigned j = 0; j < header_size; j++){  
+            in >>header;
+            //cout << "header :" << header << endl;
+        } 
+
+
+        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout){
+
+            if (cell_type.find("blood_vessel") == std::string::npos) {
+                continue;
+            }
+
+            // convert um to m
+            x = x/1000.0;
+            y = y/1000.0;
+            z = z/1000.0;
+            rout = rout/1000.0;
+            rin = rin/1000.0;
+
+            cell_id = int(cell_id);
+            component_id = int(component_id);
+
+            // if the new line is from a different axon
+            if (line_num !=0 and last_bv_id != cell_id){
+                // create the bv with id : last_bv_id
+                Blood_Vessel bv (last_bv_id, rout);
+                bv.set_spheres(spheres);
+                spheres.clear();
+
+                dynamicsEngine->blood_vessels_list.push_back(bv);
+                mean_radius += rout;
+                sphere_id = 0;
+            }
+            sphere = Sphere(sphere_id, cell_id, Eigen::Vector3d(x,y,z), rout, 0);
+            sphere_id += 1;
+            spheres.push_back(sphere);
+            last_bv_id = cell_id;
+            last_type = cell_type;
+            line_num += 1;
+        }
+        
+        if (last_type.find("blood_vessel") != std::string::npos) {
+            // add last sphere on last axon
+            Blood_Vessel bv (last_bv_id, rout);
+            bv.set_spheres(spheres);
+            spheres.clear();
+            dynamicsEngine->blood_vessels_list.push_back(bv);
+            mean_radius += rout;
+        }
+
+        in.close();
+        mean_radius = mean_radius / double(dynamicsEngine->blood_vessels_list.size());
+        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++){
+            double pressure_diff = dynamicsEngine->blood_vessels_list[i].viscosity * params.mean_blood_velocity * 1e3 * 8.0  / (mean_radius * mean_radius);
+            dynamicsEngine->blood_vessels_list[i].set_bv_parameters(pressure_diff);
+
+        }
+        
+    }
+
+    cout << "Number of blood vessels added: " << dynamicsEngine->blood_vessels_list.size() <<  endl;
+}
+void MCSimulation::addBloodVesselObstaclesFromFiles(){
+    int nbr_csvs = 0;
+    int nbr_swcs = 0;
+
+
+    if (params.blood_vessels_files.size() == 0){
+        return;
+    }
+
+    for(unsigned i = 0; i < params.blood_vessels_files.size(); i++){
+
+        std::ifstream in(params.blood_vessels_files[i]);
+
+        if (params.blood_vessels_files[i].find(".swc") != std::string::npos){
+            nbr_swcs += 1;
+        }
+        else if (params.blood_vessels_files[i].find(".csv") != std::string::npos){
+            nbr_csvs += 1;
+        }
+
+        if(!in){
+            return;
+        }
+    }
+
+    if (nbr_csvs == params.blood_vessels_files.size() && nbr_csvs > 0){
+        addBloodVesselObstaclesFromCSV();
+    }
+    else{
+        std::cerr << "Mixed or unsupported axon file formats in the list." << std::endl;
+        return;
+    }
+}
+void MCSimulation::addAxonsObstaclesFromFiles()
+{
+    
+    int nbr_csvs = 0;
+    int nbr_swcs = 0;
+
+    if (params.axons_files.size() == 0){
+        return;
+    }
+
+    for(unsigned i = 0; i < params.axons_files.size(); i++){
+
+        std::ifstream in(params.axons_files[i]);
+
+        if (params.axons_files[i].find(".swc") != std::string::npos){
+            nbr_swcs += 1;
+        }
+        else if (params.axons_files[i].find(".csv") != std::string::npos){
+            nbr_csvs += 1;
+        }
+
+        if(!in){
+            return;
+        }
+    }
+
+    if (nbr_csvs == params.axons_files.size() && nbr_csvs > 0){
+        addAxonsObstaclesFromCSV();
+    }
+    else if (nbr_swcs == params.axons_files.size() && nbr_swcs > 0){
+        addAxonsObstaclesFromSWC();
+    }
+    else{
+        std::cerr << "Mixed or unsupported axon file formats in the list." << std::endl;
+        return;
+    }
+}
+
+
+void MCSimulation::addGlialsObstaclesFromSWC()
 {
     for (unsigned i = 0; i < params.glials_files.size(); i++) {
 
@@ -584,8 +966,160 @@ void MCSimulation::addGlialsObstaclesFromFiles()
     std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
 }
 
+bool isInsideVoxel(Eigen::Vector3d position, double distance, std::pair<Eigen::Vector3d,Eigen::Vector3d> voxel)
+{
+    Eigen::Vector3d min_limits = voxel.first;
+    Eigen::Vector3d max_limits = voxel.second;
+
+    return (position[0] >= min_limits[0]-distance && position[0] <= max_limits[0]+distance &&
+            position[1] >= min_limits[1]-distance && position[1] <= max_limits[1]+distance &&
+            position[2] >= min_limits[2]-distance && position[2] <= max_limits[2]+distance);
+}
+
+void MCSimulation::addGlialsObstaclesFromCSV()
+{
+
+    for (unsigned i = 0; i < params.glials_files.size(); i++) {
+
+        std::ifstream in(params.glials_files[i]);
+
+        dynamicsEngine->glials_list.clear();
+
+        if (!in) {
+            std::cerr << "Failed to open file: " << params.glials_files[i] << std::endl;
+            return;
+        }
+
+        // Skip header lines
+        for (int j = 0; j < 9; ++j) {
+            std::string header;
+            in >> header;
+        }
+
+        double perm_ = params.glial_obstacle_permeability;
+        double diff_i = params.diffusivity_intra;
+        double diff_e = params.diffusivity_extra;
+
+        // Variables to hold parsed data
+        double x, y, z, rout, rin, r, cell_id, component_id;
+        std::string cell_type, component;
+        int sphere_id = 0;
+
+        Glial current_glial;
+        std::vector<Sphere> current_processes;
+        bool glial_initialized = false;
+
+        std::pair<Eigen::Vector3d,Eigen::Vector3d> voxels_list = params.voxels_list[i];
+
+        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout) {
+            // Convert units to micrometers
+            x /= 1000.0;
+            y /= 1000.0;
+            z /= 1000.0;
+            r = rout / 1000.0;
+
+            if (cell_type.find("glial_cell") == std::string::npos && cell_type.find("neuron") == std::string::npos) {
+                continue;
+            }
+
+            Eigen::Vector3d position = Eigen::Vector3d(x, y, z); 
+
+            bool isinvoxel = isInsideVoxel(position, r, voxels_list);
+
+            if (!isinvoxel) {
+                sphere_id += 1;
+                continue;
+            }
+
+            if (component.find("soma") != std::string::npos) {
+                // Save previous glial cell if it exists
+                if (glial_initialized) {
+                    current_glial.setDiffusion(diff_i, diff_e);
+                    current_glial.setPercolation(perm_);
+                    current_glial.set_up_glialcell(current_processes);
+                    dynamicsEngine->glials_list.push_back(current_glial);
+                    current_processes.clear();
+                    sphere_id = 0;
+                }
+
+                Sphere soma(int(sphere_id), int(cell_id), Eigen::Vector3d(x, y, z), r, 1, int(component_id));
+                soma.setDiffusion(diff_i, diff_e);
+                soma.setPercolation(perm_);
+                current_glial = Glial(cell_id, soma);
+                current_glial.processes.clear();
+                glial_initialized = true;
+            } 
+            else if (component.find("branch") != std::string::npos) {
+                Sphere process(int(sphere_id), current_glial.id, Eigen::Vector3d(x, y, z), r, 1, int(component_id));
+                process.setDiffusion(diff_i, diff_e);
+                process.setPercolation(perm_);
+                current_processes.push_back(process);
+            }
+            sphere_id += 1;
+        }
+
+        // Save the last glial cell, if any
+        if (glial_initialized) {
+            current_glial.setDiffusion(diff_i, diff_e);
+            current_glial.setPercolation(perm_);
+            current_glial.set_up_glialcell(current_processes);
+            dynamicsEngine->glials_list.push_back(current_glial);
+        }
+
+        in.close();
+    }
+    /*
+    // keep only first glial cell
+    if (dynamicsEngine->glials_list.size() > 2) {
+        std::cout << "\033[1;33m[Warning]\033[0m More than one glial cell found, keeping only the first one." << std::endl;
+        dynamicsEngine->glials_list.resize(2);
+    }
+    */
+    
+
+    std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
+}
 
 
+void MCSimulation::addGlialsObstaclesFromFiles()
+{
+
+    int nbr_csvs = 0;
+    int nbr_swcs = 0;
+
+    if (params.glials_files.size() == 0){
+        return;
+    }
+
+    for(unsigned i = 0; i < params.glials_files.size(); i++){
+
+        std::ifstream in(params.glials_files[i]);
+
+        if(!in){
+            return;
+        }
+
+        if (params.glials_files[i].find(".swc") != std::string::npos){
+            nbr_swcs += 1;
+        }
+        else if (params.glials_files[i].find(".csv") != std::string::npos){
+            nbr_csvs += 1;
+        }
+
+    }
+
+    if (nbr_csvs == params.glials_files.size() && nbr_csvs > 0){
+        addGlialsObstaclesFromCSV();
+    }
+    else if (nbr_swcs == params.glials_files.size() && nbr_swcs > 0){
+        addGlialsObstaclesFromSWC();
+    }
+    else{
+        std::cerr << "Mixed or unsupported axon file formats in the list." << std::endl;
+        return;
+    }
+
+}
 
 void MCSimulation::addCylindersObstaclesFromFiles()
 {
@@ -762,6 +1296,7 @@ void MCSimulation::addCylindersConfigurations()
 
 void MCSimulation::addSpheresObstaclesFromFiles()
 {
+
     for(unsigned i = 0; i < params.spheres_files.size(); i++){
 
         std::ifstream in(params.spheres_files[i]);
@@ -769,6 +1304,7 @@ void MCSimulation::addSpheresObstaclesFromFiles()
         if(!in){
             return;
         }
+
 
         bool first=true;
         for( std::string line; getline( in, line ); )
@@ -797,6 +1333,10 @@ void MCSimulation::addSpheresObstaclesFromFiles()
 
         while (in >> x >> y >> z >> r)
         {
+            x = x/1000.0;
+            y = y/1000.0;
+            z = z/1000.0;
+            r = r/1000.0;
             Sphere sph(0,0,Eigen::Vector3d(x,y,z),r,scale);
 
             // Local permeability - Different for each obstacle

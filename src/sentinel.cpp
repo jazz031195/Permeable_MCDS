@@ -68,13 +68,14 @@ bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY,
     if( (walker.initial_location != walker.location and walker.location != Walker::unknown) && (params.obstacle_permeability == 0.0 || params.obstacle_permeability ==-1) && (params.axon_obstacle_permeability == 0.0 || params.axon_obstacle_permeability ==-1) && (params.glial_obstacle_permeability == 0.0 || params.glial_obstacle_permeability ==-1) && deport_illegals ){
         //cout << "initial location: " << walker.initial_location << " location: " << walker.location << endl;
         cout <<"error for no permeability" << endl;
+        cout << "obstacle_permeability : " << params.glial_obstacle_permeability << endl;
         setCrossingError(uint(walker.in_obj_index));
         illegal_count++;
         throw(this->error);
 
     }
     // crossing error when permeability
-    if ((params.obstacle_permeability > 0.0 || params.axon_obstacle_permeability > 0.0 || params.glial_obstacle_permeability > 0.0 ) and (walker.location != Walker::unknown) and (walker.previous_location != Walker::unknown) and (walker.is_allowed_to_cross == false) and (walker.location != walker.previous_location) && deport_illegals)
+    if ((params.obstacle_permeability > 0.0 || params.axon_obstacle_permeability > 0.0 || params.glial_obstacle_permeability > 0.0 ) and (walker.is_allowed_to_cross == false) and (walker.location != walker.previous_location) && deport_illegals)
     {
         cout << "error for permeability" << endl;
         cout << "walker.is_allowed_to_cross = false : " << (walker.is_allowed_to_cross == false) << endl;

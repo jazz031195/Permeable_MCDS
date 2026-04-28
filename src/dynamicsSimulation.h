@@ -22,6 +22,7 @@
 #include "cylinder.h"
 #include "Axon.h"
 #include "Glial.h"
+#include "Blood_Vessel.h"
 #include "sentinel.h"
 #include "propagator.h"
 #include "sphere.h"
@@ -59,6 +60,8 @@ public:
     std::vector<unsigned>  axons_deque;             /*!< deque with the indexes of the axons (used for optmization)             */
     std::vector <Glial> glials_list;                  /*!< vector with all the isntances of "Glial" obstacles                       */
     std::vector<unsigned>  glials_deque;             /*!< deque with the indexes of the glial cells (used for optmization)             */
+    std::vector <Blood_Vessel> blood_vessels_list;  /*!< vector with all the isntances of "Blood_Vessel" obstacles                       */
+    std::vector<unsigned>  blood_vessels_deque;     /*!< deque with the indexes of the inner axons (used for optmization)             */
     int step_nbr;
 
     std::vector<std::vector<unsigned>> ply_deque;   /*!< deque with the indexes of the triangles of all ply's (used for opt)        */
@@ -67,6 +70,8 @@ public:
     double icvf;                                    /*!< Stores the ICVF (1 - Intra-Extra) if needed                                */
     unsigned intra_tries, total_tries;              /*!< Helper variables to compute the estimated ICVF                             */
     int tot_nbr_bounces;                            /*!< Total number of bounces                                                    */
+    int inside_bounces;                         /*!< Total number of bounces that happened inside the obstacles (used for stats)   */
+    int outside_bounces;                        /*!< Total number of bounces that happened outside the obstacles (used for stats)  */
     int tot_nbr_legal_crossings;                   /*!< Total number of legal crossings                                            */
     std::vector <Sphere> spheres_list;              /*!< vector with all the isntances of "Sphere" obstacles                       */
     std::vector<unsigned>  spheres_deque;           /*!< deque with the indexes of the spheres (used for optmization)             */
@@ -75,11 +80,13 @@ public:
     int nbr_walker_extra_ini;                           /*!< Number of walkers that are inside the extra-cellular space                 */
     int nbr_walker_axons_ini;                          /*!< Number of walkers that are inside the axons                 */
     int nbr_walker_glials_ini;                          /*!< Number of walkers that are inside the glial cells                 */
-    
+    int nbr_walker_blood_vessels_ini;                          /*!< Number of walkers that are inside the blood vessels                 */
+
     int nbr_walker_intra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
     int nbr_walker_extra_final;                          /*!< Number of walkers that are inside the extra-cellular space                  */
     int nbr_walker_axons_final;                         /*!< Number of walkers that are inside the axons                 */
     int nbr_walker_glials_final;                         /*!< Number of walkers that are inside the glial cells                 */
+    int nbr_walker_blood_vessels_final;                         /*!< Number of walkers that are inside the blood vessels                 */
 
     std::vector <int> list_walkers_intra;            /*!< vector with the number of the walkers that are inside the intra-cellular space */
     std::vector <int> list_walkers_extra;            /*!< vector with the number of the walkers that are inside the extra-cellular space */
@@ -178,6 +185,8 @@ public:
     bool isOutsideAxons(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside);
 
     bool isInsideGlial(Eigen::Vector3d &position, int &glial_id, const double& distance_to_be_inside);
+
+    bool isInsideBloodVessels(Eigen::Vector3d &position, int &object_id, const double& distance_to_be_inside);
 
     bool isInsidePLY(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 

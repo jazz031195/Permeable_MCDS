@@ -211,6 +211,31 @@ public:
 };
 
 
+class BloodVesselCollisionSphere: public Collisionsphere{
+public:
+
+    unsigned small_sphere_list_end;                         /*!< Index of the LAST element on the list for the small collision sphere                               */
+    unsigned big_sphere_list_end;                           /*!< Index of the LAST element on the list for the big collision sphere                                 */
+
+    std::vector<unsigned>* collision_list;                  /*! <Pointer to  List with the cylinders indexes. The indexes are permuted in its position.             */
+
+    BloodVesselCollisionSphere();
+
+    void popFromSmallSphere(unsigned i);
+
+    void pushToSmallSphere(unsigned i);
+
+    void popFromBigSphere(unsigned i);
+
+    void pushToBigSphere(unsigned i);
+
+    void setBigSphereSize(float size);
+
+    void setSmallSphereSize(float size);
+
+    void push_index(unsigned int element);
+
+};
 
 /*! \class CylinderCollisionSphere
  *  \brief Class to save the PLY mehses and the subset of triangles that a can collide to a walker

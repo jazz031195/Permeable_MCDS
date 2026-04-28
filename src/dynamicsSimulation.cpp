@@ -43,6 +43,8 @@ DynamicsSimulation::DynamicsSimulation() {
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
+    inside_bounces = 0;
+    outside_bounces = 0;
 
     params.sim_duration = 1; //secs
 
@@ -69,6 +71,8 @@ DynamicsSimulation::DynamicsSimulation() {
     nbr_walker_intra_final = 0;
     nbr_walker_glials_final = 0;
     nbr_walker_axons_final = 0;
+    nbr_walker_blood_vessels_ini = 0;
+    nbr_walker_blood_vessels_final = 0;
 
     if(params.seed > 0){
         mt.seed(ulong(params.seed));
@@ -119,9 +123,13 @@ DynamicsSimulation::DynamicsSimulation(std::string conf_file) {
     nbr_walker_intra_final = 0;
     nbr_walker_glials_final = 0;
     nbr_walker_axons_final = 0;
+    nbr_walker_blood_vessels_ini = 0;
+    nbr_walker_blood_vessels_final = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
+    inside_bounces = 0;
+    outside_bounces = 0;
 
 }
 
@@ -157,9 +165,13 @@ DynamicsSimulation::DynamicsSimulation(Parameters& params_) {
     nbr_walker_intra_final = 0;
     nbr_walker_glials_final = 0;
     nbr_walker_axons_final = 0;
+    nbr_walker_blood_vessels_ini = 0;
+    nbr_walker_blood_vessels_final = 0;
 
     tot_nbr_bounces = 0;
     tot_nbr_legal_crossings = 0;
+    inside_bounces = 0;
+    outside_bounces = 0;
 }
 
 void DynamicsSimulation::initObstacleInformation(){
@@ -184,16 +196,12 @@ void DynamicsSimulation::initObstacleInformation(){
 
             cylinders_list[i].prob_cross_e_i = prob_cross_e_i / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
             cylinders_list[i].prob_cross_i_e = prob_cross_i_e / (1.+ 0.5 * (prob_cross_e_i + prob_cross_i_e));
-            
         }
-
     }
 
     walker.collision_sphere_cylinders.collision_list        = &cylinders_deque;
     walker.collision_sphere_cylinders.list_size             = unsigned(cylinders_deque.size());
     walker.collision_sphere_cylinders.big_sphere_list_end   = walker.collision_sphere_cylinders.list_size;
-
-
     
     //Axons list of index initialization
     int nbr_prints = 0;
@@ -253,6 +261,16 @@ void DynamicsSimulation::initObstacleInformation(){
     walker.collision_sphere_glials.collision_list        = &glials_deque;
     walker.collision_sphere_glials.list_size             = unsigned(glials_deque.size());
     walker.collision_sphere_glials.big_sphere_list_end   = walker.collision_sphere_glials.list_size;
+
+
+    // blood vessels list of index initialization
+    for (unsigned i= 0 ; i < blood_vessels_list.size();i++){
+        blood_vessels_deque.push_back(i);
+    }
+    walker.collision_sphere_blood_vessels.collision_list        = &blood_vessels_deque;
+    walker.collision_sphere_blood_vessels.list_size             = unsigned(blood_vessels_deque.size());
+    walker.collision_sphere_blood_vessels.big_sphere_list_end   = walker.collision_sphere_blood_vessels.list_size;
+
 
     // PLY index list initialization
     for(unsigned i= 0 ; i < plyObstacles_list.size();i++){
@@ -726,6 +744,21 @@ void DynamicsSimulation::initWalkerObstacleIndexes()
         }
     }
 
+    //* Blood Vessels Collision Sphere *//
+    walker.collision_sphere_blood_vessels.setBigSphereSize(outer_col_dist_factor);
+    walker.collision_sphere_blood_vessels.setSmallSphereSize(inner_col_dist_factor);
+    // New version Blood Vessels obstacle selection
+    walker.collision_sphere_blood_vessels.small_sphere_list_end = 0;
+    walker.collision_sphere_blood_vessels.big_sphere_list_end = unsigned(blood_vessels_deque.size());
+    // We add and remove the blood vessels indexes that are or not inside sphere.
+    for(unsigned i = 0 ; i < walker.collision_sphere_blood_vessels.list_size; i++ ){
+        unsigned index = walker.collision_sphere_blood_vessels.collision_list->at(i);
+        float dist = float(blood_vessels_list[index].minDistance(walker));
+        if (dist < walker.collision_sphere_blood_vessels.small_sphere_distance){
+            walker.collision_sphere_blood_vessels.pushToSmallSphere(i);
+        }
+    }
+
     //* PLY Collision Sphere *//
     
     walker.collision_sphere_ply.setBigSphereSize(outer_col_dist_factor);
@@ -827,11 +860,23 @@ void DynamicsSimulation::updateStepLength(double &l, const int &t){
     
     else{
 
-        if (walker.location == Walker::intra){
+        if (walker.location == Walker::intra && walker.in_obj_type != 3){
             l                = step_lenght_intra;
             curr_step_lenght = step_lenght_intra;
             curr_diffusivity = params.diffusivity_intra;
         }
+        else if (walker.location == Walker::intra && walker.in_obj_type == 3 && walker.status != Walker::bouncing){
+
+            Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
+            double v;
+            Eigen::Vector3d direction_flow;
+            bv.WalkerVelocity(walker, v, direction_flow);
+
+            l = float(v*params.sim_duration/float(params.num_steps));
+            curr_step_lenght = l;
+            curr_diffusivity = 0.0;
+        }
+
         else if (walker.location == Walker::extra){
             l                = step_lenght_extra;
             curr_step_lenght = step_lenght_extra;
@@ -863,7 +908,7 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
     std::uniform_real_distribution<double> udist(0,1);
 
 
-    if(axons_list.size() <=0 and inner_axons_list.size() <=0 and cylinders_list.size() <=0 and plyObstacles_list.size() <= 0 and spheres_list.size() <= 0 and glials_list.size() <= 0){
+    if(axons_list.size() <=0 and inner_axons_list.size() <=0 and cylinders_list.size() <=0 and plyObstacles_list.size() <= 0 and spheres_list.size() <= 0 and glials_list.size() <= 0 and blood_vessels_list.size() <=0){
         SimErrno::error("Cannot initialize intra-axonal walkers within the given substrate.",std::cout);
         SimErrno::error("There's no defined intra-axonal compartment (missing obstacles?)",std::cout);
         assert(0);
@@ -906,6 +951,9 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
         }
         if (cylinders_list.size() > 0){
             expected_object_types.push_back(2);
+        }
+        if (blood_vessels_list.size() > 0){
+            expected_object_types.push_back(3);
         }
 
         bool isintra = isInIntra(pos_temp, object_id, object_type, -barrier_tickness);
@@ -1275,14 +1323,30 @@ bool DynamicsSimulation::isInsideGlial(Eigen::Vector3d &position, int &object_id
     return false;
 }
 
+bool DynamicsSimulation::isInsideBloodVessels(Eigen::Vector3d &position, int &object_id, const double& distance_to_be_inside)
+{
+    
+    for (unsigned i = 0; i < blood_vessels_list.size() ; i++){
+        double max_step = blood_vessels_list[i].max_velocity*params.sim_duration/float(params.num_steps);
+        bool isinside = blood_vessels_list[i].isPosInsideBlood_Vessel(position,  distance_to_be_inside, max_step);
+        if (isinside){
+            object_id = int(i);
+            return true;
+        }
+    }
+    object_id = -1;
+
+    return false;
+}
+
 bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& object_type, double distance_to_be_intra_ply)
 {
 
     bool isIntra = false;
     total_tries++;
     object_type = -1;
-    int ax_id, glial_id, cyl_id;
-    bool isinside_axons = false, isinside_glial = false, isinside_cyl = false;
+    int ax_id, glial_id, cyl_id, bv_id;
+    bool isinside_axons = false, isinside_glial = false, isinside_cyl = false, isinside_bv = false;
 
     if(cylinders_list.size()>0){
         isinside_cyl= this->isInsideCylinders(position, cyl_id, distance_to_be_intra_ply);
@@ -1310,6 +1374,15 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
         }
     }
 
+    if (blood_vessels_list.size()>0){
+        isinside_bv = this->isInsideBloodVessels(position, bv_id, distance_to_be_intra_ply);
+        isIntra|= isinside_bv;
+        if (isinside_bv){
+            object_type = 3;
+
+        }
+    }
+
     if(plyObstacles_list.size()>0){
         isIntra|=isInsidePLY(position,distance_to_be_intra_ply);
         assert(0);
@@ -1317,7 +1390,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
 
     if(spheres_list.size()>0){
         isIntra|= this->isInsideSpheres(position,distance_to_be_intra_ply);   
-        assert(0);    
+
     }
 
     if (isinside_axons){
@@ -1328,6 +1401,12 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
     }
     else if (isinside_cyl){
         object_id = cyl_id;
+    }
+    else if (isinside_bv){
+        object_id = bv_id;
+    }
+    else{
+        object_id = -1;
     }
  
 
@@ -1346,7 +1425,7 @@ bool DynamicsSimulation::isInExtra(Eigen::Vector3d &position,  double distance_t
     if (!plyObstacles_list.empty()) ok = ok && !isInsidePLY(position, distance_to_be_intra_ply);
     if (!spheres_list.empty())      ok = ok && !isInsideSpheres(position, distance_to_be_intra_ply);
     if (!glials_list.empty())   ok = ok && !this->isInsideGlial(position, dummy, distance_to_be_intra_ply);
-
+    if (!blood_vessels_list.empty())   ok = ok && !this->isInsideBloodVessels(position, dummy, distance_to_be_intra_ply);
     return ok;
 }
 
@@ -1582,6 +1661,16 @@ void DynamicsSimulation::generateStep(Vector3d & step, double l) {
         return;
     }
 
+    if(walker.in_obj_type ==3 && walker.location == Walker::intra && walker.status != Walker::on_voxel && walker.status != Walker::bouncing){
+        Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
+        double v;
+        Eigen::Vector3d direction_flow;
+        bv.WalkerVelocity(walker, v, direction_flow);
+        step = direction_flow;
+        step.normalize();
+        return;
+    }
+
     std::uniform_real_distribution<double> dist(0,1);
 
     /* Unbiased random direction*/
@@ -1676,6 +1765,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
 
         // Updates the position and bouncing direction.
         if(update_walker_status){
+
 
             //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision);
             bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision, t);
@@ -1813,6 +1903,31 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
                 unsigned index = walker.collision_sphere_glials.collision_list->at(i);
                 //unsigned index = i;
                 (glials_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,index);     
+            }
+        }
+        
+    }
+
+    // for each blood vessel obstacle
+    if ((blood_vessels_list).size()>0 ){
+        
+        // intra walkers
+        if (walker.location== Walker::intra ){
+            
+            if (walker.in_obj_type == 3 && walker.in_obj_index != -1){
+                (blood_vessels_list)[walker.in_obj_index].checkCollision(walker,bounced_step,tmax,collision_tmp);
+                handleCollisions(collision,collision_tmp,max_collision_distance,walker.in_obj_index);  
+            } 
+        }
+        // extra walkers or unknown
+        else {
+
+            for(unsigned int i = 0 ; i < walker.collision_sphere_blood_vessels.small_sphere_list_end; i++ ){
+            //for (unsigned int i = 0 ; i < (blood_vessels_list).size(); i++ ){
+                unsigned index = walker.collision_sphere_blood_vessels.collision_list->at(i);
+                //unsigned index = i;
+                (blood_vessels_list)[index].checkCollision(walker,bounced_step,tmax,collision_tmp);
                 handleCollisions(collision,collision_tmp,max_collision_distance,index);     
             }
         }
@@ -2031,12 +2146,23 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
 {
     last_time_dt = time_step*(t-1);
     time_dt = time_step*(t);
-
+    
     if(dataSynth){
         if(dataSynth->dynamic){
-            last_time_dt = dataSynth->time_steps[t-1];
-            time_dt = dataSynth->time_steps[t];
-            l = sqrt(6.0*(curr_diffusivity*(time_dt - last_time_dt)));
+            if (walker.in_obj_type ==3 && walker.location == Walker::intra && walker.status != Walker::bouncing){
+                Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
+                double v;
+                Eigen::Vector3d direction_flow;
+                bv.WalkerVelocity(walker, v, direction_flow);
+                last_time_dt = dataSynth->time_steps[t-1];
+                time_dt = dataSynth->time_steps[t];
+                l = v * (time_dt - last_time_dt);
+            }
+            else{
+                last_time_dt = dataSynth->time_steps[t-1];
+                time_dt = dataSynth->time_steps[t];
+                l = sqrt(6.0*(curr_diffusivity*(time_dt - last_time_dt)));
+            }
         }
     }
 }
@@ -2076,6 +2202,14 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
             return false;
         }
         tot_nbr_bounces++;
+
+        // if we go from inside to outside
+        if (collision.col_location == Collision::inside){
+            inside_bounces++;
+        }
+        else if (collision.col_location == Collision::outside){
+            outside_bounces++;
+        }
 
         bounced = true;
         walker.status = Walker::bouncing;
@@ -2217,7 +2351,6 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         bounced_step = collision.bounced_direction;
         tmax-=collision.t;
 
-        
     }
     else if(collision.type == Collision::near){
         //sentinela.rejected_step   = true;

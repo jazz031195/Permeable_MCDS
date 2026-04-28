@@ -1,4 +1,5 @@
-#include "Glial.h"
+
+#include "Blood_Vessel.h"
 #include "Eigen/Dense"
 #include <Eigen/Geometry>
 #include <Eigen/Core>
@@ -13,36 +14,129 @@
 #include <limits>
 #include <algorithm> // for std::min initializer_list
 
-
 using namespace Eigen;
 using namespace std;
 
-Glial::Glial()
+Blood_Vessel::Blood_Vessel()
 {}
 
-Glial::~Glial()
+Blood_Vessel::~Blood_Vessel()
 {}
 
-Glial::Glial(const Glial &gl)
+Blood_Vessel::Blood_Vessel(const Blood_Vessel &bv)
 {
-    id = gl.id;
-    soma = gl.soma;
-    processes = gl.processes;
-    grid = gl.grid;
-    percolation = gl.percolation;
-    prob_cross_e_i = gl.prob_cross_e_i;
-    prob_cross_i_e = gl.prob_cross_i_e;
-    diffusivity_i = gl.diffusivity_i;
-    diffusivity_e = gl.diffusivity_e;
-    count_perc_crossings = gl.count_perc_crossings;
+    id = bv.id;
+    radius = bv.radius;
+    pressure_diff = bv.pressure_diff;
+    viscosity = bv.viscosity;
+    flow = bv.flow;
+    max_velocity = bv.max_velocity;
+    spheres = bv.spheres;
+    skeleton = bv.skeleton;
+    grid = bv.grid;
+    min_velocity = bv.min_velocity;
 
 };
 
+void Blood_Vessel::set_bv_parameters(const double &pressure_diff_){
+    pressure_diff = pressure_diff_;
+    flow = (M_PI*pressure_diff*(radius*radius*radius*radius))/(8*viscosity); // mm^3/s
+    max_velocity = (pressure_diff/(4*viscosity))*(radius*radius); // mm/s
+    double min_distance = barrier_tickness;
+    min_velocity = velocity(radius - min_distance);
+}
 
-inline bool Glial::is_empty(const Box& b) {
+double distancePointToSegment(const Eigen::Vector3d& P, const Eigen::Vector3d& A, const Eigen::Vector3d& B) {
+    Eigen::Vector3d AB = B - A;
+    Eigen::Vector3d AP = P - A;
+
+    double ab2 = (AB).norm() * (AB).norm();
+    if (ab2 == 0.0) {
+        // A and B are the same point
+        return (P - A).norm();
+    }
+
+    // Project AP onto AB, normalized by |AB|^2
+    double t = (AP).dot(AB) / ab2;
+
+    // Clamp t to [0, 1]
+    if (t < 0.0) t = 0.0;
+    else if (t > 1.0) t = 1.0;
+
+    // Closest point on the segment
+    Eigen::Vector3d closest = A + AB * t;
+
+    // Distance from P to closest point
+    return (P - closest).norm();
+}
+
+void Blood_Vessel::distance_to_skeleton(const Walker &w, double& min_dist, Eigen::Vector3d& tangent){
+
+    // distance O to the vessel skeleton
+    Eigen::Vector3d O = w.pos_v;
+
+    if (spheres.empty()) {
+        min_dist = 0.0; // or throw, depending on how you want to handle this
+        tangent = Eigen::Vector3d::Zero();
+        return;
+    }
+    if (spheres.size() == 1) {
+        min_dist =  (O - spheres[0].P).norm();
+        tangent = (O - spheres[0].P).normalized();
+        return;
+    }
+
+    min_dist = std::numeric_limits<double>::max();
+    for (size_t i = 0; i + 1 < spheres.size(); ++i) {
+        double d = distancePointToSegment(O, spheres[i].P, spheres[i + 1].P);
+        if (d < min_dist) {
+            min_dist = d;
+            tangent = (spheres[i + 1].P - spheres[i].P).normalized();
+        }
+    }
+
+
+    if (w.normal[2] != 0){ // before colliding with voxel wall
+
+        tangent = -tangent;
+    }
+
+}
+
+double Blood_Vessel::velocity(const double &radial_distance){
+    return (pressure_diff/(4*viscosity))*(this->radius*this->radius - radial_distance*radial_distance);
+}
+
+void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& flow_direction){
+
+    double min_dist;
+
+    Eigen::Vector3d tangent;
+
+    distance_to_skeleton(w, min_dist, tangent);
+
+    if (min_dist >= this->radius) {
+        v = min_velocity;
+        flow_direction = tangent;
+        return;
+    }
+
+    double radial_distance = min_dist; // distance is negative inside the vessel
+
+    v = velocity(radial_distance);
+
+    if (v < min_velocity){
+        v = min_velocity;
+    }
+
+    flow_direction = tangent;
+
+}
+
+inline bool Blood_Vessel::is_empty(const Box& b) {
     return b.x_min > b.x_max || b.y_min > b.y_max || b.z_min > b.z_max;
 }
-inline void Glial::extend(Box& b, const Eigen::Vector3d& p) {
+inline void Blood_Vessel::extend(Box& b, const Eigen::Vector3d& p) {
     if (is_empty(b)) { b = {p.x(),p.x(),p.y(),p.y(),p.z(),p.z()}; return; }
     b.x_min = std::min(b.x_min, p.x()); b.x_max = std::max(b.x_max, p.x());
     b.y_min = std::min(b.y_min, p.y()); b.y_max = std::max(b.y_max, p.y());
@@ -55,73 +149,86 @@ inline uint64_t hash3(int x, int y, int z) {
                                v = (v^(v>>27))*0x94d049bb133111ebULL; return v^(v>>31); };
     return mix((uint64_t)(uint32_t)x) ^ (mix((uint64_t)(uint32_t)y)<<1) ^ (mix((uint64_t)(uint32_t)z)<<2);
 }
-void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& processes,
+
+
+void Blood_Vessel::set_spheres(std::vector<Sphere> &spheres_to_add) {
+
+    // Clear existing boxes and initialize variables
+    spheres.clear();
+
+    if (spheres_to_add.empty()) {
+        return;
+    }
+
+    for (const auto &sphere : spheres_to_add) {
+
+        int cell_id = sphere.id;
+
+        if (cell_id < 0) {
+            cerr << "Error: Sphere with invalid id: " << cell_id << endl;
+            assert(0);
+        }
+
+        spheres.push_back(sphere);
+        
+    }
+
+    skeleton.clear();
+    for (unsigned i = 0; i < spheres.size(); i++){
+        skeleton.push_back(spheres[i].P);
+    } 
+
+    double grid_cell_size = 5e-3;
+    double pad = barrier_tickness;
+    build_bv_grid_spheres(spheres,grid_cell_size, pad);
+
+}
+
+
+void Blood_Vessel::build_bv_grid_spheres(const std::vector<Sphere>& spheres_to_add,
                                       double cell_size, double pad)
 {
+
+    spheres = spheres_to_add;
     // init grid
     grid = HashGrid{};
     grid.cell = (cell_size > 0.0 ? cell_size : 1.0);
     grid.build_pad = std::max(0.0, pad);
 
     double maxR = 0.0;
-    for (const auto& branch : processes){
-        for (const auto& s : branch){
-            if (s.radius > 0.0){
-                maxR = std::max(maxR, s.radius + grid.build_pad);
-            }
+    for (const auto& s : spheres){
+        if (s.radius > 0.0){
+            maxR = std::max(maxR, s.radius + grid.build_pad);
         }
     }
 
     grid.max_radius_plus_pad = maxR;
 
-    // 1) compute big box from processes, already padded by `pad`
+    // 1) compute big box from spheres, already padded by `pad`
     Box B = make_empty_box();
-    for (const auto& branch : processes) {
-        for (const auto& s : branch) {
-            if (s.radius <= 0.0) continue;
-            const double R = s.radius + pad;
-            extend(B, s.P - Eigen::Vector3d::Constant(R));
-            extend(B, s.P + Eigen::Vector3d::Constant(R));
-            // track global max radius+pad
-            if (R > grid.max_radius_plus_pad){ 
-                grid.max_radius_plus_pad = R;
-            }
-        }
-    }
 
-    // Also extend by soma (helpful if processes are sparse/empty)
-    {
-        const double R = soma.radius + pad;
-        extend(B, soma.P - Eigen::Vector3d::Constant(R));
-        extend(B, soma.P + Eigen::Vector3d::Constant(R));
-        if (R > grid.max_radius_plus_pad){
+    for (const auto& s : spheres) {
+        if (s.radius <= 0.0) continue;
+        const double R = s.radius + pad;
+        extend(B, s.P - Eigen::Vector3d::Constant(R));
+        extend(B, s.P + Eigen::Vector3d::Constant(R));
+        // track global max radius+pad
+        if (R > grid.max_radius_plus_pad){ 
             grid.max_radius_plus_pad = R;
         }
     }
-
-    // Fallback if still empty (degenerate case)
-    if (is_empty(B)) {
-        const double R = std::max(1e-6, soma.radius + pad);
-        const Eigen::Vector3d mn = soma.P - Eigen::Vector3d::Constant(R);
-        const Eigen::Vector3d mx = soma.P + Eigen::Vector3d::Constant(R);
-        B = {mn.x(), mx.x(), mn.y(), mx.y(), mn.z(), mx.z()};
-        grid.max_radius_plus_pad = std::max(grid.max_radius_plus_pad, R);
-    }
+    
 
     // 2) set grid origin and store big box
     grid.origin  = Eigen::Vector3d(B.x_min, B.y_min, B.z_min);
     grid.big_box = B;
 
     // (Optional) reserve to avoid reallocation
-    size_t total = 0;
-    for (const auto& br : processes) {
-        total += br.size();
-    }
-    grid.objs.reserve(total);
+    grid.objs.reserve(spheres.size());
 
     // 3) add spheres into buckets — store indices (b,i)
-    auto add = [&](int b, int i) {
-        const Sphere& s = processes[b][i];
+    auto add = [&](int i) {
+        const Sphere& s = spheres[i];
         if (s.radius <= 0.0) return;
         const double R = s.radius + pad;
         const Eigen::Vector3d mn = s.P - Eigen::Vector3d::Constant(R);
@@ -131,7 +238,7 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
         const Eigen::Array3i imax = ((mx - grid.origin).array() / grid.cell).floor().cast<int>();
 
         const int idx = static_cast<int>(grid.objs.size());
-        grid.objs.push_back({b, i});     // store reference into `processes`
+        grid.objs.push_back(i);     // store reference into `spheres`
 
         for (int ix = imin.x(); ix <= imax.x(); ++ix)
           for (int iy = imin.y(); iy <= imax.y(); ++iy)
@@ -139,18 +246,16 @@ void Glial::build_glia_grid_processes(const std::vector<std::vector<Sphere>>& pr
               grid.buckets[hash3(ix,iy,iz)].push_back(idx);
     };
 
-    for (int b = 0; b < (int)processes.size(); ++b) {
-        const auto& branch = processes[b];
-        for (int i = 0; i < (int)branch.size(); ++i) {
-            const Sphere& s = branch[i];
-            if (s.radius <= 0.0) continue;
-            add(b, i);
-        }
+    for (int i = 0; i < (int)spheres.size(); ++i) {
+        const Sphere& s = spheres[i];
+        if (s.radius <= 0.0) continue;
+        add(i);
+
     }
 
 }
 
-inline int Glial::neighbor_radius_cells(const HashGrid& G, double query_pad)
+inline int Blood_Vessel::neighbor_radius_cells(const HashGrid& G, double query_pad)
 {
     // We need to cover centers as far as (max sphere radius + query_pad)
     const double max_sphere_radius = std::max(0.0, G.max_radius_plus_pad - G.build_pad);
@@ -158,7 +263,7 @@ inline int Glial::neighbor_radius_cells(const HashGrid& G, double query_pad)
     return std::max(1, (int)std::ceil(Rcover / G.cell));
 }
 
-inline bool Glial::point_in_inflated_aabb(const Eigen::Vector3d& p,
+inline bool Blood_Vessel::point_in_inflated_aabb(const Eigen::Vector3d& p,
                                    double d)
 {
     Box box = grid.big_box;
@@ -168,74 +273,9 @@ inline bool Glial::point_in_inflated_aabb(const Eigen::Vector3d& p,
             p.z() >= box.z_min - infl && p.z() <= box.z_max + infl);
 }
 
-void Glial::set_up_glialcell(std::vector<Sphere> &spheres_to_add) {
-
-    // Clear existing boxes and initialize variables
-    processes.clear();
-
-    if (spheres_to_add.empty()) {
-        return;
-    }
-
-    for (const auto &sphere : spheres_to_add) {
-
-        int branch_id = sphere.branch_id;
-        int cell_id = sphere.id;
-
-        if (cell_id < 0|| branch_id < 0) {
-            cerr << "Error: Sphere with invalid id or branch_id: " << cell_id << ", " << branch_id << endl;
-            assert(0);
-        }
-
-        if (branch_id >= processes.size()) {
-            processes.resize(branch_id + 1);
-        }
-        processes[branch_id].push_back(sphere);
-        
-    }
-    for (auto &branch : processes) {
-        for (auto &sphere : branch) {
-            if (sphere.id < 0 || sphere.branch_id < 0) {
-                cerr << "Error in build: Sphere with invalid id or branch_id: " << sphere.id << ", " << sphere.branch_id << endl;
-                assert(0);
-            }
-        }
-    }
-    double grid_cell_size = 5e-3;
-    double pad = barrier_tickness;
-    build_glia_grid_processes(processes,grid_cell_size, pad);
-
-}
-
-bool Glial::is_point_near_glia(const Eigen::Vector3d& p,
-                        double d)
-{
-    if ((p - soma.P).squaredNorm() <= (soma.radius + d)*(soma.radius + d))
-        return true;
-    if (!point_in_inflated_aabb(p, d)) return false;
-
-    Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
-    const int L = std::max(1, (int)std::ceil(d / grid.cell));
-    const double d2 = d*d;
-
-    for (int dx=-L; dx<=L; ++dx)
-      for (int dy=-L; dy<=L; ++dy)
-        for (int dz=-L; dz<=L; ++dz) {
-          auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
-          if (it == grid.buckets.end()) continue;
-          for (int idx : it->second) {
-            auto [b, i] = grid.objs[idx];  // (branch_id, cell_id)
-            const Sphere* s = &processes[b][i];
-            const Eigen::Vector3d v = p - s->P;
-            if (v.squaredNorm() <= (s->radius + d)*(s->radius + d)) return true;
-          }
-        }
-    return false;
-}
-
 
 // Optional: segment vs AABB to clamp traversal to the grid big_box (slab method)
-inline bool Glial::segment_aabb_intersect(const Eigen::Vector3d& p0,
+inline bool Blood_Vessel::segment_aabb_intersect(const Eigen::Vector3d& p0,
                                    const Eigen::Vector3d& p1,
                                    const Box& box,
                                    double& tEnter, double& tExit)
@@ -274,12 +314,8 @@ inline bool Glial::segment_aabb_intersect(const Eigen::Vector3d& p0,
     return true;  // segment intersects the box for t in [tEnter, tExit]
 }
 
-// Gathers process-sphere candidate indices from the grid cells crossed by the step.
-// - p0: segment start
-// - dir_unit: unit direction
-// - L: segment length (|step|)
-// - out_ids: candidate indices (into G.objs), deduplicated
-void Glial::gather_candidates_DDA(const Eigen::Vector3d& p0,
+
+void Blood_Vessel::gather_candidates_DDA(const Eigen::Vector3d& p0,
                            const Eigen::Vector3d& dir_unit,
                            double L,
                            std::vector<int>& out_ids)
@@ -377,7 +413,7 @@ void Glial::gather_candidates_DDA(const Eigen::Vector3d& p0,
 
 // Return true if the segment p0 + t*dir_unit, t∈(0,L] intersects a sphere (C,R).
 // t_enter <= t_exit are clamped to [0, L].
-inline bool Glial::raySphere(const Eigen::Vector3d& p0,
+inline bool Blood_Vessel::raySphere(const Eigen::Vector3d& p0,
                       const Eigen::Vector3d& dir_unit, // must be unit
                       const Eigen::Vector3d& C,
                       double R,
@@ -400,41 +436,65 @@ inline bool Glial::raySphere(const Eigen::Vector3d& p0,
     if (t0 > t1) std::swap(t0, t1);
     t_enter = t0;
     t_exit  = t1;
-
     return true;
 }
 
-bool Glial::checkCollision(const Walker& walker,
+bool Blood_Vessel::checkCollision(const Walker& walker,
                            Eigen::Vector3d& step,
                            const double& step_length,
                            Collision& collision)
 {
 
-    // Normalize direction
     
-    const double L = (step_length > 0.0) ? step_length : step.norm();
-    if (L <= 0.0) { 
-        cout <<"L : " << L << endl;
-        collision.perm_crossing = 0.0;
-        collision.type = Collision::null; 
-        return false; 
-    }
+    // Normalize direction
+    const double L = step_length;
+
+    //cout << "--------- checkCollision Blood_Vessel ---------" << endl;
+    //cout <<"L = " << L << endl;
+
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
-
     const double Rpad = grid.build_pad;
+    bool isinside = isPosInsideBlood_Vessel(p0, barrier_tickness, L);
+
+    if (L <= 0.0) { 
+        collision.t = 0.0;
+        collision.type = Collision::hit;
+        collision.collision_point = walker.pos_v;
+        collision.bounced_direction = step.normalized();
+        collision.obstacle_type = 3;                    // your code’s convention
+        collision.obstacle_ind  = -1;           // or branch/local as needed
+        collision.col_location  = isinside ? Collision::inside : Collision::outside;
+        collision.perm_crossing = 0.0;
+
+        cout << "problem step length :" << L << endl;
+        //assert(0);
+        return true; 
+    }
+
+
+    if (!isinside && walker.location == Walker::intra){
+
+        cout << "problem walker location intra but outside bv " << endl;
+        assert(0);
+
+    }
+
+
     
     const bool start_inside = (walker.location == Walker::intra);
 
     // Gather candidates
     std::vector<int> cand_ids;
     gather_candidates_DDA(p0, dir, L, cand_ids);
-    //cout <<"cand_ids.size()=" << cand_ids.size() << "\n";
 
     struct Ev { double t; int delta; const Sphere* s; };
     std::vector<Ev> evs; evs.reserve(cand_ids.size()*2 + 2);
 
     const double epsT = std::max(1e-12, 1e-6 * grid.cell);
+    
+    bool isbouncing = (walker.status == Walker::bouncing);
+
 
     auto addSphereEvents = [&](const Sphere* s,
                             const Eigen::Vector3d& p0,
@@ -450,20 +510,15 @@ bool Glial::checkCollision(const Walker& walker,
             // Ensure t0 <= t1 (if your raySphere doesn’t guarantee it)
             if (t1 < t0) std::swap(t0, t1);
 
+
             const bool inside0 = (p0 - s->P).squaredNorm() <= (s->radius - Rpad)*(s->radius - Rpad) + 1e-12;
             
             if (!inside0) {
-                if (t0 < L + Rpad) {
-                    evs.push_back({ t0, +1, s });
-                }
-                if (t1 < L + Rpad){
-                    evs.push_back({ t1, -1, s });
-                }
+                evs.push_back({ t0, +1, s });
+                evs.push_back({ t1, -1, s });
             } 
             else {
-                if (t1 < L + Rpad){
-                    evs.push_back({ t1, -1, s });
-                }
+                evs.push_back({ t1, -1, s });
             }
         }
         else{
@@ -473,15 +528,14 @@ bool Glial::checkCollision(const Walker& walker,
             if (!raySphere(p0, dir, s->P, Rin, t0, t1)) return;
             if (t1 < t0) std::swap(t0, t1);
             if (t0 > L + Rpad) return;  // intersection beyond step end
-            if (t0 >= 0) evs.push_back({std::min(L, std::max(0.0, t0)), +1, s});  // ENTER
+
+            if (t0 >= 0) evs.push_back({t0, +1, s});  // ENTER
+            
         }
 
     };
 
-    addSphereEvents(&soma, p0, dir);
-    //cout <<"cand_ids.size()=" << cand_ids.size() << " grid.objs.size()=" << grid.objs.size() << "\n";
 
-    // SAFETY: validate every candidate index + pointer
     size_t bad_idx = 0, null_ptr = 0;
     for (size_t k = 0; k < cand_ids.size(); ++k) {
         int idx = cand_ids[k];
@@ -492,49 +546,32 @@ bool Glial::checkCollision(const Walker& walker,
                       << ", k=" << k << ")\n";
             continue;
         }
-        auto [b, i] = grid.objs[idx];   
-        const Sphere* sp = &processes[b][i];
+        auto i = grid.objs[idx];   
+        const Sphere* sp = &spheres[i];
         if (!sp) { ++null_ptr; std::cerr << "NULL grid.objs["<<idx<<"]\n"; continue; }
         addSphereEvents(sp, p0, dir);
     }
     std::sort(evs.begin(), evs.end(), [](const Ev& a, const Ev& b){ return a.t < b.t; });
+
+
 
     if (bad_idx || null_ptr) {
         std::cerr << "Summary: bad_idx=" << bad_idx << " null_ptr=" << null_ptr << "\n";
     }
 
     if (evs.empty()) { 
-        collision.perm_crossing = 0.0;
         collision.type = Collision::null; 
-        /*
-        Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
-        if (!next_pos_inside && start_inside){
-            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
-            assert(0);
-            
-        }
-        */
-        //cout << "No sphere collisions found for walker at p0=" << p0.transpose() << " with direction :"<< dir.transpose() <<" and L : "<< L << "\n";
         return false; 
     }
 
     // Drop any events beyond L (in case raySphere or FP noise sneaks one in)
     while (!evs.empty() && evs.back().t > L + 1e-12) evs.pop_back();
     if (evs.empty()) { 
-        /*
-        Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad) > 0;
-        if (!next_pos_inside && start_inside){
-            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
-            assert(0);
-            
-        }
-        */
-        collision.perm_crossing = 0.0;
+
         collision.type = Collision::null; 
         return false; 
     }
+
 
     // 5) Sweep to find first union boundary:
     int occ0;
@@ -547,19 +584,15 @@ bool Glial::checkCollision(const Walker& walker,
     }
 
     bool is_inside = (occ0 > 0);
+
     int occ = occ0;
     if (start_inside && !is_inside){
+
         // problem
         collision.type = Collision::hit;
         collision.col_location  = Collision::outside;
         collision.perm_crossing = 0.0;
-        for (const auto& e : evs) {
-            cout << "Event: t=" << e.t << " delta=" << e.delta 
-                    << " sphere_id=" << e.s->id << "\n";
-        }
-        cout << "Error: walker started inside glia but is not inside any sphere at p0\n";
-        cout << "p0=" << p0.transpose() << " dir=" << dir.transpose() 
-             << " occ0=" << occ0 <<  "\n";
+
         //assert(0);
         return true;
     }
@@ -569,9 +602,6 @@ bool Glial::checkCollision(const Walker& walker,
         collision.type = Collision::hit;
         collision.col_location  = Collision::inside;
         collision.perm_crossing = 0.0;
-        cout << "Error: walker started outside glia but is inside a sphere at p0\n";
-        cout <<"occ0=" << occ0 << " start_inside=" << start_inside 
-             << " p0=" << p0.transpose() << " dir=" << dir.transpose() << "\n";
         //assert(0);
         return true;
     }
@@ -582,28 +612,7 @@ bool Glial::checkCollision(const Walker& walker,
     if (!start_inside) {
         // robust outside path: first time occ becomes > 0
         // (occ was computed earlier; should be 0 here)
-        size_t i = 0;
-        while (i < evs.size()) {
-            const double t = evs[i].t;
-            int sum = 0;
-            const Ev* firstEnter = nullptr;
-            size_t j = i;
-
-            // group all events with the same time (within epsT)
-            while (j < evs.size() && std::fabs(evs[j].t - t) <= epsT) {
-                sum += evs[j].delta;
-                if (evs[j].delta > 0 && !firstEnter) firstEnter = &evs[j];
-                ++j;
-            }
-
-            if (occ + sum > 0) {                    // transition to inside happens here
-                hit = firstEnter ? firstEnter : &evs[i];   // choose an ENTER in this group
-                break;
-            }
-
-            occ += sum;
-            i = j;
-        }
+        hit  =&evs[0];
     } else {
         // inside -> first time occ becomes 0, grouping same-t events
         size_t i = 0;
@@ -633,25 +642,8 @@ bool Glial::checkCollision(const Walker& walker,
     }
 
     if (!hit) { 
-        /*
-        Eigen::Vector3d next_pos = p0 + step_length * step;
-        bool next_pos_inside = occupancy_at_point(next_pos, Rpad, start_inside) > 0;
-        if (!next_pos_inside && start_inside){
-            cout << "Error in evs empty: ensure_same_compartment_at_hit failed " << endl;
-            cout <<"p0=" << p0.transpose() << " dir=" << dir.transpose() 
-                 << " start_inside=" << start_inside << " occ0=" << occ0 
-                 << " occ_final=" << occ << "\n";
 
-            for (const auto& e : evs) {
-                cout << "Event: t=" << e.t << " delta=" << e.delta 
-                     << " sphere_id=" << e.s->id << "\n";
-            }
-            assert(0);
-            
-        }
-        */
-        
-        collision.perm_crossing = 0.0;
+        //cout <<" No hit found\n";
         collision.type = Collision::null; 
         return false; 
     }
@@ -665,61 +657,21 @@ bool Glial::checkCollision(const Walker& walker,
     const double dn = dir.dot(n);
     const Eigen::Vector3d bounced = dir - 2.0 * dn * n;
 
-    /*
-    // is the hit point inside the sphere?
-    bool next_pos_inside = occupancy_at_point(pos, Rpad) > 0;
-    if (!next_pos_inside && start_inside){
-
-        cout << "Error: ensure_same_compartment_at_hit failed for walker at p0=" 
-             << p0.transpose() << " dir=" << dir.transpose() 
-             << " start_inside=" << start_inside << " occ0=" << occ0 
-             << " occ_final=" << occ << "\n";
-
-            cout <<"n : " << n.transpose() << " pos : " << pos.transpose() 
-                 << " t_hit : " << t_hit << "\n";
-        
-        assert(0);
-    }
-    */
-
     collision.type = Collision::hit;
     collision.collision_point = pos;
     collision.t = t_hit;
     collision.bounced_direction = bounced.normalized();
-    collision.obstacle_type = 1;                    // your code’s convention
+    collision.obstacle_type = 3;                    // your code’s convention
     collision.obstacle_ind  = hit->s->id;           // or branch/local as needed
     collision.col_location  = start_inside ? Collision::inside : Collision::outside;
     collision.perm_crossing = 0.0;
-    
-    /*
-    cout <<"hit sphere id=" << collision.obstacle_ind
-         << " at t=" << t_hit << " pos=" << pos.transpose()
-         << " dir=" << dir.transpose() << " bounced=" << bounced.transpose()
-         << " col_loc=" << collision.col_location
-         << " start_inside=" << start_inside
-         << " occ0=" << occ0
-         << " occ_final=" << occ
-         << "\n";
-         */
-         
-         
 
-    // Optional permeability
-    if (percolation > 0.0) {
-        static thread_local std::mt19937 gen{std::random_device{}()};
-        std::uniform_real_distribution<double> U(0.0,1.0);
-        const double p_cross = start_inside ? prob_cross_i_e : prob_cross_e_i;
-        if (U(gen) < p_cross) {
-            //cout <<" p_cross : " << p_cross << endl;
-            collision.perm_crossing = p_cross;
-            collision.bounced_direction = dir; // continue forward
-        }
-    }
+         
     return true;
 }
 
 
-int Glial::occupancy_at_point(const Eigen::Vector3d& p,
+int Blood_Vessel::occupancy_at_point(const Eigen::Vector3d& p,
                               double margin,
                               const bool& isintra, const double& L) const
 {
@@ -731,14 +683,6 @@ int Glial::occupancy_at_point(const Eigen::Vector3d& p,
 
     int occ = 0;
 
-    // 1) Soma (allow shrink/inflate here)
-    {
-        const double R = soma.radius + m;
-        if (R > 0.0) {
-            const double R2 = R * R;
-            if ((p - soma.P).squaredNorm() <= R2) ++occ;
-        }
-    }
 
     // 2) Big-box quick reject for processes (inflate-only; never shrink the box)
     const double infl = std::max(0.0, m);
@@ -769,10 +713,10 @@ int Glial::occupancy_at_point(const Eigen::Vector3d& p,
             for (int idx : it->second) {
                 if (!seen.insert(idx).second) continue;
 
-                auto [b, i] = grid.objs[idx];
-                if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
+                auto i = grid.objs[idx];
+                if ((size_t)i >= spheres.size()) continue;
 
-                const Sphere& s = processes[b][i];
+                const Sphere& s = spheres[i];
 
                 // Allow shrink/inflate by m; skip if degenerate
                 const double R = s.radius + m;
@@ -786,60 +730,19 @@ int Glial::occupancy_at_point(const Eigen::Vector3d& p,
 }
 
 
-void Glial::set_prob_crossings(double step_length_pref){
+double Blood_Vessel::minDistance(const Walker& w) 
+{
 
-    double prob_cross_i_e_, prob_cross_e_i_;
-    double dse, dsi;
+    Eigen::Vector3d p = w.pos_v;
 
-    if (percolation > 0.0){
-        
-        dse = sqrt(step_length_pref*this->diffusivity_e);
-        dsi = sqrt(step_length_pref*this->diffusivity_i);
-
-        prob_cross_i_e_ = percolation * dsi * 2. / 3. / this->diffusivity_i;
-        prob_cross_e_i_ = percolation * dse * 2. / 3. / this->diffusivity_e; 
-
-        this->prob_cross_e_i = prob_cross_e_i_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
-        this->prob_cross_i_e = prob_cross_i_e_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
-    }
-            
-    // for all spheres
-    for(unsigned i= 0 ; i < processes.size();i++){
-        for (unsigned j = 0; j < processes[i].size(); j++){
-            processes[i][j].percolation = this->percolation;
-            if(processes[i][j].percolation > 0.0){
-
-                processes[i][j].prob_cross_e_i = this->prob_cross_e_i;
-                processes[i][j].prob_cross_i_e = this->prob_cross_i_e;
-
-                processes[i][j].diffusivity_e = this->diffusivity_e;
-                processes[i][j].diffusivity_i = this->diffusivity_i;
-            }
-        }
-    }
-
-    // soma 
-    soma.percolation = this->percolation;
-    if(soma.percolation > 0.0){
-        soma.prob_cross_e_i = this->prob_cross_e_i;
-        soma.prob_cross_i_e = this->prob_cross_i_e;
-
-        soma.diffusivity_e = this->diffusivity_e;
-        soma.diffusivity_i = this->diffusivity_i;
-        
-    }
+    return this->minDistance(p);
 }
 
+double Blood_Vessel::minDistance(const Eigen::Vector3d& p){
 
-
-double Glial::minDistance(const Walker& w) const
-{
-    double distance_soma = (w.pos_v - soma.P).norm() - soma.radius;
-    if (processes.empty()) {
-        return distance_soma;
-    }
+    if (spheres.empty()) return std::numeric_limits<double>::infinity();
     const Box& box = grid.big_box;
-    const Eigen::Vector3d& p = w.pos_v;
+
     if (p.x() >= box.x_min && p.x() <= box.x_max &&
         p.y() >= box.y_min && p.y() <= box.y_max &&
         p.z() >= box.z_min && p.z() <= box.z_max) {
@@ -849,71 +752,39 @@ double Glial::minDistance(const Walker& w) const
     double dist_x = min(std::abs(p.x() - box.x_min), std::abs(p.x() - box.x_max));
     double dist_y = min(std::abs(p.y() - box.y_min), std::abs(p.y() - box.y_max));
     double dist_z = min(std::abs(p.z() - box.z_min), std::abs(p.z() - box.z_max));
+    double minimum = min(dist_x, min(dist_y, dist_z));
+    return minimum;
 
-    double distance_box = std::min({dist_x, dist_y, dist_z});
-    double dist = std::min(distance_soma, distance_box);
-
-    return dist;
 }
 
 
-bool Glial::isPosInsideGlialCell(const Eigen::Vector3d& p, double margin, const double& L)
+bool Blood_Vessel::isPosInsideBlood_Vessel(const Eigen::Vector3d& p, double margin, const double& L) 
 {
-    // 1) Soma test (allow shrink/inflate here)
-    {
-        const double Rs = soma.radius + margin;
-        if (Rs > 0.0) {
-            const double R2 = Rs * Rs;
-            if ((p - soma.P).squaredNorm() <= R2) {
-                return true;
-            }
-        }
-    }
+    const double pad = std::max(0.0, margin);
 
-
-    // 2) AABB quick reject (inflate only; never shrink the box)
-    const double infl = std::max(0.0, margin);
     const Box& B = grid.big_box;
-    if (p.x() < B.x_min - infl || p.x() > B.x_max + infl ||
-        p.y() < B.y_min - infl || p.y() > B.y_max + infl ||
-        p.z() < B.z_min - infl || p.z() > B.z_max + infl) {
-            return false;
-    }
+    if (p.x() < B.x_min - pad || p.x() > B.x_max + pad ||
+        p.y() < B.y_min - pad || p.y() > B.y_max + pad ||
+        p.z() < B.z_min - pad || p.z() > B.z_max + pad) return false;
 
-    // 3) How many neighbor cells to scan
-    //    Use the largest sphere radius you stored at build time
-    const double maxR = grid.max_radius_plus_pad; // set at build time
     double cell_size = grid.cell;
     int number_cells = int(L/cell_size);
     const int Lc = number_cells + 1;
-
-    // 4) Cell index and 27/125/... neighbor scan
     const Eigen::Array3i ic = ((p - grid.origin).array() / grid.cell).floor().cast<int>();
-    std::unordered_set<int> seen; 
-    seen.reserve(64);
 
-    for (int dx = -Lc; dx <= Lc; ++dx){
-        for (int dy = -Lc; dy <= Lc; ++dy){
-            for (int dz = -Lc; dz <= Lc; ++dz) {
-                auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
-                if (it == grid.buckets.end()) continue;
-
-                for (int idx : it->second) {
-                    if (!seen.insert(idx).second) continue;
-                    auto [b, i] = grid.objs[idx];
-                    if ((size_t)b >= processes.size() || (size_t)i >= processes[b].size()) continue;
-
-                    const Sphere& s = processes[b][i];
-                    const double R = s.radius + margin;   // allow shrink/inflate here
-                    if (R <= 0.0) continue;
-                    const double R2 = R * R;
-
-                    if ((p - s.P).squaredNorm() <= R2) {
-                        return true;
-                    }
-                }
+    std::unordered_set<int> seen; seen.reserve(64);
+    for (int dx=-Lc; dx<=Lc; ++dx)
+      for (int dy=-Lc; dy<=Lc; ++dy)
+        for (int dz=-Lc; dz<=Lc; ++dz) {
+            auto it = grid.buckets.find(hash3(ic[0]+dx, ic[1]+dy, ic[2]+dz));
+            if (it == grid.buckets.end()) continue;
+            for (int idx : it->second) {
+                if (!seen.insert(idx).second) continue;
+                auto i = grid.objs[idx];
+                const Sphere& s = spheres[i];
+                const double R = s.radius + pad;
+                if ((p - s.P).squaredNorm() <= R*R + 1e-12) return true;
             }
         }
-    }
     return false;
 }

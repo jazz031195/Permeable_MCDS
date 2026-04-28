@@ -40,7 +40,8 @@ Parameters::Parameters()
     concentration = 0;
     step_length = 0;
     num_steps = 0;
-
+    mean_blood_velocity = 1e-6;
+    
     gamma_num_axons=0;
 
     packing_output_conf = false;
@@ -451,6 +452,10 @@ void Parameters::readObstacles(ifstream& in)
         }
         if(str_dist(tmp,"<glials_list>") <= 2){
             readGlialList(in);
+            num_obstacles++;
+        }
+        if (str_dist(tmp,"<blood_vessels_list>") <= 2){
+            readBloodVesselList(in);
             num_obstacles++;
         }
         if(str_dist(tmp,"oriented_cylinders_list") <= 2){
@@ -1039,5 +1044,29 @@ void Parameters::readGlialList(std::ifstream& in)
             in >> path;
             glial_permeability_files.push_back(path);
         }
+    }  
+}
+
+void Parameters::readBloodVesselList(std::ifstream& in)
+{
+    string path;
+    in >> path;
+    blood_vessels_files.push_back(path);
+
+    string tmp="";
+    while(!(str_dist(tmp,"</blood_vessels_list>") <= 2)){
+        in >> tmp;
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
+        if (str_dist(tmp,"global") <= 2){
+            in >> blood_vessel_obstacle_permeability;
+        } 
+        else if (str_dist(tmp,"local") <= 2){
+            string path;
+            in >> path;
+            blood_vessel_permeability_files.push_back(path);
+        }
+        if (str_dist(tmp,"mean_blood_velocity") <= 2){
+            in >> mean_blood_velocity;
+        } 
     }  
 }

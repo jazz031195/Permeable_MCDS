@@ -87,8 +87,15 @@ private:
     void addCylindersObstaclesFromFiles();
 
     void addAxonsObstaclesFromFiles();
+    void addAxonsObstaclesFromSWC();
+    void addAxonsObstaclesFromCSV();
 
     void addGlialsObstaclesFromFiles();
+    void addGlialsObstaclesFromSWC();
+    void addGlialsObstaclesFromCSV();
+
+    void addBloodVesselObstaclesFromCSV();
+    void addBloodVesselObstaclesFromFiles();
 
     void addPLYObstaclesFromFiles();
 

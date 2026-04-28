@@ -53,12 +53,17 @@ def parse_direction_file(file_path, b_values):
     if (len(b_values) != len(shell_data)):
         raise ValueError("Number of b-values does not match number of shells in text file : ", file_path)
 
+    min_nbr_directins = min([len(shell_data[shell]['x_vals']) for shell in shell_data])
+    print("Minimum number of directions in all shells: ", min_nbr_directins)
+
     # Consolidate all shells into separate x, y, and z lists
     for shell, values in shell_data.items():
-        all_x_vals.extend(values['x_vals'])
-        all_y_vals.extend(values['y_vals'])
-        all_z_vals.extend(values['z_vals'])
+
+        all_x_vals.extend(values['x_vals'][:min_nbr_directins])
+        all_y_vals.extend(values['y_vals'][:min_nbr_directins])
+        all_z_vals.extend(values['z_vals'][:min_nbr_directins])
         all_b_values.extend([b_values[shell-1]] * len(values['x_vals']))
+
 
     return all_x_vals, all_y_vals, all_z_vals, all_b_values
 
@@ -192,6 +197,38 @@ def time_dependence_narrow_pulse_dki() :
     write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
 
 
+def scheme_from_directions(combo) :
+    directions_path = combo["directions_path"]
+    output_file = combo["output_file"]
+
+    # B values and directions
+    b_values = combo["b_values"]
+    if directions_path is not None:
+        x_vals, y_vals, z_vals, b_values = parse_direction_file(directions_path, b_values)
+    else:
+        nbr_combinations = len(b_values)
+        direction = [1.0, 0.0, 0.0]
+        x_vals = [direction[0]] * nbr_combinations
+        y_vals = [direction[1]] * nbr_combinations
+        z_vals = [direction[2]] * nbr_combinations
+    print("x_vals: ", len(x_vals))
+
+    delta_values = combo["delta_values"]
+    # TE, big_delta, small_delta
+    small_delta_values = [combo["small_delta"]]*len(delta_values) # narrow pulse
+    te_values = [delta_values[i]+small_delta_values[i]+0.005 for i in range(len(delta_values))]
+
+    add_b0 = combo["add_b0"]
+    if add_b0:
+        # add b0
+        b_values = [0] + b_values
+        x_vals = [0.0] + x_vals
+        y_vals = [0.0] + y_vals
+        z_vals = [1.0] + z_vals
+
+    write_combined_directions_with_b_values(x_vals, y_vals, z_vals, b_values, delta_values, te_values, small_delta_values, output_file)
+
+
 def fixed_direction() :
     output_file = "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/quentins_exp_d_20.scheme"
 
@@ -217,4 +254,13 @@ def fixed_direction() :
 
 if __name__ == "__main__":
 
-    fixed_direction()
+    ADC_substrate = {
+        "directions_path": None,
+        "output_file": "/home/localadmin/Documents/MCDS/Permeable_MCDS/instructions/scheme/ADC_only_x.scheme",
+        "b_values": [200, 1000, 2000, 3000],
+        "delta_values": [0.05],
+        "small_delta": 0.0165,
+        "add_b0": True
+    }
+
+    scheme_from_directions(ADC_substrate)

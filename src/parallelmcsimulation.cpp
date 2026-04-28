@@ -110,6 +110,8 @@ void ParallelMCSimulation::startSimulation()
 
     int tot_nbr_bounces = 0;
     int tot_nbr_legal_crossings = 0;
+    int tot_bounces_in = 0;
+    int tot_bounces_ext = 0;
     for (unsigned i = 0; i < simulations.size(); i++){
         tot_nbr_walker_extra_ini += simulations[i]->dynamicsEngine->nbr_walker_extra_ini;
         tot_nbr_walker_intra_ini += simulations[i]->dynamicsEngine->nbr_walker_intra_ini;
@@ -121,6 +123,8 @@ void ParallelMCSimulation::startSimulation()
         tot_nbr_walker_glials_final += simulations[i]->dynamicsEngine->nbr_walker_glials_final;
 
         tot_nbr_bounces += simulations[i]->dynamicsEngine->tot_nbr_bounces;
+        tot_bounces_in += simulations[i]->dynamicsEngine->inside_bounces;
+        tot_bounces_ext += simulations[i]->dynamicsEngine->outside_bounces;
         tot_nbr_legal_crossings += simulations[i]->dynamicsEngine->tot_nbr_legal_crossings;
 
     }
@@ -134,6 +138,8 @@ void ParallelMCSimulation::startSimulation()
     SimErrno::info("Number of walkers in glial cells at the end : "+ to_string(tot_nbr_walker_glials_final),out,false);
 
     SimErrno::info("Total number of bounces: "                     + to_string(tot_nbr_bounces),out,false);
+    SimErrno::info("Total number of bounces inside obstacles: " + to_string(tot_bounces_in),out,false);
+    SimErrno::info("Total number of bounces outside obstacles: "+ to_string(tot_bounces_ext),out,false);
     SimErrno::info("Total number of legal crossings: "             + to_string(tot_nbr_legal_crossings),out,false);
     
     if(params.max_simulation_time > 0){
@@ -238,7 +244,7 @@ void ParallelMCSimulation::jointResults()
         if (simulations[0]->dataSynth->type != "PGSE_INTERVALS"){
 
             std::string outDWI   = params.output_base_name  + "_DWI.txt";
-            std::string outDWIi   = params.output_base_name  + "_DWI.txt";
+            std::string outDWIi   = params.output_base_name  + "_DWI_img.txt";
             std::string outPhase  = params.output_base_name  + "_phase_shift.txt";
 
             std::string boutDWI    = params.output_base_name  + "_DWI.bfloat";

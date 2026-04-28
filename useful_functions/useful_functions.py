@@ -10,6 +10,10 @@ warnings.filterwarnings("ignore")
 import glob
 import re
 import nibabel as nib
+import math
+import sys
+sys.path.append("/home/localadmin/Documents/CATERPillar/useful_python_scripts")
+from simulationgraphs import read_swc_file
 
 def array_to_nifti(dwi_array):
 
@@ -138,6 +142,11 @@ def get_files_from_folder(folder_path, binary=True):
     binary_files.sort()
 
     return binary_files
+
+def get_subfolders_from_folder(folder_path):
+    subfolders = [f.path for f in os.scandir(folder_path) if f.is_dir()]
+    subfolders.sort()
+    return subfolders
 
 def read_and_extract_dwi(file_path, binary = True):
     column = []  # Initialize an empty list to store the values 
@@ -270,21 +279,106 @@ def read_scheme(file_path):
     return data
 
 def get_total_icvf(file_path):
-    total_icvf = 0
+    without_myelin_icvf = 0
     total_ecvf = 0
     myelin_icvf = 0
     with open(file_path, 'r') as file:
         for line in file:
-            if line.startswith("Total icvf"):
+            if line.startswith("Axon without myelin icvf"):
                 # Extract the value after the label
-                total_icvf = float(line.split()[-1])
+                without_myelin_icvf = float(line.split()[-1])
             elif line.startswith("Myelin icvf"):
                 # Extract the value after the label
                 myelin_icvf = float(line.split()[-1])
 
-    total_ecvf = 1- (total_icvf + myelin_icvf)
-    return total_icvf, total_ecvf
+    total_ecvf = 1- (without_myelin_icvf + myelin_icvf)
+    return without_myelin_icvf, total_ecvf
 
+def get_astrocytes_f(file_path):
+    total_icvf = 0
+
+    with open(file_path, 'r') as file:
+        for line in file:
+            if line.startswith("Glial cell population 1 icvf soma"):
+                # Extract the value after the label
+                total_icvf += float(line.split()[-1])
+            elif line.startswith("Glial cell population 1 icvf branches"):
+                # Extract the value after the label
+                total_icvf += float(line.split()[-1])
+            elif line.startswith("Glial cell population 2 icvf soma"):
+                # Extract the value after the label
+                total_icvf += float(line.split()[-1])
+            elif line.startswith("Glial cell population 2 icvf branches"):
+                # Extract the value after the label
+                total_icvf += float(line.split()[-1])
+
+    return total_icvf
+
+def get_undulation(file_path):
+    undulation = 0
+    with open(file_path, 'r') as file:
+        for line in file:
+            if line.startswith("Tortuosity (std of gaussians)"):
+                # Extract the value after the label
+                undulation = float(line.split()[-1])
+                break
+        return undulation
+
+
+def tortuosity(path):
+
+    df = read_swc_file(path)
+
+    str_type = "cell_type"
+    str_id = "cell_id"
+    str_x = "X"
+    str_y = "Y"
+    str_z = "Z"
+    str_rout = "outer_radius"
+
+
+    df = df.loc[df[str_type] == "axon"].reset_index()
+    if len(df) == 0:
+        print("No axons found")
+        return [], []
+
+    nbr_axons = int(df.iloc[len(df)-1 ][str_id])
+    tortuosities = []
+    radii = []
+    for axon in range(nbr_axons):
+ 
+        df_ = df.loc[df[str_id]== axon].reset_index()
+        if(len(df_)== 0):
+            continue
+        
+        # Calculate Euclidean distances between consecutive spheres
+        distances = []
+
+        for i in range(1, len(df_)):
+
+            distance = math.sqrt((df_.at[i, str_x] - df_.at[i-1, str_x])**2 +
+                                (df_.at[i, str_y] - df_.at[i-1, str_y])**2 +
+                                (df_.at[i, str_z] - df_.at[i-1, str_z])**2)
+    
+            distances.append(distance)
+            
+
+        # Calculate total length of the axon
+        total_length = sum(distances)
+
+        # Calculate distance between the first and last sphere
+        first_last_distance = math.sqrt((df_.at[0, str_x] - df_.at[len(df_)-1, str_x])**2 +
+                                        (df_.at[0, str_y] - df_.at[len(df_)-1, str_y])**2 +
+                                        (df_.at[0, str_z] - df_.at[len(df_)-1, str_z])**2)
+
+        if first_last_distance == 0:
+            continue
+        # Calculate tortuosity
+        tortuosity = total_length / first_last_distance
+        tortuosities.append(float(tortuosity))
+        radii.append(float(df_.at[0,str_rout]))
+    mean_tortuosity = np.mean(tortuosities)
+    return mean_tortuosity
 
 def powder_avg (scheme_file_path, dwi_file_path):
 
@@ -300,3 +394,6 @@ def powder_avg (scheme_file_path, dwi_file_path):
     data["b_value"] = (data["G"]*data["delta"]*giro)*(data["G"]*data["delta"]*giro) * ((data["Delta"] - data["delta"]/3))
     
     return data
+
+
+
