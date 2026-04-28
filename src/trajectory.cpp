@@ -184,6 +184,15 @@ void Trajectory::initTrajWriterText()
     else {
         tout << "walker_id step_number x y z" << std::endl;
     }
+
+    if(residence_out)
+        residence_out.close();
+
+    if (write_location) {
+     residence_out.open(trajfile + "_residence_segments.txt");
+     residence_out << "# walker_id start_step end_step location" << std::endl;
+    }
+
 }
 
 
@@ -384,6 +393,8 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
 
         }
         if (write_txt) { // make sure to write txt if it's true, even if write_bin is true
+            writeResidenceSegments(walker, walker_index);
+            
             if (write_every_nth_step>1) {
                 unsigned number_of_subsampled_columns = int(pos.cols() / write_every_nth_step)+1;
                 if (pos.cols() % write_every_nth_step == 0) {
@@ -408,13 +419,13 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
                 for (int i = 0; i < pos_subsampled.cols(); i++){
                     if (write_location) {
                         std::string this_location;
-                        if (walker.location == Walker::intra){
+                        if (walker.loc_r_log(step_number[i]) == Walker::intra){
                             this_location="intra";
                         }
-                        else if (walker.location == Walker::extra){
+                        else if (walker.loc_r_log(step_number[i]) == Walker::extra){
                             this_location="extra";
                         }
-                        else if (walker.location == Walker::unknown){
+                        else if (walker.loc_r_log(step_number[i]) == Walker::unknown){
                             this_location="unknown";
                         }
                         else {
@@ -442,13 +453,13 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
                 for (int i = 0; i < pos.cols(); i++){
                         if (write_location) {
                             std::string this_location;
-                            if (walker.location == Walker::intra){
+                            if (walker.loc_r_log(i) == Walker::intra){
                                 this_location="intra";
                             }
-                            else if (walker.location == Walker::extra){
+                            else if (walker.loc_r_log(i) == Walker::extra){
                                 this_location="extra";
                             }
-                            else if (walker.location == Walker::unknown){
+                            else if (walker.loc_r_log(i) == Walker::unknown){
                                 this_location="unknown";
                             }
                             else {
@@ -485,7 +496,44 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
                      walker.crossing_ext_log);
     } 
 }
-    
+   
+void Trajectory::writeResidenceSegments(Walker &walker, unsigned &walker_index)
+{
+    if (!write_location) return;
+    if (walker.loc_r_log.size() == 0) return;
+
+    unsigned start_step = 0;
+    int current_loc = walker.loc_r_log(0);
+
+    for (int i = 1; i < walker.loc_r_log.size(); ++i) {
+        if (walker.loc_r_log(i) != current_loc) {
+            std::string loc_string;
+            if (current_loc == Walker::intra) loc_string = "intra";
+            else if (current_loc == Walker::extra) loc_string = "extra";
+            else if (current_loc == Walker::unknown) loc_string = "unknown";
+            else loc_string = "not_implemented";
+
+            residence_out << walker_index << " "
+                          << start_step << " "
+                          << (i - 1) << " "
+                          << loc_string << std::endl;
+
+            start_step = i;
+            current_loc = walker.loc_r_log(i);
+        }
+    }
+
+    std::string loc_string;
+    if (current_loc == Walker::intra) loc_string = "intra";
+    else if (current_loc == Walker::extra) loc_string = "extra";
+    else if (current_loc == Walker::unknown) loc_string = "unknown";
+    else loc_string = "not_implemented";
+
+    residence_out << walker_index << " "
+                  << start_step << " "
+                  << (walker.loc_r_log.size() - 1) << " "
+                  << loc_string << std::endl;
+}
 
 void Trajectory::writeFullCollision(Eigen::Vector3d &col_point, int &cross, int &loc, unsigned &t, unsigned &id_)
 {

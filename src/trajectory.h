@@ -29,7 +29,7 @@ public:
 
     /*!< binary out, text out, binary header, text header */
     std::ofstream bout,tout,bheaderout,theaderout, bouthit, bheaderouthit, boutfull_loc, boutfull_cross;
-
+    std::ofstream residence_out;
 
     unsigned N,T;                         /*!< number of walkers, total time;                       */
     //dynamic duration.
@@ -120,6 +120,8 @@ public:
     void writePosition(Eigen::Vector3d&);
     void writePositionText(Eigen::Vector3d&);
     void writePositionBinary(Eigen::Vector3d&);
+
+    void writeResidenceSegments(Walker &walker, unsigned &walker_index);
 
     void writePosition(Eigen::Matrix3Xd&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
     void writePosition(Walker&, unsigned&);
