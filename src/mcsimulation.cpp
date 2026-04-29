@@ -768,6 +768,7 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
                 // create the bv with id : last_bv_id
                 Blood_Vessel bv (last_bv_id, rout);
                 bv.set_spheres(spheres);
+                bv.use_blood_random_direction = params.use_blood_random_dir;
                 spheres.clear();
 
                 dynamicsEngine->blood_vessels_list.push_back(bv);
@@ -786,6 +787,7 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
             // add last sphere on last axon
             Blood_Vessel bv (last_bv_id, rout);
             bv.set_spheres(spheres);
+            bv.use_blood_random_direction = params.use_blood_random_dir;
             spheres.clear();
             dynamicsEngine->blood_vessels_list.push_back(bv);
             mean_radius += rout;

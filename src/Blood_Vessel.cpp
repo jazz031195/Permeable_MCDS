@@ -17,6 +17,8 @@
 using namespace Eigen;
 using namespace std;
 
+std::mt19937 gen;
+
 Blood_Vessel::Blood_Vessel()
 {}
 
@@ -35,6 +37,7 @@ Blood_Vessel::Blood_Vessel(const Blood_Vessel &bv)
     skeleton = bv.skeleton;
     grid = bv.grid;
     min_velocity = bv.min_velocity;
+    use_blood_random_direction = bv.use_blood_random_direction;
 
 };
 
@@ -112,7 +115,6 @@ void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& f
     double min_dist;
 
     Eigen::Vector3d tangent;
-
     distance_to_skeleton(w, min_dist, tangent);
 
     if (min_dist >= this->radius) {
@@ -129,8 +131,92 @@ void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& f
         v = min_velocity;
     }
 
-    flow_direction = tangent;
+    if (use_blood_random_direction){
+        flow_direction = biased_direction_from_tangent(tangent);
+    } else {
+        flow_direction = tangent;
+    }
+}
 
+Eigen::Vector3d Blood_Vessel::biased_direction_from_tangent(
+    const Eigen::Vector3d& tangent
+)
+{
+    Eigen::Vector3d target_direction = tangent.normalized();
+
+    double std_dev = 0.7; // adjust to control bias strength
+    Eigen::Vector3d direction = apply_bias_toward_target(
+        generate_random_point_on_sphere(std_dev),
+        target_direction
+    ).normalized();
+
+    return direction;
+}
+
+Eigen::Vector3d Blood_Vessel::apply_bias_toward_target(const Eigen::Vector3d &point, const Eigen::Vector3d &target) {
+    // Step 1: Compute the rotation matrix from [0, 0, 0] to the target
+    Eigen::Vector3d reference(0, 0, 1);  // Reference vector [0, 0, 1]
+    Eigen::Matrix3d R = rotation_matrix_from_vectors(reference, target);
+
+    // Step 2: Rotate the point using the computed rotation matrix
+    Eigen::Vector3d rotated_point = (R * point).normalized();
+
+    return rotated_point;
+}
+
+
+Eigen::Vector3d Blood_Vessel::generate_random_point_on_sphere(double std) {
+    // azimuth: uniform (no azimuthal bias)
+    //std::uniform_real_distribution<double> U(0.0, 2.0*M_PI);
+    //double theta = U(gen);
+
+    // polar: bias toward the pole via cos(phi) ~ N(1, std)
+    //std::normal_distribution<double> N(1.0, std);
+    //double cphi = clamp(N(gen), -1.0, 1.0);  // cos(phi)
+    //double sphi = std::sqrt(std::max(0.0, 1.0 - cphi*cphi));
+    //double x = sphi * std::cos(theta);
+    //double y = sphi * std::sin(theta);
+    //double z = cphi;                // near 1 when std is small
+
+    std::normal_distribution<double> N(0.0, std);
+    double phi = std::abs(N(gen));
+
+    phi = std::min(phi, M_PI / 2.0);  // no backward flow
+
+    std::uniform_real_distribution<double> U(0.0, 2.0 * M_PI);
+    double theta = U(gen);
+
+    double x = std::sin(phi) * std::cos(theta);
+    double y = std::sin(phi) * std::sin(theta);
+    double z = std::cos(phi);
+
+    return Eigen::Vector3d(x, y, z);  // unit by construction
+}
+
+
+Eigen::Matrix3d Blood_Vessel::rotation_matrix_from_vectors(const Eigen::Vector3d &vec1, const Eigen::Vector3d &vec2) {
+    Eigen::Vector3d a = vec1.normalized();
+    Eigen::Vector3d b = vec2.normalized();
+    
+    double c = a.dot(b);
+
+    if (c > 1.0 - 1e-12) return Eigen::Matrix3d::Identity();       // already aligned
+    if (c < -1.0 + 1e-12) {                                         // 180°
+        Eigen::Vector3d axis = a.unitOrthogonal();
+        return Eigen::AngleAxisd(M_PI, axis).toRotationMatrix();
+    }
+
+    Eigen::Vector3d v = a.cross(b);
+    double s = v.norm();
+    Eigen::Matrix3d K;
+    K <<   0,   -v.z(),  v.y(),
+         v.z(),     0,  -v.x(),
+        -v.y(),  v.x(),    0;
+    return Eigen::Matrix3d::Identity() + K + K*K * ((1 - c)/(s*s));
+}
+
+double Blood_Vessel::clamp(double value, double lower, double upper) {
+    return std::max(lower, std::min(value, upper));
 }
 
 inline bool Blood_Vessel::is_empty(const Box& b) {

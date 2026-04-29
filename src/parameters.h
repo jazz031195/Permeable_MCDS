@@ -39,7 +39,7 @@ public:
     double t_ex;                                    /*!< exchange time between compartments */
     double f; /*!< Useful for mixed_compartment_diffusivities */
     double mean_blood_velocity;                               /*!< mean blood velocity in case of flowing compartment                          */
-    
+    bool use_blood_random_dir = false;
     bool write_txt;                                 /*!< flag, writes DWI output signals in .txt if True                            */
     bool write_bin;                                 /*!< flag, writes the output signal in binary format (True by default)          */
     bool scale_from_stu;                            /*!< flag, true if the scheme file is in standar units m,s                      */
@@ -356,6 +356,8 @@ public:
     std::string getSchemeFileName();
 
     static int str_dist(std::string s, std::string t);
+
+
 
 private:
 

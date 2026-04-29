@@ -103,6 +103,15 @@ class Blood_Vessel : public Obstacle
         void set_bv_parameters(const double &pressure_diff_);
         double velocity(const double &radial_distance);
 
+        Eigen::Vector3d generate_random_point_on_sphere(double std);
+        Eigen::Vector3d apply_bias_toward_target(const Eigen::Vector3d& point, const Eigen::Vector3d& target);
+        Eigen::Vector3d find_next_center(const double dist_,
+                                const std::vector<Sphere>& spheres,
+                                const Eigen::Vector3d& target);
+        Eigen::Matrix3d rotation_matrix_from_vectors(const Eigen::Vector3d& vec1, const Eigen::Vector3d& vec2);
+        Eigen::Vector3d biased_direction_from_tangent(const Eigen::Vector3d& tangent);
+        double clamp(double value, double lower, double upper);
+        bool use_blood_random_direction = false;
 
 };
 
