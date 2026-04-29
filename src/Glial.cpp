@@ -411,7 +411,13 @@ bool Glial::checkCollision(const Walker& walker,
 {
 
     // Normalize direction
-    
+    if (step.norm() <= 1e-15) { 
+        collision.perm_crossing = 0.0;
+        collision.type = Collision::null; 
+        return false; 
+    }
+    const Eigen::Vector3d dir = step.normalized();
+        
     const double L = (step_length > 0.0) ? step_length : step.norm();
     if (L <= 0.0) { 
         cout <<"L : " << L << endl;
@@ -419,7 +425,7 @@ bool Glial::checkCollision(const Walker& walker,
         collision.type = Collision::null; 
         return false; 
     }
-    const Eigen::Vector3d dir = step.normalized();
+
     const Eigen::Vector3d p0  = walker.pos_v;
 
     const double Rpad = grid.build_pad;
@@ -796,8 +802,17 @@ void Glial::set_prob_crossings(double step_length_pref){
         dse = sqrt(step_length_pref*this->diffusivity_e);
         dsi = sqrt(step_length_pref*this->diffusivity_i);
 
-        prob_cross_i_e_ = percolation * dsi * 2. / 3. / this->diffusivity_i;
-        prob_cross_e_i_ = percolation * dse * 2. / 3. / this->diffusivity_e; 
+        if (this->diffusivity_i > 0.0) {
+            prob_cross_i_e_ = percolation * dsi * 2. / 3. / this->diffusivity_i;
+        } else {
+            prob_cross_i_e_ = 0.0; 
+        }
+
+        if (this->diffusivity_e > 0.0) {
+            prob_cross_e_i_ = percolation * dse * 2. / 3. / this->diffusivity_e; 
+        } else {
+            prob_cross_e_i_ = 0.0;
+        }
 
         this->prob_cross_e_i = prob_cross_e_i_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
         this->prob_cross_i_e = prob_cross_i_e_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));

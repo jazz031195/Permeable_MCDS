@@ -31,7 +31,7 @@ Blood_Vessel::Blood_Vessel(const Blood_Vessel &bv)
     viscosity = bv.viscosity;
     flow = bv.flow;
     max_velocity = bv.max_velocity;
-    spheres = bv.spheres;
+    spheres = bv.spheres; 
     skeleton = bv.skeleton;
     grid = bv.grid;
     min_velocity = bv.min_velocity;
