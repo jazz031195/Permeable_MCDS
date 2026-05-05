@@ -123,6 +123,9 @@ void Parameters::readSchemeFile(std::string conf_file_path)
         else if(str_dist(tmp,"write_every_nth_step") <= 7){
             in >> write_every_nth_step;
         }
+        else if(str_dist(tmp,"use_blood_random_direction") <= 1){
+            in >> use_blood_random_dir;
+        }
         else if(str_dist(tmp,"write_txt") <= 1){
             in >> write_txt;
         }
