@@ -667,7 +667,8 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
                 ax_in.setPercolation(perm_);
                 ax.setPercolation(perm_);
             }
-
+            ax.set_spheres(spheres_out);
+            ax_in.set_spheres(spheres_in);
             dynamicsEngine->axons_list.push_back(ax);
             dynamicsEngine->inner_axons_list.push_back(ax_in);
 
@@ -683,6 +684,7 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
         in.close();
         
     }
+    cout << "Number of axons added: " << dynamicsEngine->inner_axons_list.size() << endl;
 }
 
 
@@ -925,17 +927,18 @@ void MCSimulation::addGlialsObstaclesFromSWC()
                 if (glial_initialized) {
                     current_glial.setDiffusion(diff_i, diff_e);
                     current_glial.setPercolation(perm_);
-                    current_glial.set_up_glialcell(current_processes);
+                    current_glial.set_spheres(current_processes);
                     dynamicsEngine->glials_list.push_back(current_glial);
                     current_processes.clear();
                 }
 
                 int id_glial_cell = dynamicsEngine->glials_list.size();
                 Sphere soma(int(sph_id), id_glial_cell, Eigen::Vector3d(x, y, z), r, 1, int(branch_id));
+                current_processes.push_back(soma);
                 soma.setDiffusion(diff_i, diff_e);
                 soma.setPercolation(perm_);
-                current_glial = Glial(id_glial_cell, soma);
-                current_glial.processes.clear();
+                current_glial = Glial(id_glial_cell);
+                current_glial.spheres.clear();
                 glial_initialized = true;
             } 
             else if (type_object.find("Process") != std::string::npos) {
@@ -950,20 +953,13 @@ void MCSimulation::addGlialsObstaclesFromSWC()
         if (glial_initialized) {
             current_glial.setDiffusion(diff_i, diff_e);
             current_glial.setPercolation(perm_);
-            current_glial.set_up_glialcell(current_processes);
+            current_glial.set_spheres(current_processes);
             dynamicsEngine->glials_list.push_back(current_glial);
         }
 
         in.close();
     }
-    /*
-    // keep only first glial cell
-    if (dynamicsEngine->glials_list.size() > 2) {
-        std::cout << "\033[1;33m[Warning]\033[0m More than one glial cell found, keeping only the first one." << std::endl;
-        dynamicsEngine->glials_list.resize(2);
-    }
-    */
-    
+
 
     std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
 }
@@ -1038,17 +1034,18 @@ void MCSimulation::addGlialsObstaclesFromCSV()
                 if (glial_initialized) {
                     current_glial.setDiffusion(diff_i, diff_e);
                     current_glial.setPercolation(perm_);
-                    current_glial.set_up_glialcell(current_processes);
+                    current_glial.set_spheres(current_processes);
                     dynamicsEngine->glials_list.push_back(current_glial);
                     current_processes.clear();
                     sphere_id = 0;
                 }
 
                 Sphere soma(int(sphere_id), int(cell_id), Eigen::Vector3d(x, y, z), r, 1, int(component_id));
+                current_processes.push_back(soma);
                 soma.setDiffusion(diff_i, diff_e);
                 soma.setPercolation(perm_);
-                current_glial = Glial(cell_id, soma);
-                current_glial.processes.clear();
+                current_glial = Glial(cell_id);
+                current_glial.spheres.clear();
                 glial_initialized = true;
             } 
             else if (component.find("branch") != std::string::npos) {
@@ -1064,7 +1061,7 @@ void MCSimulation::addGlialsObstaclesFromCSV()
         if (glial_initialized) {
             current_glial.setDiffusion(diff_i, diff_e);
             current_glial.setPercolation(perm_);
-            current_glial.set_up_glialcell(current_processes);
+            current_glial.set_spheres(current_processes);
             dynamicsEngine->glials_list.push_back(current_glial);
         }
 

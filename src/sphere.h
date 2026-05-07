@@ -10,10 +10,11 @@
 #ifndef SPHERE_H
 #define SPHERE_H
 
-#include "obstacle.h"
+#include <Eigen/Core>
+#include "walker.h"
+#include "collision.h"
 
-
-class Sphere : public Obstacle
+class Sphere 
 {
 public:
 
@@ -24,6 +25,12 @@ public:
     int object_id;          /*!< ID of the object */
     int object_type;        /*!< Type of the object  (0 : axon, 1 : glial)   */
     int branch_id;          /*!< ID of the branch */
+    int count_perc_crossings;       /*!< Auxiliar value to count the number of percolatin crossings in a simulation */
+    double percolation;             /*!< Percolation value between 0 and 1.                                         */
+    double prob_cross_e_i;
+    double prob_cross_i_e;
+    double diffusivity_i;
+    double diffusivity_e;
 
     /*!
      *  \brief Default constructor. Does nothing
@@ -82,6 +89,16 @@ public:
      */
 
     double minDistance(Eigen::Vector3d O);
+
+    void setPercolation(double &percolation_);
+
+    void setDiffusion(double &diffusivity_i_, double &diffusivity_e_);
+
+    void setProbabilities(double &prob_cross_e_i_, double &prob_cross_i_e_);
+
+    void set_prob_crossings(double step_length_pref);
+
+    void elasticBounceAgainsPlane(Eigen::Vector3d &ray_origin, Eigen::Vector3d &normal, double &t, Eigen::Vector3d &step);
 
 private:
 

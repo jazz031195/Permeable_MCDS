@@ -184,7 +184,7 @@ public:
 
     bool isOutsideAxons(Eigen::Vector3d &position, int &object_id, double distance_to_be_inside);
 
-    bool isInsideGlial(Eigen::Vector3d &position, int &glial_id, const double& distance_to_be_inside);
+    bool isInsideGlials(Eigen::Vector3d &position, int &glial_id, const double& distance_to_be_inside);
 
     bool isInsideBloodVessels(Eigen::Vector3d &position, int &object_id, const double& distance_to_be_inside);
 

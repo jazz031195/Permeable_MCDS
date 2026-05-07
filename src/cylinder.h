@@ -75,6 +75,8 @@ public:
     double minDistance(Walker &w);
     double minDistance(const Eigen::Vector3d& O);
 
+    int getObstacleType() const override;
+
 private:
 
     /*! \fn  handleCollition

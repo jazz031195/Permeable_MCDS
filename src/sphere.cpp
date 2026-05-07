@@ -2,9 +2,10 @@
 #include "constants.h"
 #include <Eigen/Dense>
 #include <iostream>
+#include <random>
 
 using namespace Eigen;
-
+using namespace std;
 
 Sphere::Sphere()
 {}
@@ -118,6 +119,7 @@ inline bool Sphere::handleCollition(Walker& walker, Collision &colision, Vector3
     colision.rn = c;
 
     colision.collision_point = walker.pos_v + colision.t*step;
+    colision.obstacle_type = sph_obstacle_type;
     
 
     // Membrane permeability    
@@ -198,5 +200,58 @@ double Sphere::minDistance(Eigen::Vector3d O){
     //Minimum distance to the sphere wall.
     double d_ = (distance_to_sphere - radius);
     return d_;
+
+}
+
+void Sphere::setPercolation(double &percolation_)
+{
+    percolation = percolation_;
+}
+
+void Sphere::setDiffusion(double &diffusivity_i_, double &diffusivity_e_){
+    diffusivity_i = diffusivity_i_;
+    diffusivity_e = diffusivity_e_;
+}
+
+
+void Sphere::setProbabilities(double &prob_cross_e_i_, double &prob_cross_i_e_)
+{
+    prob_cross_e_i = prob_cross_e_i_;
+    prob_cross_i_e = prob_cross_i_e_;
+}
+
+void Sphere::set_prob_crossings(double step_length_pref){
+
+    double prob_cross_i_e_, prob_cross_e_i_;
+    double dse, dsi;
+
+    if (percolation > 0.0){
+        
+        dse = sqrt(step_length_pref*this->diffusivity_e);
+        dsi = sqrt(step_length_pref*this->diffusivity_i);
+
+        prob_cross_i_e_ = percolation * dsi * 2. / 3. / this->diffusivity_i;
+        prob_cross_e_i_ = percolation * dse * 2. / 3. / this->diffusivity_e; 
+
+        this->prob_cross_e_i = prob_cross_e_i_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
+        this->prob_cross_i_e = prob_cross_i_e_ / (1.+ 0.5 * (prob_cross_e_i_ + prob_cross_i_e_));
+    }
+            
+
+}
+
+
+void Sphere::elasticBounceAgainsPlane(Eigen::Vector3d &ray_origin, Eigen::Vector3d &normal, double &t, Eigen::Vector3d &step)
+{
+
+    Eigen::Vector3d ray =  (-t*step).normalized();//
+    double rn = ray.dot(normal);
+
+    //std::cout << "rn in elastic plane :" << rn << std::endl;
+
+    // Caso 3) ni cerca ni paralela
+    step = -ray + 2.0*normal*rn;
+
+    //step = (rn>0.0)?normal:(-normal);
 
 }

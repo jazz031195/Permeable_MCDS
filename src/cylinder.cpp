@@ -85,6 +85,10 @@ bool Cylinder::checkCollision(Walker &walker, Eigen::Vector3d &step, double &ste
     return handleCollition(walker,colision,step,a,b,c,discr,step_lenght);
 
 }
+int Cylinder::getObstacleType() const { 
+    return 4; 
+}
+
 
 inline bool Cylinder::handleCollition(Walker& walker, Collision &colision, Vector3d& step,double& a,double& b, double& c,double& discr,double& step_length){
 
@@ -135,7 +139,7 @@ inline bool Cylinder::handleCollition(Walker& walker, Collision &colision, Vecto
     }
 
     colision.rn = c;
-    colision.obstacle_type = 2;
+    colision.obstacle_type = cyl_obstacle_type;
 
     if(percolation>0.0){
         if(colision.type == Collision::hit && colision.col_location != Collision::voxel){

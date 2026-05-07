@@ -7,6 +7,8 @@
 
 using namespace std;
 
+
+
 PLYObstacle::PLYObstacle()
 {
     file_path    = "";
@@ -30,6 +32,10 @@ PLYObstacle::PLYObstacle(string path, double scale_factor_)
     count_perc_crossings = 0;
 
     readPLY_ASCII_triangles(path);
+}
+
+int PLYObstacle::getObstacleType() const { 
+    return ply_obstacle_type; 
 }
 
 

@@ -22,7 +22,7 @@ public:
     /*! All the possibles cases or situations where a step can end.
      *  The next step is performed according to this state
     */
-    enum collision_type{hit,near,null,boundary,degenerate};
+    enum collision_type{hit,near,null,boundary,degenerate, leaked};
 
     //! \enum collision_location.
     /*! Only in case of collision (or a very close ending position) this are  the cases where the

@@ -64,7 +64,7 @@ protected:
      *  \param obstacles_list obstacle already added.
      *  \param min_distance that two spheres can be close to.
     */
-    bool checkForCollition(Obstacle obs, Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, std::vector<Obstacle>& obstacles_list, double &min_distance);
+    bool checkForCollition(const Obstacle& obs, Eigen::Vector3d min_limits, Eigen::Vector3d max_limits, std::vector<Obstacle*>& obstacles_to_add, double &min_distance);
 
     /*!
      *  \brief Auxiliary function to check the BOundary collision
@@ -73,7 +73,7 @@ protected:
      *  \param max_limits Voxel max limits.
      *  \param obstacles_to_add spheres already added.
     */
-    void checkBoundaryConditions(Obstacle obs, std::vector<Obstacle>& obstacles_to_add, Eigen::Vector3d min_limits, Eigen::Vector3d max_limits);
+    void checkBoundaryConditions(const Obstacle& obs, std::vector<Obstacle*>& obstacles_to_add, Eigen::Vector3d min_limits, Eigen::Vector3d max_limits);
 
     /*!
      *  \brief Computes Intra Celular Volum Fraction given the voxel limits and the list of added spheres.
@@ -81,7 +81,7 @@ protected:
      *  \param min_limits voxel min limits.
      *  \param max_limits voxel max limits.
     */
-    double  computeICVF(std::vector<Obstacle> &obstacles, Eigen::Vector3d &min_limits, Eigen::Vector3d &max_limits, int &num_no_repeat);
+    double  computeICVF(std::vector<Obstacle*>& obstacles, Eigen::Vector3d &min_limits, Eigen::Vector3d &max_limits, int &num_no_repeat);
 
     /*!
      *  \brief Estimate the minimal voxel side length from Intra Celular Volum Fraction and the radiis of the obstacles

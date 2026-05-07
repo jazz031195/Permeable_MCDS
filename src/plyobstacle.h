@@ -31,6 +31,7 @@ public:
     PLYObstacle();
     PLYObstacle(std::string path,double scale_factor_ = 1);
 
+    int getObstacleType() const override;
 
     void readPLY_ASCII_triangleFan(std::string ply_file);
     void readPLY_ASCII_triangles(std::string ply_file);

@@ -37,6 +37,12 @@ const double max_number_bouncings = 10000.0;    /*!< Defines the maximum number 
 const double triangle_eps = 1e-10;              /*!< Extra area for the PLY triangles. Help to numerical erros  */
 const unsigned max_rejections =25;              /*!< Max number of tries to unstuck a particle in a single step */
 const double INFINITY_VALUE = std::numeric_limits<double>::infinity();  /*!< numerical infinity value           */
+const int axon_obstacle_type = 0;                   /*!< Defines the obstacle type for axons.                        */
+const int glial_obstacle_type = 1;                 /*!< Defines the obstacle type for glial cell.                       */
+const int blood_obstacle_type = 2;                 /*!< Defines the obstacle type for blood vessel.                       */
+const int cyl_obstacle_type = 3;                 /*!< Defines the obstacle type for cylinder.                       */
+const int ply_obstacle_type = 4;                 /*!< Defines the obstacle type for ply.                       */
+const int sph_obstacle_type = 5;                 /*!< Defines the obstacle type for sphere.                       */
 
 /*!< Colision optimization parameters                                                                           */
 #define PRECISE_T_MIN_D 0
