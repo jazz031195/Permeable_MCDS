@@ -53,11 +53,12 @@ DynamicsSimulation::DynamicsSimulation() {
     params.diffusivity_intra = DIFF_CONST;
     params.diffusivity_extra = DIFF_CONST;
     
-    step_lenght_intra = sqrt(6.0*params.diffusivity_intra*params.sim_duration/params.num_steps);
-    step_lenght_extra = sqrt(6.0*params.diffusivity_extra*params.sim_duration/params.num_steps);
+    step_lenght_intra = sqrt(6.0*params.diffusivity_intra*params.sim_duration/params.num_steps); // m
+    step_lenght_extra = sqrt(6.0*params.diffusivity_extra*params.sim_duration/params.num_steps); // m
 
     //cout << "step_lenght_intra: " << step_lenght_intra << endl;
     //cout << "step_lenght_extra: " << step_lenght_extra << endl;
+    //assert(0);
 
     params.write_traj = trajectory.write_traj = false;
     params.write_hit = trajectory.write_hit = false;
@@ -445,6 +446,7 @@ void DynamicsSimulation::initSimulation()
 
     //cout << "step_lenght_intra: " << step_lenght_intra << endl;
     //cout << "step_lenght_extra: " << step_lenght_extra << endl;
+    //assert(0);
 
     curr_step_lenght  = step_lenght_intra;
     curr_diffusivity  = params.diffusivity_intra;
@@ -860,12 +862,13 @@ void DynamicsSimulation::updateStepLength(double &l, const int &t){
     
     else{
 
-        if (walker.location == Walker::intra && walker.in_obj_type != 3){
+        if (walker.location == Walker::intra && walker.in_obj_type != blood_obstacle_type){
             l                = step_lenght_intra;
             curr_step_lenght = step_lenght_intra;
             curr_diffusivity = params.diffusivity_intra;
+            //cout << "step length: " << l << " at time " << t <<  "walker.in_obj_type : " << walker.in_obj_type << "but not"<< blood_obstacle_type<<endl;
         }
-        else if (walker.location == Walker::intra && walker.in_obj_type == 3 && walker.status != Walker::bouncing){
+        else if (walker.location == Walker::intra && walker.in_obj_type == blood_obstacle_type && walker.status != Walker::bouncing){
 
             Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
             double v;
@@ -873,6 +876,7 @@ void DynamicsSimulation::updateStepLength(double &l, const int &t){
             bv.WalkerVelocity(walker, v, direction_flow);
 
             l = float(v*params.sim_duration/float(params.num_steps));
+            //cout << "Blood vessel flow step length: " << l << " at time " << t << " velocity " << v << endl;
             curr_step_lenght = l;
             curr_diffusivity = 0.0;
         }
@@ -941,19 +945,19 @@ void DynamicsSimulation::getAnIntraCellularPosition(Vector3d &intra_pos, int &ob
 
         std::vector<int> expected_object_types;
         if (inner_axons_list.size() > 0){
-            expected_object_types.push_back(0);
+            expected_object_types.push_back(axon_obstacle_type);
         }
         else if (axons_list.size() > 0){
-            expected_object_types.push_back(0);
+            expected_object_types.push_back(axon_obstacle_type);
         }
         if (glials_list.size() > 0){
-            expected_object_types.push_back(1);
+            expected_object_types.push_back(glial_obstacle_type);
         }
         if (cylinders_list.size() > 0){
-            expected_object_types.push_back(2);
+            expected_object_types.push_back(cyl_obstacle_type);
         }
         if (blood_vessels_list.size() > 0){
-            expected_object_types.push_back(3);
+            expected_object_types.push_back(blood_obstacle_type);
         }
 
         bool isintra = isInIntra(pos_temp, object_id, object_type, -barrier_tickness);
@@ -1351,7 +1355,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
         isinside_cyl= this->isInsideCylinders(position, cyl_id, distance_to_be_intra_ply);
         isIntra|= isinside_cyl;
         if (isinside_cyl){
-            object_type = 2;
+            object_type = cyl_obstacle_type;
         }
 
     }
@@ -1360,7 +1364,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
         isinside_axons = this->isInsideAxons(position, ax_id, distance_to_be_intra_ply);
         isIntra|= isinside_axons;
         if (isinside_axons){
-            object_type = 0;
+            object_type = axon_obstacle_type;
         }
     }
 
@@ -1368,7 +1372,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
         isinside_glial = this->isInsideGlials(position, glial_id, distance_to_be_intra_ply);
         isIntra|= isinside_glial;
         if (isinside_glial){
-            object_type = 1;
+            object_type = glial_obstacle_type;
 
         }
     }
@@ -1377,7 +1381,7 @@ bool DynamicsSimulation::isInIntra(Vector3d &position, int &object_id, int& obje
         isinside_bv = this->isInsideBloodVessels(position, bv_id, distance_to_be_intra_ply);
         isIntra|= isinside_bv;
         if (isinside_bv){
-            object_type = 3;
+            object_type = blood_obstacle_type;
 
         }
     }
@@ -1560,10 +1564,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         if (walker.location == Walker::intra){
             nbr_walker_intra_final ++;
-            if (walker.in_obj_type == 0){
+            if (walker.in_obj_type == axon_obstacle_type){
                 nbr_walker_axons_final ++;
             }
-            else if (walker.in_obj_type == 1){
+            else if (walker.in_obj_type == glial_obstacle_type){
                 nbr_walker_glials_final ++;
             }
         }
@@ -1660,7 +1664,7 @@ void DynamicsSimulation::generateStep(Vector3d & step, double l) {
         return;
     }
 
-    if(walker.in_obj_type ==3 && walker.location == Walker::intra && walker.status != Walker::on_voxel && walker.status != Walker::bouncing){
+    if(walker.in_obj_type ==blood_obstacle_type && walker.location == Walker::intra && walker.status != Walker::on_voxel && walker.status != Walker::bouncing){
         Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
         double v;
         Eigen::Vector3d direction_flow;
@@ -2149,7 +2153,7 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
     
     if(dataSynth){
         if(dataSynth->dynamic){
-            if (walker.in_obj_type ==3 && walker.location == Walker::intra && walker.status != Walker::bouncing){
+            if (walker.in_obj_type ==blood_obstacle_type && walker.location == Walker::intra && walker.status != Walker::bouncing){
                 Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
                 double v;
                 Eigen::Vector3d direction_flow;

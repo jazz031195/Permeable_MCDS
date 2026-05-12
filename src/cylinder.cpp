@@ -86,7 +86,7 @@ bool Cylinder::checkCollision(Walker &walker, Eigen::Vector3d &step, double &ste
 
 }
 int Cylinder::getObstacleType() const { 
-    return 4; 
+    return cyl_obstacle_type; 
 }
 
 

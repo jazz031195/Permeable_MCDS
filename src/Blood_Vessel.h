@@ -30,13 +30,13 @@ class Blood_Vessel : public Obstacle
         Blood_Vessel(int id_, double radius_){
         
                 id = id_;
-                radius = radius_;
+                radius = radius_; // mm
                 viscosity = 3* 1e-3; // Pa * s for blood at 37 degree C
-                pressure_diff = 0.0;
+                pressure_diff = 0.0; 
                 flow = 0.0;
-                max_velocity = 0.0;
-                min_velocity = 0.0;
-        }
+                max_velocity = 0.0; // mm/s
+                min_velocity = 0.0; // mm/s
+        } 
 
         int getObstacleType() const override;
 

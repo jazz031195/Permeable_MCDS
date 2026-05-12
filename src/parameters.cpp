@@ -124,7 +124,15 @@ void Parameters::readSchemeFile(std::string conf_file_path)
             in >> write_every_nth_step;
         }
         else if(str_dist(tmp,"use_blood_random_direction") <= 1){
-            in >> use_blood_random_dir;
+            int use_blood_random_dir_;
+            in >> use_blood_random_dir_;
+            if (use_blood_random_dir_ == 0) {
+                use_blood_random_dir = false;
+            }
+            else {
+                use_blood_random_dir = true;
+            }
+            cout << "use_blood_random_dir :" << use_blood_random_dir << endl;
         }
         else if(str_dist(tmp,"write_txt") <= 1){
             in >> write_txt;

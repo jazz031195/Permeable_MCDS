@@ -50,6 +50,7 @@ void Blood_Vessel::set_bv_parameters(const double &pressure_diff_){
     pressure_diff = pressure_diff_;
     flow = (M_PI*pressure_diff*(radius*radius*radius*radius))/(8*viscosity); 
     max_velocity = (pressure_diff/(4*viscosity))*(radius*radius); 
+    //cout << "radius :" << radius << ", max velocity: " << max_velocity << endl;
     double min_distance = barrier_tickness;
     min_velocity = velocity(radius - min_distance);
 }

@@ -755,7 +755,7 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
                 continue;
             }
 
-            // convert um to m
+            // convert um to mm
             x = x/1000.0;
             y = y/1000.0;
             z = z/1000.0;
@@ -796,11 +796,23 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
         }
 
         in.close();
-        mean_radius = mean_radius / double(dynamicsEngine->blood_vessels_list.size());
+        // 1. Calculate the Mean of the SQUARED radii
+        double mean_squared_radius = 0.0;
         for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++){
-            double pressure_diff = dynamicsEngine->blood_vessels_list[i].viscosity * params.mean_blood_velocity * 1e3 * 8.0  / (mean_radius * mean_radius);
-            dynamicsEngine->blood_vessels_list[i].set_bv_parameters(pressure_diff);
+            double r = dynamicsEngine->blood_vessels_list[i].radius;
+            mean_squared_radius += (r * r); // Square it BEFORE summing!
+        }
+        mean_squared_radius /= double(dynamicsEngine->blood_vessels_list.size());
 
+        // 2. Calculate the global pressure difference using the mean of the squares
+        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++){
+            
+            // Notice we just use mean_squared_radius directly here now
+            double pressure_diff = dynamicsEngine->blood_vessels_list[i].viscosity * 
+                                params.mean_blood_velocity  * 8.0 / 
+                                mean_squared_radius;
+                                
+            dynamicsEngine->blood_vessels_list[i].set_bv_parameters(pressure_diff);
         }
         
     }
