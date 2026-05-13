@@ -265,7 +265,7 @@ void PGSESequence_Intervals::readSchemeFile()
 }
 
 
-void PGSESequence_Intervals::update_phase_shift(double dt, double dt_last, Walker walker)
+void PGSESequence_Intervals::update_phase_shift(double dt, double dt_last, const Walker& walker)
 {
     Eigen::Vector3d xt;
     Eigen::Vector3d Gdt;
@@ -284,7 +284,7 @@ void PGSESequence_Intervals::update_phase_shift(double dt, double dt_last, Walke
     }
 }
 
-void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3Xd trajectory)
+void PGSESequence_Intervals::update_phase_shift(double time_step, const Eigen::Matrix3Xd& trajectory)
 {
     Eigen::Vector3d xt;
     Eigen::Vector3d Gdt;
@@ -370,7 +370,7 @@ void PGSESequence_Intervals::update_phase_shift(double time_step, Eigen::Matrix3
 }
 
 
-void PGSESequence_Intervals::update_DWI_signal(Walker& walker)
+void PGSESequence_Intervals::update_DWI_signal(const Walker& walker)
 {
     // occurs after all steps are travelled by walker
     bool isintra = (walker.location == Walker::intra);

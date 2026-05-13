@@ -82,17 +82,18 @@ public:
     /**
      * @param i: updated walker
      */
-    virtual void update_phase_shift(double dt,double dt_last,Walker walker) = 0;
+    virtual void update_phase_shift(double dt,double dt_last, const Walker& walker) = 0;
 
     /**
      * @param i: updated the phase shift over a whole trajectory
      */
-    virtual void update_phase_shift(double time_step,Eigen::Matrix3Xd trajectory) = 0;
+    virtual void update_phase_shift(double time_step, const Eigen::Matrix3Xd& trajectory) = 0;
 
     /**
      * @brief Updates the DWI signal using the cumulated phase shift
      */
-    virtual void update_DWI_signal(Walker& walker) = 0;
+    virtual void update_DWI_signal(const Walker& walker) = 0;
+
 
     /**
      * @brief Set the number of time steps if they are known

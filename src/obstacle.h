@@ -86,7 +86,7 @@ public:
 
     void gather_candidates_AABB(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir, double L, const HashGrid& grid, std::vector<int>& out_ids);
 
-    bool checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision);
+    virtual bool checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision);
 
     double minDistance(const Walker& w);
 

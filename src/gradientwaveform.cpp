@@ -164,7 +164,7 @@ void GradientWaveform::getInterpolatedGradImpulse(uint rep_index, double t_sim, 
 //    }
 }
 
-void GradientWaveform::update_phase_shift(double time_step, Eigen::Matrix3Xd trajectory)
+void GradientWaveform::update_phase_shift(double time_step, const Eigen::Matrix3Xd& trajectory)
 {
     Eigen::Vector3d xt;
     Eigen::Vector3d Gdt;
@@ -190,7 +190,7 @@ void GradientWaveform::update_phase_shift(double time_step, Eigen::Matrix3Xd tra
     }
 }
 
-void GradientWaveform::update_phase_shift(double dt, double dt_last, Walker walker)
+void GradientWaveform::update_phase_shift(double dt, double dt_last, const Walker& walker)
 {
     // Deprecated for General Forms.
     return;
@@ -253,7 +253,7 @@ void GradientWaveform::getDWISignal()
 
 
 
-void GradientWaveform::update_DWI_signal(Walker& walker)
+void GradientWaveform::update_DWI_signal(const Walker& walker)
 {
     for(uint s=0; s< uint(num_rep); s++){
 
@@ -270,9 +270,11 @@ void GradientWaveform::update_DWI_signal(Walker& walker)
         }
 
         if(subdivision_flag){
+            const Eigen::Matrix3Xd& pos = walker.pos_v;
+
             for(uint i = 0 ; i < subdivisions.size(); i++){
 
-                if( subdivisions[i].isInside(walker.pos_v)){
+                if( subdivisions[i].isInside(pos)){
                     sub_DWI[i][s] += cos_phase_shift; // Real part
                     sub_DWIi[i][s]+= sin_phase_shift; // Img part
                     break;  //WARNING this break means that the subdivision are mutally exclusive

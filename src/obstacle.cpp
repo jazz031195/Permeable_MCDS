@@ -2,6 +2,7 @@
 #include "sphere.h"
 #include "constants.h"
 #include <math.h>
+#include <chrono>
 
 Obstacle::Obstacle():percolation(0.0), prob_cross_e_i(0.0), prob_cross_i_e(0.0), diffusivity_i(0.0), diffusivity_e(0.0), count_perc_crossings(0)
 {}
@@ -117,7 +118,7 @@ void Obstacle::set_spheres(std::vector<Sphere> &spheres_to_add) {
         if (sphere.id < 0) assert(0);
         spheres.push_back(sphere);
     }
-    build_bv_grid_spheres(spheres, 5e-3, barrier_tickness);
+    build_bv_grid_spheres(spheres, 1, barrier_tickness);
 }
 
 
@@ -221,13 +222,9 @@ void Obstacle::gather_candidates_AABB(const Eigen::Vector3d& p0, const Eigen::Ve
     out_ids.clear();
     Eigen::Vector3d p1 = p0 + dir * L;
     
-    // Bounding box of the ray
+    // Strict bounding box of the ray. No inflation needed!
     Eigen::Vector3d min_pt = p0.cwiseMin(p1);
     Eigen::Vector3d max_pt = p0.cwiseMax(p1);
-    
-    // Inflate by max radius to catch sphere centers in nearby cells
-    min_pt.array() -= grid.max_radius_plus_pad;
-    max_pt.array() += grid.max_radius_plus_pad;
 
     const double inv_cell = 1.0 / grid.cell;
     Eigen::Array3i imin = ((min_pt - grid.origin).array() * inv_cell).floor().cast<int>();
@@ -252,8 +249,10 @@ void Obstacle::gather_candidates_AABB(const Eigen::Vector3d& p0, const Eigen::Ve
         out_ids.erase(std::unique(out_ids.begin(), out_ids.end()), out_ids.end());
     }
 }
+
 bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision)
 {
+
     const double L = step_length;
     const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
@@ -265,6 +264,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     // 1. Establish absolute truth
     bool math_inside_strict = isPosInsideObstacle(p0, barrier_tickness);
+    //bool math_inside_strict = true;
     bool start_inside = (walker.location == Walker::intra);
 
     // ====================================================================
@@ -299,7 +299,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
     }
 
     // 2. Gather Candidates based on ray bounding box
-    std::vector<int> cand_ids;
+    static thread_local std::vector<int> cand_ids;
     gather_candidates_AABB(p0, dir, L, grid, cand_ids);
 
     if (cand_ids.empty()) {
@@ -309,8 +309,10 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     // 3. Find all potential intersections
     struct Hit { double t; const Sphere* s; bool is_exit; };
-    std::vector<Hit> hits;
+    static thread_local std::vector<Hit> hits;
+    hits.clear(); // Must clear it manually before use!
     hits.reserve(cand_ids.size() * 2);
+
 
     for (int idx : cand_ids) {
         const Sphere& s = spheres[grid.objs[idx]];
@@ -322,6 +324,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
             if (t1 >= -1e-9 && t1 <= L + 1e-9) hits.push_back({std::max(0.0, t1), &s, true});
         }
     }
+
 
     if (hits.empty()) {
         collision.type = Collision::null;
@@ -363,6 +366,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
             }
         }
     }
+    
 
     if (!valid_hit) { 
         collision.type = Collision::null; 

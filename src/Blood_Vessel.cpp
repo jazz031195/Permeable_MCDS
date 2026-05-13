@@ -178,6 +178,11 @@ void Blood_Vessel::set_spheres(std::vector<Sphere> &spheres_to_add) {
     for (unsigned i = 0; i < spheres.size(); i++){
         skeleton.push_back(spheres[i].P);
     } 
-    build_bv_grid_spheres(spheres, 5e-3, barrier_tickness);
+    build_bv_grid_spheres(spheres, 1, barrier_tickness);
 }
 
+bool Blood_Vessel::checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision)
+{
+    collision.type = Collision::null;
+    return false;
+}

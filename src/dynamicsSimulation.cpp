@@ -1455,11 +1455,12 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
     unsigned w=0;
 
     //cout << "params.num_walkers :" << params.num_walkers << endl;
-
+    
     for (w = 0 ; w < params.num_walkers; w++)
     {
+
         // start timer 
-        //auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         //flag in case there was any error with the particle.
     
         back_tracking = false;
@@ -1486,7 +1487,6 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
 
         for(unsigned t = 1 ; t <= params.num_steps; t++) //T+1 steps in total (avoid errors)
         {         
-            //cout << "t : " << t << endl;
 
             //Get the time step in milliseconds         
             getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
@@ -1495,7 +1495,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             generateStep(step,l);
 
             // Moves the particle. Checks collision and handles bouncing.
-
+            
             try{
 
                 //updateWalkerPosition(step);
@@ -1515,7 +1515,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
                     continue;
             }     
 
-            
+
             // Saves the final particle position after bouncing in the time t.
             walker.setRealPosLog(walker.pos_r,t);
             walker.setVoxPosLog (walker.pos_v,t);
@@ -1540,22 +1540,26 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
                 list_walkers_extra[t-1]+= 1;
             }
 
-
         }// end for t
 
-        // stop timer
-        //auto stop = std::chrono::high_resolution_clock::now();
+        // 2. Stop the timer
+        auto stop = std::chrono::high_resolution_clock::now();
 
-        // get the time
-        //auto duration = std::chrono::duration_cast<std::chrono::seconds>(stop - start);
-        //cout << "Time taken by walker: " << duration.count() << " seconds" << endl;
+        // 3. Calculate the duration
+        // You can change std::chrono::milliseconds to std::chrono::seconds or std::chrono::microseconds
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+        // 4. Print the result
+        std::cout << "Time taken for all steps: " << duration.count() << " milliseconds" << std::endl;
+
+        start = std::chrono::high_resolution_clock::now();
 
         
-        if(!back_tracking)
-            if(finalPositionCheck()){
-                back_tracking=true;
-                w--;
-            }
+        //if(!back_tracking)
+        //    if(finalPositionCheck()){
+        //        back_tracking=true;
+        //        w--;
+        //    }
         
         //If there was an error, we don't compute the signal or write anything.
         if(back_tracking){
@@ -1596,7 +1600,19 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
                  << "Max time limit reached: Simulation halted after "<< ++w << " spins" << endl;
             break;
         }
-        
+
+        // 2. Stop the timer
+        stop = std::chrono::high_resolution_clock::now();
+
+        // 3. Calculate the duration
+        // You can change std::chrono::milliseconds to std::chrono::seconds or std::chrono::microseconds
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+        // 4. Print the result
+        std::cout << "Time taken fo signal: " << duration.count() << " milliseconds" << std::endl;
+
+
+
 
     }// for w
    
@@ -1762,7 +1778,6 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         
         // Checks the number of bouncing per step.
         walker.steps_count++;
-
         // True if there was a collision and the particle needs to be bounced.
         update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, collision);
 
@@ -1789,6 +1804,7 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
                 walker.next_direction = {0,0,0};
             }
         }
+
         //cout << "walker.previous_location: " << walker.previous_location << endl;
         //cout << "walker.location: " << walker.location << endl;
         //cout << "walker.object_id: " << walker.in_obj_index << endl;

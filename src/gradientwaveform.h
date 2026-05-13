@@ -78,18 +78,18 @@ public:
     /*
      * @brief Updates the phase shift using the full stored trajectory
      */
-     void update_phase_shift(double time_step, Eigen::Matrix3Xd trajectory);
+     void update_phase_shift(double time_step, const Eigen::Matrix3Xd& trajectory) override;
 
 
-     void update_phase_shift(double dt,double dt_last,Walker walker);
+     void update_phase_shift(double dt,double dt_last, const Walker& walker) override;
     /**
       * @brief Updates the DWI signal using the cumulated phase shift
       */
-     void update_DWI_signal(Walker &walker);
+     void update_DWI_signal(const Walker& walker) override;
 
-     void setNumberOfSteps(unsigned T);
+     void setNumberOfSteps(unsigned T) override;
 
-     void getGradImpulse(int i, double t, double tLast, Eigen::Vector3d& Gdt);
+     void getGradImpulse(int i, double t, double tLast, Eigen::Vector3d& Gdt) override;
 
 
 private:

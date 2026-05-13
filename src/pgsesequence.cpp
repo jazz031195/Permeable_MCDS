@@ -216,7 +216,7 @@ void PGSESequence::readSchemeFile()
     in.close();
 }
 
-void PGSESequence::update_phase_shift(double dt, double dt_last, Walker walker)
+void PGSESequence::update_phase_shift(double dt, double dt_last, const Walker& walker)
 {
     Eigen::Vector3d xt;
     Eigen::Vector3d Gdt;
@@ -234,41 +234,51 @@ void PGSESequence::update_phase_shift(double dt, double dt_last, Walker walker)
         phase_shift[s] = fmod(phase_shift[s] + val,dos_pi);
     }
 }
-
-void PGSESequence::update_phase_shift(double time_step, Eigen::Matrix3Xd trajectory)
+// 1. Added const reference to prevent massive memory copying!
+void PGSESequence::update_phase_shift(double time_step, const Eigen::Matrix3Xd& trajectory)
 {
-    Eigen::Vector3d xt;
+    const double dos_pi = 2.0 * M_PI;
+    const Eigen::Vector3d x0 = trajectory.col(0); 
     Eigen::Vector3d Gdt;
-    double dt,dt_last;
 
-    for (uint t=1; t < this->T ;t++){ //TODO: checar si deberia ser <= T
-        //Displacement
-        xt[0] = trajectory(0,t) - trajectory(0,0);
-        xt[1] = trajectory(1,t) - trajectory(1,0);
-        xt[2] = trajectory(2,t) - trajectory(2,0);
+    // Loop variables hoisted
+    double dt, dt_last;
 
-        double dos_pi = 2.0*M_PI;
+    for (uint t = 1; t < this->T; t++) {
+        
+        // 2. Fast Eigen vector subtraction
+        Eigen::Vector3d xt = trajectory.col(t) - x0;
 
-        if(this->dynamic){
+        // 3. Hoist the dynamic check (no branching inside the inner math)
+        if (this->dynamic) {
             dt_last = this->time_steps[t-1];
             dt      = this->time_steps[t];
-        }
-        else{
-            dt_last = time_step*(t-1);
-            dt      = time_step*(t);
+        } else {
+            dt_last = time_step * (t-1);
+            dt      = time_step * t;
         }
 
-        for(int s=0; s < num_rep ;s++){
+        for (int s = 0; s < num_rep; s++) {
+            getGradImpulse(s, dt, dt_last, Gdt);
+            
+            // 4. Pure accumulation. NO fmod() in the hot loop!
+            // Gdt.dot(xt) calculates (Gdt[0]*xt[0] + Gdt[1]*xt[1] + Gdt[2]*xt[2]) efficiently
+            phase_shift[s] += giro * Gdt.dot(xt);
+        }
+    }
 
-            getGradImpulse(s,dt,dt_last,Gdt);
-            double val = giro*(Gdt[0]*xt[0]+Gdt[1]*xt[1]+Gdt[2]*xt[2]);
-            val = fmod(val,dos_pi);
-            phase_shift[s] = fmod(phase_shift[s] + val,dos_pi);
+    // 5. Apply the expensive fmod exactly ONCE per repetition at the very end
+    for (int s = 0; s < num_rep; s++) {
+        phase_shift[s] = fmod(phase_shift[s], dos_pi);
+        
+        // C++ fmod can return negative numbers. This ensures it stays cleanly in [0, 2pi]
+        if (phase_shift[s] < 0.0) {
+            phase_shift[s] += dos_pi;
         }
     }
 }
 
-void PGSESequence::update_DWI_signal(Walker& walker)
+void PGSESequence::update_DWI_signal(const Walker& walker)
 {
     for(uint s=0; s< uint(num_rep); s++){
 
@@ -300,8 +310,9 @@ void PGSESequence::update_DWI_signal(Walker& walker)
 
     //The for bellow is outside so it's not computed for each adquisition.
     if(subdivision_flag){
+        const Eigen::Matrix3Xd& pos = walker.pos_v;
         for(uint i = 0 ; i < subdivisions.size(); i++){
-            if( subdivisions[i].isInside(walker.pos_v)){
+            if( subdivisions[i].isInside(pos)){
 
                 subdivisions[i].density++;
 

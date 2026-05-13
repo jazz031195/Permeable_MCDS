@@ -44,7 +44,7 @@ public:
      * @param pos: 3d position
      * @brief Auxiliary function to check if a 3d position is inside a "subdivision" i.e. defined cube
      */
-    bool isInside(Eigen::Vector3d &pos);
+    bool isInside(const Eigen::Vector3d &pos);
 };
 
 #endif // SUBDIVISION_H

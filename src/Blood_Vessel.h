@@ -55,6 +55,9 @@ class Blood_Vessel : public Obstacle
         Eigen::Matrix3d rotation_matrix_from_vectors(const Eigen::Vector3d& vec1, const Eigen::Vector3d& vec2);
         Eigen::Vector3d biased_direction_from_tangent(const Eigen::Vector3d& tangent);
 
+        bool checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision) override;
+
+
 };
 
 #endif // BLOOD_VESSEL_H

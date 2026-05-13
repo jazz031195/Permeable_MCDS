@@ -45,9 +45,9 @@ public:
 
     void setRejectedError();
 
-    bool checkErrors(Walker &w, const Parameters &params, bool noPLY, unsigned &bouncing_count);
+    bool checkErrors(const Walker& w, const Parameters& params, bool noPLY, unsigned &bouncing_count);
 
-    void deportationProcess(Walker &walker, unsigned &w, unsigned& t , bool& back_tracking, Parameters &params, int id);
+    void deportationProcess(Walker walker, unsigned &w, unsigned& t , bool& back_tracking, const Parameters& params, int id);
 
 };
 

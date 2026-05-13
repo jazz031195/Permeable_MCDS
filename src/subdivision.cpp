@@ -14,7 +14,7 @@ Subdivision::Subdivision(Eigen::Vector3f &min_, Eigen::Vector3f &max_)
     this->density_intra=0;
 }
 
-bool Subdivision::isInside(Eigen::Vector3d& pos)
+bool Subdivision::isInside(const Eigen::Vector3d& pos)
 {
     bool flag =  (pos(0) >= min_limits(0)) && (pos(1) >= min_limits(1)) && (pos(2) >= min_limits(2)) ;
     flag     &=  (pos(0) <= max_limits(0)) && (pos(1) <= max_limits(1)) && (pos(2) <= max_limits(2)) ;

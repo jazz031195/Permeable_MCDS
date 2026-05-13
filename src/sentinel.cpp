@@ -48,7 +48,7 @@ void Sentinel::setRejectedError(){
 }
 
 
-bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY, unsigned& bouncing_count)
+bool Sentinel::checkErrors(const Walker& walker, const Parameters& params, bool noPLY, unsigned& bouncing_count)
 {
 
     //If it was rejected to many times we have to take out the walker.
@@ -94,7 +94,7 @@ bool Sentinel::checkErrors(Walker &walker, const Parameters &params, bool noPLY,
     return false;
 }
 
-void Sentinel::deportationProcess(Walker &walker, unsigned& w, unsigned &t, bool &back_tracking, Parameters &params, int id)
+void Sentinel::deportationProcess(Walker walker, unsigned& w, unsigned &t, bool &back_tracking, const Parameters& params, int id)
 {
     if (this->error == Sentinel::ErrorCases::stuck){
         //If the particle got stuck in a corner or bad defined area.

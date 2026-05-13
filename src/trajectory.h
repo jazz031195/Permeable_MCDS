@@ -121,13 +121,13 @@ public:
     void writePositionText(Eigen::Vector3d&);
     void writePositionBinary(Eigen::Vector3d&);
 
-    void writeResidenceSegments(Walker &walker, unsigned &walker_index);
+    void writeResidenceSegments(const Walker& walker, unsigned &walker_index);
 
     void writePosition(Eigen::Matrix3Xd&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
-    void writePosition(Walker&, unsigned&);
+    void writePosition(const Walker&, unsigned&);
     void writePositionText(Eigen::Matrix3Xd&);
     void writePositionBinary(const Eigen::Matrix3Xd&);
-    void writePositionHit(Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&, Eigen::VectorXi&);
+    void writePositionHit(const Eigen::VectorXi&, const Eigen::VectorXi&, const Eigen::VectorXi&, const Eigen::VectorXi&);
 
     void writeFullCollision(Eigen::Vector3d&, int&, int&, unsigned&, unsigned&);
 

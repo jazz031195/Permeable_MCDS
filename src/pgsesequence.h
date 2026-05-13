@@ -69,13 +69,8 @@ public:
     /**
      * @brief For using w/o the adt array
      */
-    void getGradImpulse(int i, double t, double tLast, Eigen::Vector3d &Gdt);
+    void getGradImpulse(int i, double t, double tLast, Eigen::Vector3d &Gdt) override;
 
-
-    /**
-     * @brief For using with the adt array
-     */
-    void getGradImpuse(int i,  double t, Eigen::Vector3d Gdt);
 
     /**
      * @brief Analytical defined b-value
@@ -107,17 +102,17 @@ public:
     /**
      * @param i: updated walker
      */
-    virtual void update_phase_shift(double dt,double dt_last,Walker walker);
+    virtual void update_phase_shift(double dt,double dt_last, const Walker& walker) override;
 
     /**
      * @brief Updates the phase shift using the full stored trajectory
      */
-    virtual void update_phase_shift(double time_step, Eigen::Matrix3Xd trajectory);
+    virtual void update_phase_shift(double time_step, const Eigen::Matrix3Xd& trajectory) override;
 
     /**
      * @brief Updates the DWI signal using the cumulated phase shift
      */
-    virtual void update_DWI_signal(Walker &walker);
+    virtual void update_DWI_signal(const Walker& walker) override;
 
     /**
      * @brief computes de signal value and sign in a certain time step.

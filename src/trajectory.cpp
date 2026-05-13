@@ -383,9 +383,9 @@ void Trajectory::writePosition(Eigen::Matrix3Xd &pos, Eigen::VectorXi &col_in, E
     }    
 }  
 
-void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
+void Trajectory::writePosition(const Walker& walker, unsigned &walker_index){
     // Malte's new writePosition for text output that supports location output (intra/extra)
-    Eigen::Matrix3Xd& pos = walker.pos_r_log;
+    const Eigen::Matrix3Xd& pos = walker.pos_r_log;
 
     if (write_traj){
         if(write_bin){
@@ -497,7 +497,7 @@ void Trajectory::writePosition(Walker &walker, unsigned &walker_index){
     } 
 }
    
-void Trajectory::writeResidenceSegments(Walker &walker, unsigned &walker_index)
+void Trajectory::writeResidenceSegments(const Walker& walker, unsigned &walker_index)
 {
     if (!write_location) return;
     if (walker.loc_r_log.size() == 0) return;
@@ -644,7 +644,7 @@ void Trajectory::writePositionBinary(const Eigen::Matrix3Xd& pos)
 
 
 
-void Trajectory::writePositionHit(Eigen::VectorXi &col_in, Eigen::VectorXi &col_ext, Eigen::VectorXi &cross_in, Eigen::VectorXi &cross_ext)
+void Trajectory::writePositionHit(const Eigen::VectorXi& col_in, const Eigen::VectorXi& col_ext, const Eigen::VectorXi& cross_in, const Eigen::VectorXi& cross_ext)
 {
     if(steps_subset)
     {
