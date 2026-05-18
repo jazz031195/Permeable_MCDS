@@ -118,7 +118,7 @@ void Obstacle::set_spheres(std::vector<Sphere> &spheres_to_add) {
         if (sphere.id < 0) assert(0);
         spheres.push_back(sphere);
     }
-    build_bv_grid_spheres(spheres, 1e-2, barrier_tickness);
+    build_bv_grid_spheres(spheres, 5e-1, barrier_tickness);
 }
 
 
@@ -172,7 +172,7 @@ void Obstacle::build_bv_grid_spheres(const std::vector<Sphere>& spheres_to_add, 
 // =========================================================================
 
 // Simple math intersection
-bool Obstacle::raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit)
+inline bool Obstacle::raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit)
 {
     const Eigen::Vector3d oc = p0 - C;
     const double b = oc.dot(dir_unit);
@@ -187,75 +187,33 @@ bool Obstacle::raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_u
     return true;
 }
 
+// Checks if a point is mathematically inside the blood vessel (alloc-free, fast)
 bool Obstacle::isPosInsideObstacle(const Eigen::Vector3d& p, double margin) 
 {
-    // ========================================================================
-    // GUARD 0: The NaN Shield 
-    // Prevents casting NaN to int, which causes Undefined Behavior and segfaults
-    // ========================================================================
-    if (std::isnan(p.x()) || std::isnan(p.y()) || std::isnan(p.z())) {
-        std::cout << "\n[FATAL ERROR] NaN position passed to isPosInsideObstacle!" << std::endl;
-        assert(0);
-        return false;
-    }
-
-    // 1. Fast-Fail against the Global Bounding Box
     const Box& B = grid.big_box;
     if (p.x() < B.x_min - margin || p.x() > B.x_max + margin ||
         p.y() < B.y_min - margin || p.y() > B.y_max + margin ||
-        p.z() < B.z_min - margin || p.z() > B.z_max + margin) {
-        return false;
-    }
+        p.z() < B.z_min - margin || p.z() > B.z_max + margin) return false;
 
-    // 2. Map position to grid buckets safely
     const double inv_cell = 1.0 / grid.cell; 
     const int Lc = static_cast<int>(grid.max_radius_plus_pad * inv_cell) + 1;
     const Eigen::Array3i ic = ((p - grid.origin).array() * inv_cell).floor().cast<int>();
 
-    // 3. Search neighboring buckets
     for (int dx = -Lc; dx <= Lc; ++dx) {
         for (int dy = -Lc; dy <= Lc; ++dy) {
             for (int dz = -Lc; dz <= Lc; ++dz) {
-                
                 auto it = grid.buckets.find(hash3(ic[0] + dx, ic[1] + dy, ic[2] + dz));
                 if (it == grid.buckets.end()) continue;
 
-                // 4. Safely evaluate candidates
                 for (int idx : it->second) {
-                    
-                    // ========================================================
-                    // GUARD 1: Prevent grid.objs out-of-bounds access
-                    // ========================================================
-                    if (idx < 0 || idx >= grid.objs.size()) {
-                        std::cout << "\n[FATAL MEMORY CORRUPTION] grid.objs size is " << grid.objs.size() 
-                                  << ", but spatial hash requested idx: " << idx << std::endl;
-                        assert(0);
-                    }
-
-                    int sphere_id = grid.objs[idx];
-
-                    // ========================================================
-                    // GUARD 2: Prevent spheres array out-of-bounds access
-                    // ========================================================
-                    if (sphere_id < 0 || sphere_id >= spheres.size()) {
-                        std::cout << "\n[FATAL MEMORY CORRUPTION] spheres vector size is " << spheres.size() 
-                                  << ", but grid points to sphere_id: " << sphere_id << std::endl;
-                        assert(0);
-                    }
-
-                    // 5. Safe Memory Access and Intersection Math
-                    const Sphere& s = spheres[sphere_id];
-                    const double threshold = s.radius + margin;
-                    
-                    if ((p - s.P).squaredNorm() <= (threshold * threshold)) {
-                        return true; // Point is inside this sphere!
+                    const Sphere& s = spheres[grid.objs[idx]];
+                    if ((p - s.P).squaredNorm() <= (s.radius + margin) * (s.radius + margin)) {
+                        return true;
                     }
                 }
             }
         }
     }
-    
-    // Checked all candidates in range, no intersection found
     return false;
 }
 
@@ -296,33 +254,13 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 {
 
     const double L = step_length;
+    const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
     if (L <= 0.0) { 
         collision.type = Collision::null; 
-        cout << "\n[FATAL ERROR] Step length must be positive!" << endl;
-        assert(0); // Should never happen, step length must be positive
         return false; 
     }
-
-    // check if p0 is nan
-    if (std::isnan(p0.x()) || std::isnan(p0.y()) || std::isnan(p0.z())) {
-        cout << "\n[FATAL ERROR] Walker position is NaN!" << endl;
-        assert(0);
-    }
-
-    if (step.squaredNorm() < 1e-14) {
-        cout << "\n[FATAL ERROR] step is smaller than 1e-14 !" << endl;
-        cout << "step: " << step.transpose() << endl;
-        assert(0);
-    }
-
-    if (std::isnan(step.x()) || std::isnan(step.y()) || std::isnan(step.z())) {
-        cout << "\n[FATAL ERROR] step is NaN!" << endl;
-        assert(0);
-    }
-
-    const Eigen::Vector3d dir = step.normalized();
 
     // 1. Establish absolute truth
     bool math_inside_strict = isPosInsideObstacle(p0, barrier_tickness);
@@ -437,10 +375,6 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     // 5. Build final collision response
     collision.type = Collision::hit;
-    if (std::isnan(valid_hit->t)) {
-        cout << "\n[FATAL ERROR] valid_hit->t is NaN!" << endl;
-        assert(0);
-    }
     collision.t = valid_hit->t;
     collision.collision_point = p0 + valid_hit->t * dir;
     
@@ -480,3 +414,4 @@ double Obstacle::minDistance(const Eigen::Vector3d& p){
     double dist_z = min(std::abs(p.z() - box.z_min), std::abs(p.z() - box.z_max));
     return min(dist_x, min(dist_y, dist_z));
 }
+

@@ -635,7 +635,6 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
             Axon ax_in (last_ax_id, {0.0,0.0,0.0}, {0.0,0.0,0.0}, rin);
 
             for (unsigned i = 0; i < spheres_out.size(); i++){
-                
                 if (rin != rout){
                     spheres_out[i].setPercolation(null_perm);
                     spheres_in[i].setPercolation(null_perm);
@@ -644,20 +643,18 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
                     spheres_out[i].setPercolation(perm_);
                     spheres_in[i].setPercolation(perm_);
                 }
-                // Diffusion coefficient - Useless now, to be implemented for obstacle specific Di
                 diff_i = params.diffusivity_intra; 
                 diff_e = params.diffusivity_extra;
                 spheres_out[i].setDiffusion(diff_i, diff_e);
                 spheres_in[i].setDiffusion(diff_i, diff_e);
             }
+            
+            // Assign the spheres to the object profiles once
             ax.set_spheres(spheres_out);
             ax.setDiffusion(diff_i, diff_e);
 
             ax_in.set_spheres(spheres_in);
             ax_in.setDiffusion(diff_i, diff_e);
-
-            spheres_out.clear();
-            spheres_in.clear();
 
             if (ax.radius != ax_in.radius){
                 ax_in.setPercolation(null_perm);
@@ -667,13 +664,12 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
                 ax_in.setPercolation(perm_);
                 ax.setPercolation(perm_);
             }
-            ax.set_spheres(spheres_out);
-            ax_in.set_spheres(spheres_in);
+
+            // REMOVED: The duplicate set_spheres calls that used the cleared vectors
+            
             dynamicsEngine->axons_list.push_back(ax);
             dynamicsEngine->inner_axons_list.push_back(ax_in);
-
         }
-
         if (params.ini_walker_flag == "intra") {
             dynamicsEngine->axons_list.clear();
         }
