@@ -80,7 +80,7 @@ public:
 
     void build_bv_grid_spheres(const std::vector<Sphere>& spheres_to_add, double cell_size, double pad);
 
-    inline bool raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit);
+    bool raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit);
 
     bool isPosInsideObstacle(const Eigen::Vector3d& p, double margin);
 

@@ -289,9 +289,21 @@ void PGSESequence::update_DWI_signal(const Walker& walker)
         DWIi[s]+= sin_phase_shift; // Img part
 
         if(save_phase_shift){
-            //Index between 0 and 3600, this give us a histogram with 3600 bins
-            unsigned index = (phase_shift[s])>0?uint(phase_shift[s]*1800.0/M_PI):uint(-phase_shift[s]*1800.0/M_PI);
-            phase_shift_distribution(s,index)+=1;
+            // 1. Physically correct Phase Wrapping
+            // fmod keeps the phase shift strictly between -2*PI and 2*PI
+            double wrapped_phase = fmod(phase_shift[s], 2.0 * M_PI);
+            
+            // 2. Calculate the index using the wrapped phase
+            unsigned index = (wrapped_phase > 0) ? uint(wrapped_phase * 1800.0 / M_PI) : uint(-wrapped_phase * 1800.0 / M_PI);
+
+            // 3. Absolute safety clamp to protect the Eigen array
+            // (Just in case math rounding makes index exactly equal to the number of columns)
+            if (index >= phase_shift_distribution.cols()) {
+                index = phase_shift_distribution.cols() - 1;
+            }
+
+            // 4. Safe Eigen array update
+            phase_shift_distribution(s, index) += 1;
         }
 
         if(subdivision_flag){

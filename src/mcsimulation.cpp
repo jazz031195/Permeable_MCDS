@@ -684,7 +684,7 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
         in.close();
         
     }
-    cout << "Number of axons added: " << dynamicsEngine->inner_axons_list.size() << endl;
+    cout << "Number of axons added: " << dynamicsEngine->axons_list.size() << endl;
 }
 
 
@@ -797,22 +797,27 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
 
         in.close();
         // 1. Calculate the Mean of the SQUARED radii
-        double mean_squared_radius = 0.0;
-        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++){
-            double r = dynamicsEngine->blood_vessels_list[i].radius;
-            mean_squared_radius += (r * r); // Square it BEFORE summing!
-        }
-        mean_squared_radius /= double(dynamicsEngine->blood_vessels_list.size());
+        double sum_R2 = 0.0;
+        double sum_R4_over_eta = 0.0;
 
-        // 2. Calculate the global pressure difference using the mean of the squares
-        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++){
+        // 1. Accumulate the geometric flow properties of the entire network
+        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++) {
+            double r = dynamicsEngine->blood_vessels_list[i].radius;
+            double eta = dynamicsEngine->blood_vessels_list[i].viscosity;
             
-            // Notice we just use mean_squared_radius directly here now
-            double pressure_diff = dynamicsEngine->blood_vessels_list[i].viscosity * 
-                                params.mean_blood_velocity  * 8.0 / 
-                                mean_squared_radius;
-                                
-            dynamicsEngine->blood_vessels_list[i].set_bv_parameters(pressure_diff);
+            sum_R2 += (r * r); 
+            // We divide by viscosity here in case your vessels have varying hematocrit/viscosity
+            sum_R4_over_eta += (r * r * r * r) / eta; 
+        }
+
+        // 2. Calculate the SINGLE global pressure gradient
+        // Mathematical Derivation: 
+        // V_target = (1 / sum_R2) * sum [ R^2 * (Gradient * R^2) / (8 * eta) ]
+        double global_pressure_diff = 8.0 * params.mean_blood_velocity * (sum_R2 / sum_R4_over_eta);
+
+        // 3. Apply the exact same global pressure to ALL vessels
+        for (unsigned i = 0; i < dynamicsEngine->blood_vessels_list.size(); i++) {
+            dynamicsEngine->blood_vessels_list[i].set_bv_parameters(global_pressure_diff);
         }
         
     }

@@ -172,7 +172,7 @@ void Obstacle::build_bv_grid_spheres(const std::vector<Sphere>& spheres_to_add, 
 // =========================================================================
 
 // Simple math intersection
-inline bool Obstacle::raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit)
+bool Obstacle::raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_unit, const Eigen::Vector3d& C, double R, double& t_enter, double& t_exit)
 {
     const Eigen::Vector3d oc = p0 - C;
     const double b = oc.dot(dir_unit);
@@ -254,13 +254,33 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 {
 
     const double L = step_length;
-    const Eigen::Vector3d dir = step.normalized();
     const Eigen::Vector3d p0  = walker.pos_v;
 
     if (L <= 0.0) { 
         collision.type = Collision::null; 
+        cout << "\n[FATAL ERROR] Step length must be positive!" << endl;
+        assert(0); // Should never happen, step length must be positive
         return false; 
     }
+
+    // check if p0 is nan
+    if (std::isnan(p0.x()) || std::isnan(p0.y()) || std::isnan(p0.z())) {
+        cout << "\n[FATAL ERROR] Walker position is NaN!" << endl;
+        assert(0);
+    }
+
+    if (step.squaredNorm() < 1e-14) {
+        cout << "\n[FATAL ERROR] step is smaller than 1e-14 !" << endl;
+        cout << "step: " << step.transpose() << endl;
+        assert(0);
+    }
+
+    if (std::isnan(step.x()) || std::isnan(step.y()) || std::isnan(step.z())) {
+        cout << "\n[FATAL ERROR] step is NaN!" << endl;
+        assert(0);
+    }
+
+    const Eigen::Vector3d dir = step.normalized();
 
     // 1. Establish absolute truth
     bool math_inside_strict = isPosInsideObstacle(p0, barrier_tickness);
@@ -375,6 +395,10 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     // 5. Build final collision response
     collision.type = Collision::hit;
+    if (std::isnan(valid_hit->t)) {
+        cout << "\n[FATAL ERROR] valid_hit->t is NaN!" << endl;
+        assert(0);
+    }
     collision.t = valid_hit->t;
     collision.collision_point = p0 + valid_hit->t * dir;
     
@@ -414,4 +438,3 @@ double Obstacle::minDistance(const Eigen::Vector3d& p){
     double dist_z = min(std::abs(p.z() - box.z_min), std::abs(p.z() - box.z_max));
     return min(dist_x, min(dist_y, dist_z));
 }
-

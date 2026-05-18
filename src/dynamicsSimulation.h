@@ -192,7 +192,7 @@ public:
 
     bool isInsideSpheres(Eigen::Vector3d& position,double distance_to_be_inside=1e-6);
 
-    bool elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, const double& t, Eigen::Vector3d &step);
+    bool elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, Eigen::Vector3d &step);
 
     Eigen::Vector3d findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal);
 

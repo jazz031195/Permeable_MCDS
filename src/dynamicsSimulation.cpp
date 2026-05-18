@@ -1550,7 +1550,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
         // 4. Print the result
-        std::cout << "Time taken for all steps: " << duration.count() << " milliseconds" << std::endl;
+        //std::cout << "Time taken for all steps: " << duration.count() << " milliseconds" << std::endl;
 
         start = std::chrono::high_resolution_clock::now();
 
@@ -1609,7 +1609,7 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
         // 4. Print the result
-        std::cout << "Time taken fo signal: " << duration.count() << " milliseconds" << std::endl;
+        //std::cout << "Time taken fo signal: " << duration.count() << " milliseconds" << std::endl;
 
 
 
@@ -1781,12 +1781,25 @@ bool DynamicsSimulation::updateWalkerPosition(Eigen::Vector3d& step, unsigned &t
         // True if there was a collision and the particle needs to be bounced.
         update_walker_status |= checkObstacleCollision(bounced_step, tmax, end_point, collision);
 
+        if (std::isnan(collision.t)) {
+            cout << "collision.t: " << collision.t << endl;
+            assert(0);
+        }
+
         // Updates the position and bouncing direction.
         if(update_walker_status){
 
 
             //bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision);
             bounced = updateWalkerPositionAndHandleBouncing(bounced_step,tmax,collision, t);
+
+            Eigen::Vector3d p0  = walker.pos_v;
+            if (std::isnan(p0.x()) || std::isnan(p0.y()) || std::isnan(p0.z())) {
+                cout << "\n[FATAL ERROR] Walker position is NaN!" << endl;
+                cout << "collision.type: " << collision.type << endl;
+                cout << "collision.t: " << collision.t << endl;
+                assert(0);
+            }
 
             // restarts the variables.
             
@@ -1847,6 +1860,11 @@ bool DynamicsSimulation::checkObstacleCollision(Vector3d &bounced_step,double &t
     //Origin O
     Eigen::Vector3d ray_origin;
     walker.getVoxelPosition(ray_origin);
+
+    if (std::isnan(ray_origin.x()) || std::isnan(ray_origin.y()) || std::isnan(ray_origin.z())) {
+        cout << "\n[FATAL ERROR] ray_origin is NaN!" << endl;
+        assert(0);
+    }
 
     //To keep track of the closest collision
     double max_collision_distance = tmax;
@@ -2066,53 +2084,37 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(Eigen::Vector3d& bounced_st
 
 }
 */
-
-
-bool DynamicsSimulation::elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, const double& t, Eigen::Vector3d &step){
+bool DynamicsSimulation::elasticBounceAgainstVoxel(const Eigen::Vector3d& previous_pos, const Eigen::Vector3d& current_pos, Eigen::Vector3d &normal, Eigen::Vector3d &step){
     
+    Eigen::Vector3d ray = (-step).normalized();
+    bool hit_wall = false;
+    normal = {0, 0, 0};
 
-    Eigen::Vector3d ray =  (-t*step).normalized();
-
-    double smallest_distance = EPS_VAL;
-    Eigen::Vector3d point_voxelplane;
- 
-    //normal ={0,0,0};
-
-    for(int i = 0 ; i < 3; i++)
-    {
-   
-
-        if ( fabs(current_pos[i] -  voxels_list[0].min_limits[i]) <= smallest_distance){
-
-            point_voxelplane = previous_pos;
-            point_voxelplane[i] = voxels_list[0].min_limits[i]; 
-            normal += (previous_pos- point_voxelplane).normalized();
-            smallest_distance = fabs(current_pos[i] -  voxels_list[0].min_limits[i]);
-            
+    // Check each axis independently WITH A DIRECTIONAL GUARD
+    for(int i = 0 ; i < 3; i++) {
+        
+        // Hit MIN limit AND moving outwards (negative direction)?
+        if (current_pos[i] <= voxels_list[0].min_limits[i] + EPS_VAL && step[i] < 0.0) {
+            normal[i] = 1.0; 
+            hit_wall = true;
         }
-        if ( fabs(current_pos[i] - voxels_list[0].max_limits[i]) <= smallest_distance){
-            point_voxelplane = previous_pos;
-            point_voxelplane[i] = voxels_list[0].max_limits[i]; 
-            normal += (previous_pos- point_voxelplane).normalized();
-            smallest_distance = fabs(current_pos[i] -  voxels_list[0].max_limits[i]);
-            
+        // Hit MAX limit AND moving outwards (positive direction)?
+        else if (current_pos[i] >= voxels_list[0].max_limits[i] - EPS_VAL && step[i] > 0.0) {
+            normal[i] = 1.0; 
+            hit_wall = true;
         }
     }
-    normal = {abs(normal[0]),abs(normal[1]),abs(normal[2])};
-    if (smallest_distance < EPS_VAL){
+
+    if (hit_wall) {
+        normal.normalize();
         double rn = ray.dot(normal);
-        step = -ray + 2.0*normal*rn;
+        step = -ray + 2.0 * normal * rn;
+        normal = {abs(normal[0]), abs(normal[1]), abs(normal[2])};
         return true;
     } 
-    else{
-        return false;
-    } 
-    //cout << "point_voxelplane :" << point_voxelplane << endl;
-    //cout << "walker_pos_v :" << walker_pos_v << endl;
     
-} 
-
-
+    return false; 
+}
 
 Eigen::Vector3d DynamicsSimulation::findMirrorStep(const Eigen::Vector3d& bounced_step, const Eigen::Vector3d& normal){
 
@@ -2147,18 +2149,60 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
     
     Eigen::Vector3d temp_step = bounced_step;
     Eigen::Vector3d normal = {0,0,0} ;
-    bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, collision.t,temp_step);
+    if (walker.location == Walker::intra && walker.in_obj_type == blood_obstacle_type){
 
-    if (mapped){ 
-        collision.bounced_direction = temp_step.normalized();
-        //cout << "previous_v_pos" << previous_v_pos << endl;
-        //cout << "walker.pos_v :" << walker.pos_v << endl;
-        //cout << "walker.pos_r :" << walker.pos_r << endl;
-        //cout << "normal :" << normal << endl;
-        walker.normal -= normal;
-        walker.normal = {abs(walker.normal[0]),abs(walker.normal[1]),abs(walker.normal[2])};
-        initWalkerObstacleIndexes();
-    } 
+        bool hit_wall = false;
+        
+        // 1. Detect which wall we hit (with directional safety guards)
+        for(int i = 0 ; i < 3; i++) {
+            if (walker.pos_v[i] <= voxels_list[0].min_limits[i] + EPS_VAL && bounced_step[i] < 0.0) {
+                normal[i] = 1.0; 
+                hit_wall = true;
+            } else if (walker.pos_v[i] >= voxels_list[0].max_limits[i] - EPS_VAL && bounced_step[i] > 0.0) {
+                normal[i] = 1.0; 
+                hit_wall = true;
+            }
+        }
+
+        if (hit_wall) {
+
+            // 2. The 180-degree reversal: Go straight backwards down the pipe
+            collision.bounced_direction = -bounced_step;
+            
+            // 3. Toggle the mirror state for accurate pos_r tracking
+            for(int i = 0; i < 3; ++i) {
+                if (normal[i] != 0) {
+                    walker.normal[i] = (walker.normal[i] == 0) ? 1 : 0;
+                }
+            }
+ 
+            initWalkerObstacleIndexes();
+        } else {
+            // SAFETY CATCH: Ignore fake microscopic hits
+            collision.bounced_direction = bounced_step;
+        }
+    }
+    else{
+        bool mapped = elasticBounceAgainstVoxel(previous_v_pos, walker.pos_v,normal, temp_step);
+
+        if (mapped) { 
+            collision.bounced_direction = temp_step.normalized();
+            
+            for(int i = 0; i < 3; ++i) {
+                if (normal[i] != 0) {
+                    walker.normal[i] = (walker.normal[i] == 0) ? 1 : 0;
+                }
+            }
+            initWalkerObstacleIndexes();
+        } else {
+            // SAFETY CATCH: If it was a fake microscopic hit, just keep moving forward 
+            // without toggling the mirror states!
+            collision.bounced_direction = bounced_step;
+        }
+
+    }
+
+    
 
 } 
 
@@ -2190,7 +2234,10 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
 //bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &collision)
 bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced_step, double &tmax, Collision &collision, unsigned &t)
 {
-
+    if (std::isnan(collision.t)) {
+        cout << "\n[FATAL ERROR] collision.t is NaN!" << endl;
+        assert(0);
+    }
     // To avoid numerical errors.
     double min_step_length =  barrier_tickness;
 
@@ -2366,6 +2413,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
 
             adapted_step =  findMirrorStep(bounced_step, walker.normal);
             walker.setRealPosition(real_pos + displ*adapted_step);
+            
         } 
         walker.setVoxelPosition(voxel_pos  + displ*bounced_step);
         
@@ -2384,7 +2432,7 @@ bool DynamicsSimulation::updateWalkerPositionAndHandleBouncing(Vector3d &bounced
         walker.status = Walker::on_voxel;
 
         mapWalkerIntoVoxel_tortuous(bounced_step,collision);
-        bounced_step = collision.bounced_direction;
+
         tmax-=collision.t;
 
     }
