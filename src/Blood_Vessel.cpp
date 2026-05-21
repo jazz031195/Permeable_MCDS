@@ -18,7 +18,7 @@ using namespace std;
 
 std::mt19937 gen;
 
-Blood_Vessel::Blood_Vessel() {}
+Blood_Vessel::Blood_Vessel(){}
 
 Blood_Vessel::~Blood_Vessel() {}
 
@@ -35,6 +35,8 @@ Blood_Vessel::Blood_Vessel(const Blood_Vessel &bv)
     grid = bv.grid;
     min_velocity = bv.min_velocity;
     use_blood_random_direction = bv.use_blood_random_direction;
+    diffusivity = bv.diffusivity;
+
 };
 
 int Blood_Vessel::getObstacleType() const { 
@@ -149,10 +151,6 @@ void Blood_Vessel::distance_to_skeleton(const Walker &w, double& min_dist, Eigen
         tangent.normalize();
     }
     
-
-    if (tangent.squaredNorm() > 1e-12) {
-        tangent.normalize();
-    }
 }
 
 double Blood_Vessel::velocity(const double &radial_distance){
@@ -163,6 +161,10 @@ void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& f
     double min_dist;
     Eigen::Vector3d tangent;
     distance_to_skeleton(w, min_dist, tangent);
+    if (min_dist/radius > 1) {
+        cout << " distance to skeleton/R : " << min_dist/radius << endl;
+    }
+
 
     if (min_dist >= this->radius) {
         v = min_velocity;
@@ -179,6 +181,51 @@ void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& f
     } else {
         flow_direction = tangent;
     }
+}
+
+void Blood_Vessel::WalkerStepDir(const Walker &w, double& l, Eigen::Vector3d& direction, const double& dt){
+
+    //cout << "--------------- " << endl;
+    double v;
+    Eigen::Vector3d flow_direction;
+    this->WalkerVelocity(w, v, flow_direction);
+    double l1 = v*dt;
+    Eigen::Vector3d flow_step = l1*flow_direction;
+    direction = flow_direction;
+    l = l1;
+
+    /*
+
+    double l2 = sqrt(6.0*(diffusivity*dt));
+
+    static thread_local std::mt19937 gen{std::random_device{}()};
+    thread_local std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+    l = 0.0;
+    int nbr_tries = 0;
+
+    while(l < 1e-14 && nbr_tries < 1000) {
+
+        double theta  = 2.0*M_PI*dist(gen);
+        double cosPhi = 2.0*dist(gen)-1.0;
+        double cosTh  = cos(theta);
+        double sinTh  = sin(theta);
+        double sinPhi = sqrt(1.0-cosPhi*cosPhi);
+
+        Eigen::Vector3d random_step = {0,0,0};
+
+        random_step(0) = l2*cosTh*sinPhi;
+        random_step(1) = l2*sinTh*sinPhi;
+        random_step(2) = l2*cosPhi;
+
+        Eigen::Vector3d final_step = random_step + flow_step;
+        direction = final_step.normalized();
+        l = final_step.norm();
+        nbr_tries ++;
+
+    }
+    */
+
 }
 
 Eigen::Vector3d Blood_Vessel::biased_direction_from_tangent(const Eigen::Vector3d& tangent) {
@@ -250,6 +297,7 @@ void Blood_Vessel::set_spheres(std::vector<Sphere> &spheres_to_add) {
     } 
     build_bv_grid_spheres(spheres, 1, barrier_tickness);
 }
+
 
 bool Blood_Vessel::checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision)
 {

@@ -504,6 +504,7 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
         std::ifstream in(params.axons_files[i]);
 
         if(!in){
+            cout << "COULD NOT READ AXON FILE :" <<  params.axons_files[i] << endl;
             return;
         }
 
@@ -680,7 +681,7 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
         in.close();
         
     }
-    cout << "Number of axons added: " << dynamicsEngine->axons_list.size() << endl;
+    cout << "Number of axons added: " << dynamicsEngine->inner_axons_list.size() << endl;
 }
 
 

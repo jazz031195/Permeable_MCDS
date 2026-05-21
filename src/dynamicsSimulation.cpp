@@ -1489,10 +1489,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
         {         
 
             //Get the time step in milliseconds         
-            getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step);
+            getTimeDt(last_time_dt,time_dt,l,dataSynth,t,time_step, step);
 
             //Generates a random oriented step of size l
-            generateStep(step,l);
+            generateStep(step,l, time_step);
 
             // Moves the particle. Checks collision and handles bouncing.
             
@@ -1539,8 +1539,10 @@ void DynamicsSimulation::startSimulation(SimulableSequence *dataSynth) {
             else{
                 list_walkers_extra[t-1]+= 1;
             }
+            
 
         }// end for t
+       
 
         // 2. Stop the timer
         auto stop = std::chrono::high_resolution_clock::now();
@@ -1673,7 +1675,7 @@ void DynamicsSimulation::readConfigurationFile(std::string conf_file_path) {
 /**
  * @return void
  */
-void DynamicsSimulation::generateStep(Vector3d & step, double l) {
+void DynamicsSimulation::generateStep(Eigen::Vector3d &step, double &l, const double &time_step) {
 
     if(walker.status == Walker::on_object){
         step = walker.next_direction.normalized();
@@ -1682,11 +1684,7 @@ void DynamicsSimulation::generateStep(Vector3d & step, double l) {
 
     if(walker.in_obj_type ==blood_obstacle_type && walker.location == Walker::intra && walker.status != Walker::on_voxel && walker.status != Walker::bouncing){
         Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
-        double v;
-        Eigen::Vector3d direction_flow;
-        bv.WalkerVelocity(walker, v, direction_flow);
-        step = direction_flow;
-        step.normalize();
+        bv.WalkerStepDir(walker, l, step, time_step);
         return;
     }
 
@@ -2206,7 +2204,7 @@ void DynamicsSimulation::mapWalkerIntoVoxel_tortuous(const Eigen::Vector3d& boun
 
 } 
 
-void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double &l, SimulableSequence* dataSynth, unsigned t, double time_step)
+void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double &l, SimulableSequence* dataSynth, unsigned t, double time_step, Eigen::Vector3d &step)
 {
     last_time_dt = time_step*(t-1);
     time_dt = time_step*(t);
@@ -2215,12 +2213,11 @@ void DynamicsSimulation::getTimeDt(double &last_time_dt, double &time_dt, double
         if(dataSynth->dynamic){
             if (walker.in_obj_type ==blood_obstacle_type && walker.location == Walker::intra && walker.status != Walker::bouncing){
                 Blood_Vessel bv = blood_vessels_list[walker.in_obj_index];
-                double v;
-                Eigen::Vector3d direction_flow;
-                bv.WalkerVelocity(walker, v, direction_flow);
                 last_time_dt = dataSynth->time_steps[t-1];
                 time_dt = dataSynth->time_steps[t];
-                l = v * (time_dt - last_time_dt);
+                double dt = (time_dt - last_time_dt);
+                // assigns l and direction
+                bv.WalkerStepDir(walker, l, step, dt);
             }
             else{
                 last_time_dt = dataSynth->time_steps[t-1];

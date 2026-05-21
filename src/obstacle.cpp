@@ -186,7 +186,6 @@ bool Obstacle::raySphere(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir_u
     if (t_enter > t_exit) std::swap(t_enter, t_exit);
     return true;
 }
-
 bool Obstacle::isPosInsideObstacle(const Eigen::Vector3d& p, double margin) 
 {
     // ========================================================================
@@ -200,6 +199,7 @@ bool Obstacle::isPosInsideObstacle(const Eigen::Vector3d& p, double margin)
     }
 
     // 1. Fast-Fail against the Global Bounding Box
+    // It is mathematically safe to keep 'margin' here as a search buffer.
     const Box& B = grid.big_box;
     if (p.x() < B.x_min - margin || p.x() > B.x_max + margin ||
         p.y() < B.y_min - margin || p.y() > B.y_max + margin ||
@@ -243,12 +243,19 @@ bool Obstacle::isPosInsideObstacle(const Eigen::Vector3d& p, double margin)
                         assert(0);
                     }
 
-                    // 5. Safe Memory Access and Intersection Math
+                    // ========================================================
+                    // 5. THE FIX: Strict Physical Intersection Math
+                    // ========================================================
                     const Sphere& s = spheres[sphere_id];
-                    const double threshold = s.radius + margin;
                     
-                    if ((p - s.P).squaredNorm() <= (threshold * threshold)) {
-                        return true; // Point is inside this sphere!
+                    // We DO NOT add margin to the radius anymore.
+                    // We subtract a tiny epsilon to protect against floating-point rounding errors
+                    // incorrectly identifying edge-walkers as "inside".
+                    const double epsilon = 1e-12; 
+                    const double true_squared_radius = (s.radius * s.radius) - epsilon;
+                    
+                    if ((p - s.P).squaredNorm() <= true_squared_radius) {
+                        return true; // Point is strictly inside this sphere!
                     }
                 }
             }
@@ -258,7 +265,6 @@ bool Obstacle::isPosInsideObstacle(const Eigen::Vector3d& p, double margin)
     // Checked all candidates in range, no intersection found
     return false;
 }
-
 void Obstacle::gather_candidates_AABB(const Eigen::Vector3d& p0, const Eigen::Vector3d& dir, double L, const HashGrid& grid, std::vector<int>& out_ids)
 {
     out_ids.clear();
@@ -333,7 +339,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
     // STRICT LEAK CHECKER (The Tolerance Trap)
     // ====================================================================
     if (math_inside_strict != start_inside) {
-        
+   
         // 1e-5 mm tolerance strictly for forgiving harmless 64-bit float drift 
         // that occurs naturally when resting directly on a sphere boundary.
         double drift_tolerance = 1e-5; 
@@ -366,6 +372,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     if (cand_ids.empty()) {
         collision.type = Collision::null;
+
         return false;
     }
 
@@ -390,6 +397,7 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     if (hits.empty()) {
         collision.type = Collision::null;
+
         return false;
     }
 
@@ -432,11 +440,13 @@ bool Obstacle::checkCollision(const Walker& walker, Eigen::Vector3d& step, const
 
     if (!valid_hit) { 
         collision.type = Collision::null; 
+
         return false; 
     }
 
     // 5. Build final collision response
     collision.type = Collision::hit;
+ 
     if (std::isnan(valid_hit->t)) {
         cout << "\n[FATAL ERROR] valid_hit->t is NaN!" << endl;
         assert(0);

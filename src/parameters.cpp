@@ -1076,7 +1076,7 @@ void Parameters::readBloodVesselList(std::ifstream& in)
             in >> path;
             blood_vessel_permeability_files.push_back(path);
         }
-        if (str_dist(tmp,"min_blood_velocity") <= 2){
+        if (str_dist(tmp,"mean_blood_velocity") <= 2){
             in >> mean_blood_velocity;
         } 
     }  

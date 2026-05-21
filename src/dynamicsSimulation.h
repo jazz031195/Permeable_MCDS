@@ -212,7 +212,7 @@ private:
      *  \brief  Computes a random generated orientation in the sphere with given norm.
      *  \todo   Enable the use of pre-computed steps.
      */
-    inline void generateStep(Eigen::Vector3d& step , double l);
+    inline void generateStep(Eigen::Vector3d &step, double &l, const double &time_step);
 
     /*! \fn     generateDirectedStep
      *  \param  new_step stores the computed step.
@@ -287,7 +287,7 @@ private:
      * \param   time_step size in milliseconds between steps.
      * \brief   Computes the step time. If the time steps are not dynamic this is just a constant sum.
      */
-    inline void getTimeDt(double &last_time_dt, double& time_dt, double& l, SimulableSequence* dataSynth, unsigned t, double time_step);
+    inline void getTimeDt(double &last_time_dt, double& time_dt, double& l, SimulableSequence* dataSynth, unsigned t, double time_step, Eigen::Vector3d &step);
 
     /*! \fn     initSimulation
      * \brief   Initialize simulation variables and write (if needed) header files.

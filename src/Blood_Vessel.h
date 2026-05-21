@@ -15,6 +15,7 @@ class Blood_Vessel : public Obstacle
         double flow;
         double max_velocity; // mm/s
         double min_velocity; // mm/s
+        double diffusivity;
         std::vector<Eigen::Vector3d> skeleton;
         double radius;
         bool use_blood_random_direction;
@@ -36,6 +37,7 @@ class Blood_Vessel : public Obstacle
                 flow = 0.0;
                 max_velocity = 0.0; // mm/s
                 min_velocity = 0.0; // mm/s
+                diffusivity = 1.5*1e-3; // mm/s
         } 
 
         int getObstacleType() const override;
@@ -56,6 +58,7 @@ class Blood_Vessel : public Obstacle
         Eigen::Vector3d biased_direction_from_tangent(const Eigen::Vector3d& tangent);
 
         bool checkCollision(const Walker& walker, Eigen::Vector3d& step, const double& step_length, Collision& collision) override;
+        void WalkerStepDir(const Walker &w, double& l, Eigen::Vector3d& direction, const double& dt);
 
 
 };
