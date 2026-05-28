@@ -50,7 +50,7 @@ The main simulation settings are defined as key-value pairs in the configuration
 - **`num_process`**: Number of simulations to run simultaneously. It is recommended to set this to the number of CPU cores available.
 - **`ini_walkers_pos`**: Initial compartment in which the molecules start. Can be : intra or extra. If this is not given, the water molecules can be inside or outside the cells.
 - **`write_every_nth_step`**: If you want to save trajctories but not every single step taken by walkers (as this makes the saved files very heavy), you can save lighter trajectories with the positions for every N steps.
-- **`write_location`****': Write location (intra or extra) of each walker in the trajectory file .traj.
+- **`write_location`**: Write location (intra or extra) of each walker in the trajectory file .traj.
 
 Other parameters can be found in /src/parameters.h
 
@@ -72,8 +72,18 @@ To include glial cells or neurons, specify their properties in the following for
 <obstacle>
 <glials_list>
 path/to/swc/file
-permeability global desired_permeability
+permeability [global desired_permeability]
 </glials_list>
+</obstacle>
+```
+To include blood vessels, specify their properties in the following format:
+
+```xml
+<obstacle>
+<blood_vessels_list>
+path/to/swc/file
+mean_blood_velocity [desired mean velocity in mm/s]
+</blood_vessels_list>
 </obstacle>
 ```
 
@@ -83,11 +93,11 @@ If you want both glial cells and axons from the same substrate, write :
 <obstacle>
 <axons_list>
 path/to/swc/file
-permeability global desired_permeability
+permeability [global desired_permeability]
 </axons_list>
 <glials_list>
 path/to/swc/file
-permeability global desired_permeability
+permeability [global desired_permeability]
 </glials_list>
 </obstacle>
 ```
@@ -183,6 +193,6 @@ Once the configuration and scheme files are created, simply execute :
 
 If you use this tool, please cite the following works:
 
-- Nguyen-Duc JK, Brammerloh M, Cherchali M, De Riedmatten I, Perot JB, Rafael-Patino J, Jelescu IO, CATERPillar: A Flexible Framework for Generating White Matter Numerical Substrates with incorporated Glial Cells, bioRxiv 2025
+- Nguyen-Duc, J., Brammerloh, M., Cherchali, M., De Riedmatten, I., Pérot, J.-B., Rafael-Patiño, J., & Jelescu, I. O. (2026). CATERPillar : A flexible framework for generating white matter numerical substrates with incorporated glial cells. Medical Image Analysis, 110, 103946. https://doi.org/10.1016/j.media.2026.103946
 
-- Rafael-Patino Jonathan, Romascano David, Ramirez-Manzanares Alonso, Canales-Rodríguez Erick Jorge, Girard Gabriel, Thiran Jean-Philippe, Robust Monte-Carlo Simulations in Diffusion-MRI: Effect of the Substrate Complexity and Parameter Choice on the Reproducibility of Results, Frontiers in Neuroinformatics, 2020
+- Rafael-Patino, J., Romascano, D., Ramirez-Manzanares, A., Canales-Rodríguez, E. J., Girard, G., & Thiran, J.-P. (2020). Robust Monte-Carlo Simulations in Diffusion-MRI : Effect of the Substrate Complexity and Parameter Choice on the Reproducibility of Results. Frontiers in Neuroinformatics, 14. https://doi.org/10.3389/fninf.2020.00008
