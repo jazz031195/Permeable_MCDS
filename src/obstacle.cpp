@@ -252,7 +252,7 @@ bool Obstacle::isPosInsideObstacle(const Eigen::Vector3d& p, double margin)
                     // We subtract a tiny epsilon to protect against floating-point rounding errors
                     // incorrectly identifying edge-walkers as "inside".
                     const double epsilon = 1e-12; 
-                    const double true_squared_radius = (s.radius * s.radius) - epsilon;
+                    const double true_squared_radius = (s.radius * s.radius) + margin;
                     
                     if ((p - s.P).squaredNorm() <= true_squared_radius) {
                         return true; // Point is strictly inside this sphere!
