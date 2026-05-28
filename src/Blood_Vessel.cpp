@@ -161,10 +161,6 @@ void Blood_Vessel::WalkerVelocity(const Walker &w, double& v, Eigen::Vector3d& f
     double min_dist;
     Eigen::Vector3d tangent;
     distance_to_skeleton(w, min_dist, tangent);
-    if (min_dist/radius > 1) {
-        cout << " distance to skeleton/R : " << min_dist/radius << endl;
-    }
-
 
     if (min_dist >= this->radius) {
         v = min_velocity;
