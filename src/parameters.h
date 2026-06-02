@@ -104,7 +104,7 @@ public:
     bool                    uniform_packing;                      /*!< flag, true if a gamma distribution of spheres will be initialized        */
     std::vector<double>     uniform_packing_radii;
 
-    bool        gaussian_packing;                      /*!< flag, true if a gamma distribution of cylinders will be initialized        */
+    bool        gaussian_packing = false;                      /*!< flag, true if a gamma distribution of cylinders will be initialized        */
     std::vector<double>      gaussian_packing_mean;
     std::vector<double>      gaussian_packing_std;
 
