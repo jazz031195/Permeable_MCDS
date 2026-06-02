@@ -50,6 +50,9 @@ const int sph_obstacle_type = 5;                 /*!< Defines the obstacle type 
 /*!< outher collision sphere relative size      DEPRECATED                                                      */
 //const double outher_col_dist_factor   = 5.0;
 
+// Needed for MacOS
+typedef unsigned long ulong;
+
 /*!< inner collision sphere relative size                                                                       */
 const double inner_col_dist_factor      = 0.25;
 

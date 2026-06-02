@@ -36,6 +36,6 @@ CMD /cmake/bin/cmake \
 && /cmake/bin/cmake \
     --build build_glibc_2.28 \
     --config Release \
-    --target MC-DC_Simulator \
+    --target run_neurons \
     -j 10 \
     --
