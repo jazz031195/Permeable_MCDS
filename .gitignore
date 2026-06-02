@@ -50,6 +50,8 @@ useful_functions/read_trajectories.py
 *vscode*
 *__pycache__*
 
+.gitignore
+build_glibc_2.28/
 build/
 andres/
 docs/

@@ -936,7 +936,7 @@ void MCSimulation::addGlialsObstaclesFromSWC()
                 assert(0);
             }
 
-            if (type_object.find("CellSoma") != std::string::npos) {
+            if (type_object.find("Soma") != std::string::npos) {
                 // Save previous glial cell if it exists
                 if (glial_initialized) {
                     current_glial.setDiffusion(diff_i, diff_e);
@@ -990,107 +990,213 @@ bool isInsideVoxel(Eigen::Vector3d position, double distance, std::pair<Eigen::V
 
 void MCSimulation::addGlialsObstaclesFromCSV()
 {
+    dynamicsEngine->glials_list.clear();
 
-    for (unsigned i = 0; i < params.glials_files.size(); i++) {
+    for (unsigned file_idx = 0; file_idx < params.glials_files.size(); ++file_idx)
+    {
+        std::ifstream in(params.glials_files[file_idx]);
 
-        std::ifstream in(params.glials_files[i]);
-
-        dynamicsEngine->glials_list.clear();
-
-        if (!in) {
-            std::cerr << "Failed to open file: " << params.glials_files[i] << std::endl;
-            return;
+        if (!in)
+        {
+            std::cerr << "Failed to open file: "
+                      << params.glials_files[file_idx]
+                      << std::endl;
+            continue;
         }
 
-        // Skip header lines
-        for (int j = 0; j < 9; ++j) {
-            std::string header;
-            in >> header;
-        }
-
-        double perm_ = params.glial_obstacle_permeability;
+        double perm_  = params.glial_obstacle_permeability;
         double diff_i = params.diffusivity_intra;
         double diff_e = params.diffusivity_extra;
 
-        // Variables to hold parsed data
-        double x, y, z, rout, rin, r, cell_id, component_id;
-        std::string cell_type, component;
-        int sphere_id = 0;
+        //------------------------------------------------------------------
+        // Read header
+        //------------------------------------------------------------------
+        std::string header_line;
 
-        Glial current_glial;
-        std::vector<Sphere> current_processes;
-        bool glial_initialized = false;
-
-        std::pair<Eigen::Vector3d,Eigen::Vector3d> voxels_list = params.voxels_list[i];
-
-        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout) {
-            // Convert units to micrometers
-            x /= 1000.0;
-            y /= 1000.0;
-            z /= 1000.0;
-            r = rout / 1000.0;
-
-            if (cell_type.find("glial_cell") == std::string::npos && cell_type.find("neuron") == std::string::npos) {
-                continue;
-            }
-
-            Eigen::Vector3d position = Eigen::Vector3d(x, y, z); 
-
-            bool isinvoxel = isInsideVoxel(position, r, voxels_list);
-
-            if (!isinvoxel) {
-                sphere_id += 1;
-                continue;
-            }
-
-            if (component.find("soma") != std::string::npos) {
-                // Save previous glial cell if it exists
-                if (glial_initialized) {
-                    current_glial.setDiffusion(diff_i, diff_e);
-                    current_glial.setPercolation(perm_);
-                    current_glial.set_spheres(current_processes);
-                    dynamicsEngine->glials_list.push_back(current_glial);
-                    current_processes.clear();
-                    sphere_id = 0;
-                }
-
-                Sphere soma(int(sphere_id), int(cell_id), Eigen::Vector3d(x, y, z), r, 1, int(component_id));
-                current_processes.push_back(soma);
-                soma.setDiffusion(diff_i, diff_e);
-                soma.setPercolation(perm_);
-                current_glial = Glial(cell_id);
-                current_glial.spheres.clear();
-                glial_initialized = true;
-            } 
-            else if (component.find("branch") != std::string::npos) {
-                Sphere process(int(sphere_id), current_glial.id, Eigen::Vector3d(x, y, z), r, 1, int(component_id));
-                process.setDiffusion(diff_i, diff_e);
-                process.setPercolation(perm_);
-                current_processes.push_back(process);
-            }
-            sphere_id += 1;
+        if (!std::getline(in, header_line))
+        {
+            std::cerr << "Empty file: "
+                      << params.glials_files[file_idx]
+                      << std::endl;
+            continue;
         }
 
-        // Save the last glial cell, if any
-        if (glial_initialized) {
+        std::vector<std::string> headers;
+        std::unordered_map<std::string, size_t> col;
+
+        {
+            std::istringstream hs(header_line);
+            std::string name;
+
+            while (hs >> name)
+            {
+                col[name] = headers.size();
+                headers.push_back(name);
+            }
+        }
+
+        //------------------------------------------------------------------
+        // Verify required columns exist
+        //------------------------------------------------------------------
+        const std::vector<std::string> required_columns =
+        {
+            "Cell_type",
+            "Cell_ID",
+            "Component",
+            "Component_ID",
+            "X",
+            "Y",
+            "Z",
+            "Outer_radius"
+        };
+
+        for (const auto& c : required_columns)
+        {
+            if (!col.count(c))
+            {
+                std::cerr << "Missing required column: "
+                          << c
+                          << " in file "
+                          << params.glials_files[file_idx]
+                          << std::endl;
+                return;
+            }
+        }
+
+        //------------------------------------------------------------------
+        // Helpers
+        //------------------------------------------------------------------
+        auto getString =
+        [&](const std::vector<std::string>& fields,
+            const std::string& name) -> std::string
+        {
+            return fields.at(col.at(name));
+        };
+
+        auto getDouble =
+        [&](const std::vector<std::string>& fields,
+            const std::string& name) -> double
+        {
+            return std::stod(fields.at(col.at(name)));
+        };
+
+        auto getInt =
+        [&](const std::vector<std::string>& fields,
+            const std::string& name) -> int
+        {
+            return std::stoi(fields.at(col.at(name)));
+        };
+
+        //------------------------------------------------------------------
+        // Current glial cell
+        //------------------------------------------------------------------
+        Glial current_glial;
+        std::vector<Sphere> current_spheres;
+
+        bool glial_initialized = false;
+        int current_cell_id = -1;
+        int sphere_id = 0;
+
+        auto voxel_bounds = params.voxels_list[file_idx];
+
+        //------------------------------------------------------------------
+        // Read data rows
+        //------------------------------------------------------------------
+        std::string line;
+
+        while (std::getline(in, line))
+        {
+            if (line.empty())
+                continue;
+
+            std::istringstream ss(line);
+
+            std::vector<std::string> fields;
+            std::string token;
+
+            while (ss >> token)
+                fields.push_back(token);
+
+            if (fields.size() < headers.size())
+                continue;
+
+            //------------------------------------------------------------------
+            // Extract values by column name
+            //------------------------------------------------------------------
+            std::string cell_type  = getString(fields, "Cell_type");
+            int cell_id            = getInt(fields, "Cell_ID");
+            std::string component  = getString(fields, "Component");
+            int component_id       = getInt(fields, "Component_ID");
+
+            double x    = getDouble(fields, "X") / 1000.0;
+            double y    = getDouble(fields, "Y") / 1000.0;
+            double z    = getDouble(fields, "Z") / 1000.0;
+            double rout = getDouble(fields, "Outer_radius") / 1000.0;
+
+            Eigen::Vector3d position(x, y, z);
+
+            //------------------------------------------------------------------
+            // New cell detected
+            //------------------------------------------------------------------
+            if (!glial_initialized || cell_id != current_cell_id)
+            {
+                if (glial_initialized)
+                {
+                    current_glial.setDiffusion(diff_i, diff_e);
+                    current_glial.setPercolation(perm_);
+                    current_glial.set_spheres(current_spheres);
+
+                    dynamicsEngine->glials_list.push_back(current_glial);
+
+                    current_spheres.clear();
+                }
+
+                current_glial = Glial(cell_id);
+                current_glial.spheres.clear();
+
+                current_cell_id = cell_id;
+                glial_initialized = true;
+                sphere_id = 0;
+            }
+
+            //------------------------------------------------------------------
+            // Create sphere
+            //------------------------------------------------------------------
+            Sphere sphere(
+                sphere_id,
+                cell_id,
+                position,
+                rout,
+                1,
+                component_id
+            );
+
+            sphere.setDiffusion(diff_i, diff_e);
+            sphere.setPercolation(perm_);
+
+            current_spheres.push_back(sphere);
+
+            ++sphere_id;
+        }
+
+        //------------------------------------------------------------------
+        // Save the last glial cell
+        //------------------------------------------------------------------
+        if (glial_initialized)
+        {
             current_glial.setDiffusion(diff_i, diff_e);
             current_glial.setPercolation(perm_);
-            current_glial.set_spheres(current_processes);
+            current_glial.set_spheres(current_spheres);
+
             dynamicsEngine->glials_list.push_back(current_glial);
         }
 
         in.close();
     }
-    /*
-    // keep only first glial cell
-    if (dynamicsEngine->glials_list.size() > 2) {
-        std::cout << "\033[1;33m[Warning]\033[0m More than one glial cell found, keeping only the first one." << std::endl;
-        dynamicsEngine->glials_list.resize(2);
-    }
-    */
-    
 
-    std::cout << "Number of glials: " << dynamicsEngine->glials_list.size() << std::endl;
+    std::cout << "Number of glials: "
+              << dynamicsEngine->glials_list.size()
+              << std::endl;
 }
 
 

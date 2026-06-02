@@ -97,7 +97,7 @@ public:
      Implementation of packing distribution by Remy -
     */
 
-    bool        gamma_packing;                      /*!< flag, true if a gamma distribution of cylinders will be initialized        */
+    bool        gamma_packing = false;                      /*!< flag, true if a gamma distribution of cylinders will be initialized        */
     std::vector<double>      gamma_packing_alpha;
     std::vector<double>      gamma_packing_beta;
 
