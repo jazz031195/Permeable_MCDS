@@ -39,6 +39,7 @@ run.sh
 
 # Internal analysis/dev scripts, kept private only
 useful_functions/
+publish_to_public.sh
 
 #OUTPUT FOLDERS
 *output*
