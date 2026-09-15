@@ -67,6 +67,9 @@ for overlap in os.listdir(folder):
                                     run_time_seconds = run_time.total_seconds()
                                     if run_time_seconds/60 > 0 :
                                         df.loc[len(df)] = {'overlap': overlap, 'time [min.]': run_time_seconds/60}
+                                        print({'overlap': overlap, 'time [min.]': run_time_seconds/60})
+                                        print(path)
+                                        assert(0)
 
 # Time mesh
 for mesh in os.listdir(folder):
@@ -101,6 +104,9 @@ for mesh in os.listdir(folder):
 
 
 from scipy import stats 
+
+print(df)
+
 
 means = df.groupby(['overlap'])['time [min.]'].mean().reset_index().values
 stds  = df.groupby(['overlap'])['time [min.]'].std().reset_index().values

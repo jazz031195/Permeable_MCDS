@@ -129,13 +129,29 @@ df_all_data = df_all_data[(df_all_data["case"] == "soma_dendrites_ex") | (df_all
 
 df_all_data = df_all_data[df_all_data['b [ms/um²]'] > 0]
 
+fig, ax = plt.subplots(1, 1, figsize=(8.5, 6))
+g = sns.violinplot(data=df_all_data[df_all_data['SNR'] == np.inf], 
+                    x='b [ms/um²]', 
+                    y='Sb/So', 
+                    hue='case', 
+                    ax=ax, 
+                    style='case',
+                    s=200)
+
+for collection in ax.collections:
+    collection.set_edgecolor(collection.get_facecolor())
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles, ['Soma-dendrites (disconnected)', 'Soma-dendrites (connected)'], loc='upper right')
+ax.set_xticks([0, 2, 4, 6, 8, 10], [0, 2, 4, 6, 8, 10])
+ax.set_ylabel(r"$S_b/S_0$")
+
 # Analytical solutions
 Delta     = np.array([0.05])   # in [s]
 delta     = np.array([0.0165]) # in [s]
 D0        = 2.5e-9             # [m²/s]
 # If we keep b=0, it becomes significant 
 # (but S in b=0 equals 1 all the time so it's cheating...)
-bvals     = df_all_data['b [ms/um²]'].values * 1e9 # in [s/m²]
+bvals     = np.linspace(0.2, 10, 100) * 1e9 # in [s/m²]
 
 # Calculate soma and neurite fraction
 r_soma           = 10e-6 # [m]
@@ -149,11 +165,27 @@ soma_fraction    = volume_soma / volume_neuron     # without unit
 log = False
 soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
 
+ax2 = ax.twinx()
+ax2.plot(bvals*1e-9, both_signal, label=f"Soma & dendrites", color='k', linestyle="dotted")
+if log:
+    ax2.plot(bvals*1e-9, -bvals*D0, label="Water free diffusion, D = 2.5 [ms/um²]")
+ax2.set_yticklabels([])
+ax2.set_yticks([])
+ax.set_ylim([0, 1])
+ax2.set_ylim([0, 1])
+plt.show()
 
+
+
+
+
+
+bvals = df_all_data['b [ms/um²]'].values * 1e9
+soma_signal, neurites_signal, both_signal = analytical_solutions(bvals, Delta, delta, r_soma, D0, log, soma_fraction, neurite_fraction)
 # Subtract the analytical value of the corresponding b-value to the signal ("de-meaning")
 df_all_data['Sb/So_no_mean'] = df_all_data['Sb/So'].values -  both_signal
 df_all_data['SNR'] = df_all_data['SNR'].astype(str)
-print(df_all_data.case.unique())
+
 # Plotting
 fig, ax = plt.subplots(1, 1, figsize=(11, 9))
 sns.violinplot(data=df_all_data, 
