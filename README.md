@@ -182,13 +182,31 @@ Once you have the directional data, you can use the create_pgse_file Python scri
 
 To run a Monte Carlo simulation on a specific substrate, first create it using the tool of your choice (ex: CATERPillar). The path to the output that has the .swc must be put in the configuration file. An example of such a substrate can be found in /example_swc_files/. Information on this substrate can be found in the .txt file. 
 
-## Running the MCDS 
+## Compiling
 
-Once the configuration and scheme files are created, simply execute :
+The repository ships a precompiled `MC-DC_Simulator` built for **Linux (x86-64)**. To rebuild it from source:
 
-```xml
-./run_mcds.sh
+- **Linux**:
+  ```bash
+  ./compile.sh
+  ```
+- **macOS** (Intel or Apple Silicon):
+  ```bash
+  ./compile_mac.sh
+  ```
+  The precompiled Linux executable does not run on macOS, so you must compile it first. This requires the Xcode Command Line Tools (`xcode-select --install`).
+
+Both scripts produce the executable `MC-DC_Simulator` in the repository root.
+
+## Running the MCDS
+
+Once the configuration and scheme files are created, run the simulator with your configuration file:
+
+```bash
+./MC-DC_Simulator path/to/conf/file
 ```
+
+On Linux, `./run_mcds.sh` compiles and runs in one step (edit the path to your `.conf` file inside it first). On macOS, run `./compile_mac.sh` once, then call `./MC-DC_Simulator` directly as above.
 ## Citation
 
 If you use this tool, please cite the following works:
