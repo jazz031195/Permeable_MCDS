@@ -8,6 +8,14 @@
 
 int MCSimulation::count =0;
 
+// Skips the CSV header line and returns true if the file has the
+// parent_component_id column (10-column format) instead of the old 9-column one
+static bool readCSVHeader(std::ifstream& in){
+    std::string header_line;
+    getline(in, header_line);
+    return header_line.find("parent_component_id") != std::string::npos;
+}
+
 MCSimulation::MCSimulation()
 {
     dynamicsEngine = NULL;
@@ -550,15 +558,12 @@ void MCSimulation::addAxonsObstaclesFromCSV(){
 
         int line_num = 0;
 
-        int header_size = 9;
+        bool has_parent = readCSVHeader(in);
+        double parent_component_id;
 
-        for(unsigned j = 0; j < header_size; j++){  
-            in >>header;
-            //cout << "header :" << header << endl;
-        } 
-
-
-        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout){
+        while (in >> cell_type >> cell_id >> component >> component_id
+               && (!has_parent || in >> parent_component_id)
+               && in >> x >> y >> z >> rin >> rout){
 
             if (cell_type.find("axon") == std::string::npos) {
                 continue;
@@ -738,15 +743,12 @@ void MCSimulation::addBloodVesselObstaclesFromCSV(){
 
         int line_num = 0;
 
-        int header_size = 9;
+        bool has_parent = readCSVHeader(in);
+        double parent_component_id;
 
-        for(unsigned j = 0; j < header_size; j++){  
-            in >>header;
-            //cout << "header :" << header << endl;
-        } 
-
-
-        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout){
+        while (in >> cell_type >> cell_id >> component >> component_id
+               && (!has_parent || in >> parent_component_id)
+               && in >> x >> y >> z >> rin >> rout){
 
             if (cell_type.find("blood_vessel") == std::string::npos) {
                 continue;
@@ -1002,11 +1004,9 @@ void MCSimulation::addGlialsObstaclesFromCSV()
             return;
         }
 
-        // Skip header lines
-        for (int j = 0; j < 9; ++j) {
-            std::string header;
-            in >> header;
-        }
+        // Skip header line
+        bool has_parent = readCSVHeader(in);
+        double parent_component_id;
 
         double perm_ = params.glial_obstacle_permeability;
         double diff_i = params.diffusivity_intra;
@@ -1023,7 +1023,9 @@ void MCSimulation::addGlialsObstaclesFromCSV()
 
         std::pair<Eigen::Vector3d,Eigen::Vector3d> voxels_list = params.voxels_list[i];
 
-        while (in >> cell_type >> cell_id >> component >> component_id >> x >> y >> z >> rin >> rout) {
+        while (in >> cell_type >> cell_id >> component >> component_id
+               && (!has_parent || in >> parent_component_id)
+               && in >> x >> y >> z >> rin >> rout) {
             // Convert units to micrometers
             x /= 1000.0;
             y /= 1000.0;
